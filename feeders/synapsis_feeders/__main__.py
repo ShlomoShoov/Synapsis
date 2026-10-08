@@ -1,21 +1,26 @@
 """Synapsis feeders.
 
   python -m synapsis_feeders list
-  python -m synapsis_feeders schema <feeder>                 register the feeder's schema package and exit
-  python -m synapsis_feeders run <feeder> [options]          fetch, send, checkpoint
-  python -m synapsis_feeders run-all [--only a,b] [options]  every feeder once, in turn
+  python -m synapsis_feeders schema <feeder>                  register the feeder's schema packages and exit
+  python -m synapsis_feeders run <feeder> [options]           one run: fetch, send, checkpoint, exit
+  python -m synapsis_feeders serve <feeder> [--every 6h]      the long-running service Docker Compose starts
+  python -m synapsis_feeders run-all [--only a,b] [options]   every feeder once, in turn
 
-Options for run and run-all:
+serve registers the schema packages at start-up, runs, then waits for the next trigger and runs again: the timer
+(--every) or a manual trigger (the signal SIGUSR1: docker kill --signal SIGUSR1 <container>).
+
+Options for run, serve and run-all:
   --since YYYY-MM-DD   start of a backfill (default: continue from the cursor, or the feeder's own start)
   --until YYYY-MM-DD   end of a backfill (default: today)
-  --every 6h           keep running and repeat on this interval (run only)
   --limit N            stop after N records (smoke tests)
-  --dry-run DIR        write the batches to DIR instead of sending them
   --reset              forget the cursor and start from --since or the feeder's default
   --set key=value      a feeder option (for example --set months=2024-01,2024-02); may repeat
+Only for run and run-all:
+  --dry-run DIR        write the batches to DIR instead of sending them
 
 Environment: SYNAPSIS_API_URL (default http://localhost:8080), SYNAPSIS_API_KEY, FEEDER_STATE_DIR,
-FEEDER_CACHE_DIR, FEEDER_BATCH_SIZE, and each source's key (FIRMS_MAP_KEY, GFW_TOKEN, FRED_API_KEY)."""
+FEEDER_CACHE_DIR, FEEDER_BATCH_SIZE, FEEDER_PACKAGES_DIR, and each source's key (FIRMS_MAP_KEY, GFW_TOKEN,
+FRED_API_KEY)."""
 from __future__ import annotations
 
 import argparse
@@ -30,66 +35,120 @@ from . import sources  # noqa: F401  (registers every feeder)
 from .api import ApiRefused, SynapsisApi
 from .base import FEEDERS, MissingKey
 from .config import Settings
-from .runner import run_all, run_every, run_once
+from .runner import register_packages, run_all, run_once, serve
+
+log = logging.getLogger("feeder")
 
 
-def _date(s: str) -> date:
-    return date.fromisoformat(s)
+def _date(text: str) -> date:
+    """Read a YYYY-MM-DD command-line value."""
+    return date.fromisoformat(text)
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """The command-line grammar: list, schema, run, serve and run-all, with their options."""
+    parser = argparse.ArgumentParser(prog="synapsis_feeders", description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("list")
+    schema = commands.add_parser("schema")
+    schema.add_argument("feeder", choices=sorted(FEEDERS))
+    run = commands.add_parser("run")
+    run.add_argument("feeder", choices=sorted(FEEDERS))
+    _add_run_options(run, dry_run=True)
+    service = commands.add_parser("serve")
+    service.add_argument("feeder", choices=sorted(FEEDERS))
+    service.add_argument("--every", help="run again on this interval, for example 30m, 6h or 7d")
+    _add_run_options(service, dry_run=False)
+    everything = commands.add_parser("run-all")
+    everything.add_argument("--only", help="a comma-separated list of feeders")
+    _add_run_options(everything, dry_run=True)
+    return parser
+
+
+def _add_run_options(command: argparse.ArgumentParser, dry_run: bool) -> None:
+    """The options that decide what a run sends (shared by run, serve and run-all)."""
+    command.add_argument("--since", type=_date)
+    command.add_argument("--until", type=_date)
+    command.add_argument("--limit", type=int)
+    command.add_argument("--reset", action="store_true")
+    command.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
+    if dry_run:
+        command.add_argument("--dry-run", type=Path)
+
+
+def _run_options(args: argparse.Namespace) -> dict:
+    """The parsed options as keyword arguments for run_once."""
+    options = {}
+    for pair in args.set:
+        key, value = pair.split("=", 1)
+        options[key] = value
+    return {"since": args.since, "until": args.until, "limit": args.limit, "reset": args.reset,
+            "options": options, "dry_run_dir": getattr(args, "dry_run", None)}
+
+
+def _list() -> int:
+    """Print every feeder with its package, title and the keys it needs."""
+    for name in sorted(FEEDERS):
+        feeder_class = FEEDERS[name]
+        keys = ""
+        if feeder_class.keys:
+            keys = f" (needs {', '.join(feeder_class.keys)})"
+        print(f"{name:22s} package {feeder_class.package:22s} {feeder_class.title}{keys}")
+    return 0
+
+
+def _schema(name: str, settings: Settings) -> int:
+    """Register the feeder's schema packages (shared ones first) and print its own package's version."""
+    version = register_packages(name, settings, SynapsisApi(settings))
+    print(json.dumps({"feeder": name, "package": FEEDERS[name].package, "version": version}, indent=1))
+    return 0
+
+
+def _run(name: str, settings: Settings, run_options: dict) -> int:
+    """One run of one feeder. Exit code 2 when a key is missing, 3 when the API refused the request."""
+    try:
+        print(json.dumps(run_once(name, settings, **run_options), indent=1, default=str))
+    except MissingKey as exc:
+        log.error("%s", exc)
+        return 2
+    except ApiRefused as exc:
+        log.error("the API refused the request: %s", exc)
+        return 3
+    return 0
+
+
+def _serve(name: str, settings: Settings, every: str | None, run_options: dict) -> int:
+    """Run the feeder as a long-running service until it is stopped."""
+    run_options.pop("dry_run_dir")
+    serve(name, settings, every, **run_options)
+    return 0
+
+
+def _run_all(only: str | None, settings: Settings, run_options: dict) -> int:
+    """Every feeder (or the --only list) once, in turn, and print each run's summary."""
+    names = None
+    if only:
+        names = only.split(",")
+    print(json.dumps(run_all(settings, names, **run_options), indent=1, default=str))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    p = argparse.ArgumentParser(prog="synapsis_feeders", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = p.add_subparsers(dest="command", required=True)
-    sub.add_parser("list")
-    s = sub.add_parser("schema")
-    s.add_argument("feeder", choices=sorted(FEEDERS))
-    for name in ("run", "run-all"):
-        r = sub.add_parser(name)
-        if name == "run":
-            r.add_argument("feeder", choices=sorted(FEEDERS))
-            r.add_argument("--every")
-        else:
-            r.add_argument("--only")
-        r.add_argument("--since", type=_date)
-        r.add_argument("--until", type=_date)
-        r.add_argument("--limit", type=int)
-        r.add_argument("--dry-run", type=Path)
-        r.add_argument("--reset", action="store_true")
-        r.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
-    args = p.parse_args(argv)
-    settings = Settings.from_env()
-
+    """Parse the command line and run the chosen command. Returns the process exit code."""
+    logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"),
+                        format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    args = _build_parser().parse_args(argv)
     if args.command == "list":
-        for n in sorted(FEEDERS):
-            f = FEEDERS[n]
-            keys = f" (needs {', '.join(f.keys)})" if f.keys else ""
-            print(f"{n:22s} package {f.package:22s} {f.title}{keys}")
-        return 0
+        return _list()
+    settings = Settings.from_env()
     if args.command == "schema":
-        f = FEEDERS[args.feeder]
-        body = (settings.schemas_dir / "seed" / f"{f.package}.yaml").read_bytes()
-        print(json.dumps(SynapsisApi(settings).register_schema(f.package, body), indent=1))
-        return 0
-
-    options = dict(kv.split("=", 1) for kv in args.set)
-    kw = dict(since=args.since, until=args.until, limit=args.limit, dry_run_dir=args.dry_run, reset=args.reset, options=options)
+        return _schema(args.feeder, settings)
     if args.command == "run":
-        if args.every:
-            run_every(args.feeder, args.every, settings, **kw)
-            return 0
-        try:
-            print(json.dumps(run_once(args.feeder, settings, **kw), indent=1, default=str))
-        except MissingKey as exc:
-            logging.getLogger("feeder").error("%s", exc)
-            return 2
-        except ApiRefused as exc:
-            logging.getLogger("feeder").error("the API refused the request: %s", exc)
-            return 3
-        return 0
-    results = run_all(settings, args.only.split(",") if args.only else None, **kw)
-    print(json.dumps(results, indent=1, default=str))
-    return 0
+        return _run(args.feeder, settings, _run_options(args))
+    if args.command == "serve":
+        return _serve(args.feeder, settings, args.every, _run_options(args))
+    return _run_all(args.only, settings, _run_options(args))
 
 
 if __name__ == "__main__":

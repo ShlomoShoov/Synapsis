@@ -7,8 +7,9 @@ Each case in cases/*.json is sent as one bundle to POST /v1/ingest?dry_run=true,
 passes when the receipt rejects exactly the listed records with the listed codes (and paths, where a case gives one)
 and accepts every other record. A request case passes when the API answers with the listed status and code.
 
-The cases use the seed packages in schemas/seed, which every API registers on start. Exit code 0 when every case
-passes, 1 otherwise. Needs only the Python standard library."""
+The cases use the feeders' schema packages (feeders/packages). The API seeds only the core package itself, so the
+runner registers the others first, the way a feeder does at start-up (an identical package is answered "unchanged").
+Exit code 0 when every case passes, 1 otherwise. Needs only the Python standard library."""
 from __future__ import annotations
 
 import argparse
@@ -21,13 +22,15 @@ import urllib.request
 from pathlib import Path
 
 CASES = Path(__file__).resolve().parent / "cases"
+PACKAGES = Path(__file__).resolve().parents[2] / "feeders" / "packages"
+TRY_AGAIN = {"E-SCHEMA-REF", "E-SCHEMA-VERSION"}    # a package it needs is not there yet, or another writer was first
 
 
-def post(api: str, body: bytes, headers: dict, key: str | None) -> tuple[int, dict]:
-    headers = {"Content-Type": "application/json", **headers}
+def send(api: str, method: str, path: str, body: bytes, headers: dict, key: str | None) -> tuple[int, dict]:
+    """Send one HTTP request to the API and return (status, JSON body); an error status is returned, not raised."""
     if key:
-        headers["Authorization"] = f"Bearer {key}"
-    req = urllib.request.Request(f"{api.rstrip('/')}/v1/ingest?dry_run=true", data=body, headers=headers, method="POST")
+        headers = {**headers, "Authorization": f"Bearer {key}"}
+    req = urllib.request.Request(f"{api.rstrip('/')}{path}", data=body, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=120) as r:
             return r.status, json.loads(r.read())
@@ -36,6 +39,32 @@ def post(api: str, body: bytes, headers: dict, key: str | None) -> tuple[int, di
             return e.code, json.loads(e.read())
         except ValueError:
             return e.code, {}
+
+
+def post(api: str, body: bytes, headers: dict, key: str | None) -> tuple[int, dict]:
+    """POST one bundle to /v1/ingest?dry_run=true, so nothing is written."""
+    return send(api, "POST", "/v1/ingest?dry_run=true", body, {"Content-Type": "application/json", **headers}, key)
+
+
+def register_packages(api: str, key: str | None) -> None:
+    """Register every feeder package the cases rely on. A package that is refused only because a package it needs
+    is not registered yet is tried again after the others, up to three rounds."""
+    pending = sorted(PACKAGES.glob("*.yaml"))
+    for _ in range(3):
+        retry = []
+        for path in pending:
+            status, body = send(api, "PUT", f"/v1/schemas/{path.stem}", path.read_bytes(),
+                                {"Content-Type": "application/yaml"}, key)
+            if status in (200, 201):
+                continue
+            if body.get("code") in TRY_AGAIN:
+                retry.append(path)
+                continue
+            raise SystemExit(f"package {path.stem} was refused: HTTP {status} {json.dumps(body)[:500]}")
+        if not retry:
+            return
+        pending = retry
+    raise SystemExit(f"packages still refused after three rounds: {[p.stem for p in pending]}")
 
 
 def bundle_for(name: str, records: list) -> dict:
@@ -108,6 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--only", help="run one group, for example 03-time")
     p.add_argument("--verbose", action="store_true", help="print passing cases too")
     args = p.parse_args(argv)
+    register_packages(args.api, args.key)
     total = failed = 0
     for path in sorted(CASES.glob("*.json")):
         if args.only and not path.stem.startswith(args.only):

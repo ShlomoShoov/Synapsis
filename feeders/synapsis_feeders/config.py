@@ -11,16 +11,14 @@ def _env(name: str, default: str | None = None) -> str | None:
     return value if value not in (None, "") else default
 
 
-def _schemas_dir() -> Path:
-    """schemas/seed lives at the repository root; the Docker image copies it to /app/schemas."""
-    configured = _env("SYNAPSIS_SCHEMAS_DIR")
+def _packages_dir() -> Path:
+    """The folder of schema packages the feeders own: feeders/packages, next to this Python package.
+
+    FEEDER_PACKAGES_DIR overrides it (for example to try an edited package without rebuilding the image)."""
+    configured = _env("FEEDER_PACKAGES_DIR")
     if configured:
         return Path(configured)
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        if (parent / "schemas" / "seed").is_dir():
-            return parent / "schemas"
-    return Path("/app/schemas")
+    return Path(__file__).resolve().parent.parent / "packages"
 
 
 def _user_agent(contact: str | None) -> str:
@@ -36,7 +34,7 @@ class Settings:
     api_key: str | None
     state_dir: Path
     cache_dir: Path
-    schemas_dir: Path
+    packages_dir: Path
     batch_size: int
     user_agent: str
     http_timeout: float
@@ -48,11 +46,15 @@ class Settings:
             api_key=_env("SYNAPSIS_API_KEY"),
             state_dir=Path(_env("FEEDER_STATE_DIR", "./.feeder-state")),
             cache_dir=Path(_env("FEEDER_CACHE_DIR", "./.feeder-cache")),
-            schemas_dir=_schemas_dir(),
+            packages_dir=_packages_dir(),
             batch_size=int(_env("FEEDER_BATCH_SIZE", "5000")),
             user_agent=_env("FEEDER_USER_AGENT") or _user_agent(_env("FEEDER_CONTACT")),
             http_timeout=float(_env("FEEDER_HTTP_TIMEOUT", "180")),
         )
+
+    def package_file(self, package: str) -> Path:
+        """The YAML file of one schema package, for example feeders/packages/kev.yaml."""
+        return self.packages_dir / f"{package}.yaml"
 
     def key(self, name: str) -> str | None:
         """A source credential from the environment. Values are never logged."""

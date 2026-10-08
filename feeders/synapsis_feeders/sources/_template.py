@@ -1,5 +1,5 @@
-"""Template for a new feeder. Copy to sources/<name>.py, write schemas/seed/<package>.yaml, import the module in
-sources/__init__.py, add a service to docker-compose.yml. Nothing else in the framework changes.
+"""Template for a new feeder. Copy to sources/<name>.py, write feeders/packages/<package>.yaml, import the module in
+sources/__init__.py, add a service to deploy/feeders/compose.yml. Nothing else in the framework changes.
 
 Checklist (the API enforces most of it and says which record broke which rule):
   * ids from the source's own identifiers, so a re-run sends the same ids (and gets 'unchanged')
@@ -22,7 +22,7 @@ API = "https://example.org/api/items"
 
 class TemplateFeeder(Feeder):
     name = "template"                 # the CLI name: python -m synapsis_feeders run template
-    package = "template"              # schemas/seed/template.yaml
+    package = "template"              # feeders/packages/template.yaml
     title = "Short description shown by 'list'"
     keys = ()                         # environment variables the source needs, for example ("EXAMPLE_KEY",)
     requires = ()                     # shared packages to register first, for example ("health",)
