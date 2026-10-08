@@ -8,3 +8,7 @@ bin/
 obj/
 node_modules/
 dist/
+# Local documentation and Claude files: kept on each developer's machine, never committed
+CLAUDE.md
+.claude/
+docs/
