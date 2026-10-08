@@ -1,0 +1,10 @@
+.env
+*.pyc
+__pycache__/
+.feeder-state/
+.feeder-cache/
+docker/certs/*.crt
+bin/
+obj/
+node_modules/
+dist/

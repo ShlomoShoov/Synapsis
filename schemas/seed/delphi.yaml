@@ -1,0 +1,28 @@
+# Delphi Epidata (CMU): five daily COVID-19 signals for US states, each from a different upstream publisher.
+package: delphi
+title: Delphi Epidata COVID-19 signals (US states)
+description: >-
+  Daily values per US state and territory for five signals Delphi distributes: hospital admissions (HHS), confirmed
+  cases (JHU CSSE), outpatient COVID-like illness (doctor visits), symptom searches (Google) and the symptom survey
+  (Facebook/CMU). Each upstream publisher is its own source with its own publication lag (rule T-LAG). The stored
+  value is Delphi's latest revision; its issue date is kept as an attribute.
+maintainer: synapsis-feeders
+namespaces:
+  records: [delphi]
+
+sources:
+  - {id: src:delphi:hhs-admissions, title: HHS confirmed COVID-19 admissions via Delphi, publisher: US HHS (via Delphi Epidata CMU),
+     url: "https://cmu-delphi.github.io/delphi-epidata/api/covidcast-signals/hhs.html", reliability: 90, reliability_basis: A2,
+     publication_lag_days: 5, known_at_rule: Day of the value plus 5 days (basis proxy_publication_lag)}
+  - {id: src:delphi:jhu-cases, title: JHU CSSE confirmed cases via Delphi, publisher: Johns Hopkins CSSE (via Delphi Epidata CMU),
+     url: "https://cmu-delphi.github.io/delphi-epidata/api/covidcast-signals/jhu-csse.html", reliability: 85, reliability_basis: B2,
+     publication_lag_days: 1, known_at_rule: Day of the value plus 1 day (basis proxy_publication_lag)}
+  - {id: src:delphi:doctor-visits, title: Outpatient COVID-like illness via Delphi, publisher: Delphi Epidata CMU (claims data),
+     url: "https://cmu-delphi.github.io/delphi-epidata/api/covidcast-signals/doctor-visits.html", reliability: 85, reliability_basis: B2,
+     publication_lag_days: 5, known_at_rule: Day of the value plus 5 days (basis proxy_publication_lag)}
+  - {id: src:delphi:google-symptoms, title: Google symptom searches via Delphi, publisher: Google (via Delphi Epidata CMU),
+     url: "https://cmu-delphi.github.io/delphi-epidata/api/covidcast-signals/google-symptoms.html", reliability: 70, reliability_basis: C3,
+     publication_lag_days: 4, known_at_rule: Day of the value plus 4 days (basis proxy_publication_lag)}
+  - {id: src:delphi:fb-survey, title: COVID-19 Trends and Impact Survey via Delphi, publisher: Delphi Epidata CMU with Facebook,
+     url: "https://cmu-delphi.github.io/delphi-epidata/api/covidcast-signals/fb-survey.html", reliability: 80, reliability_basis: B3,
+     publication_lag_days: 1, known_at_rule: Day of the value plus 1 day (basis proxy_publication_lag)}

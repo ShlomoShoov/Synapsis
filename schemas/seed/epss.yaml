@@ -1,0 +1,34 @@
+# EPSS: FIRST's daily probability that a published vulnerability will be exploited in the next 30 days.
+package: epss
+title: EPSS exploit prediction scores
+description: >-
+  One event per vulnerability per score date: the EPSS probability of exploitation in the next 30 days and its
+  percentile among all scored vulnerabilities. By default the first score of each month is loaded, as in round 3;
+  every day is available with --set every=day.
+maintainer: synapsis-feeders
+namespaces:
+  records: [epss]
+
+sources:
+  - id: src:first:epss
+    title: Exploit Prediction Scoring System daily scores
+    publisher: FIRST EPSS SIG (files served by Empirical Security)
+    url: https://www.first.org/epss/data_stats
+    license: Free to use with attribution to FIRST
+    reliability: 85
+    reliability_basis: B2
+    publication_lag_days: 0
+    known_at_rule: The score_date in the file header (published).
+
+event_types:
+  - code: CYB.VULN.EPSS_SCORE
+    title: The EPSS score of a vulnerability on one date
+    place: [unplaced]
+    roles: {subject: [Vulnerability]}
+    measures: [epss, epss_percentile]
+    attributes:
+      model_version: {type: string, max_length: 40}
+
+measures:
+  - {name: epss, title: Probability of exploitation in the next 30 days, unit: probability, min: 0, max: 1}
+  - {name: epss_percentile, title: Percentile of the score among all scored vulnerabilities, unit: probability, min: 0, max: 1}

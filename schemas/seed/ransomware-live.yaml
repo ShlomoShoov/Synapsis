@@ -1,0 +1,42 @@
+# ransomware.live: victims posted on ransomware groups' leak sites, as observed by the tracker.
+package: ransomware-live
+title: Ransomware leak-site victim posts (ransomware.live)
+description: >-
+  One event per victim a ransomware group posts on its leak site, as first observed by ransomware.live.
+  The group is an entity; group names are normalised (lower case, every LockBit variant is 'lockbit') and the name as
+  listed is kept as an attribute. The group's own claim text is the record's text: a claim, not a verified fact.
+maintainer: synapsis-feeders
+namespaces:
+  records: [ransomware-live]
+  entities: [rgroup]
+
+sources:
+  - id: src:ransomware-live:victims
+    title: ransomware.live victims API (v2)
+    publisher: ransomware.live (community tracker of leak sites)
+    url: https://www.ransomware.live
+    license: Free for non-commercial use; see the site's terms
+    reliability: 70
+    reliability_basis: C3
+    publication_lag_days: 0
+    known_at_rule: The time ransomware.live first observed the post (field 'discovered').
+
+entity_types:
+  - {code: RansomwareGroup, title: A ransomware group that runs a leak site}
+
+event_types:
+  - code: CYB.RANSOM.VICTIM_POSTED
+    title: A ransomware group posts a victim on its leak site
+    place: [logical, admin]
+    roles: {actor: [RansomwareGroup]}
+    text: optional
+    attributes:
+      victim: {type: string, max_length: 500, required: true}
+      domain: {type: string, max_length: 300}
+      sector: {type: string, max_length: 200}
+      attack_date: {type: date}
+      group_as_listed: {type: string, max_length: 200, required: true}
+      press_source: {type: string, max_length: 2000}
+
+logical_spaces:
+  - {space: cyber.ransom_group, title: Ransomware group (normalised name), kind: tree, max_depth: 1}

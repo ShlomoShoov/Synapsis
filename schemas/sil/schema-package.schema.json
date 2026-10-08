@@ -1,0 +1,539 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synapsis.local/schemas/schema-package.schema.json",
+  "title": "Synapsis schema package",
+  "description": "The vocabulary one package adds to the registry: sources, record types, roles, measures, logical spaces and attributes. The SIL record envelope itself is fixed; packages only add vocabulary.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "package",
+    "title"
+  ],
+  "properties": {
+    "package": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,40}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "maintainer": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "namespaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "records": {
+          "$ref": "#/$defs/namespaceList"
+        },
+        "entities": {
+          "$ref": "#/$defs/namespaceList"
+        }
+      }
+    },
+    "vocabularies": {
+      "description": "Core package only: closed lists used by the envelope rules.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "uniqueItems": true
+      }
+    },
+    "shared_entity_namespaces": {
+      "description": "Core package only: authority namespaces any package may create entities in.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "namespace",
+          "entity_type",
+          "key_pattern"
+        ],
+        "properties": {
+          "namespace": {
+            "$ref": "#/$defs/namespace"
+          },
+          "entity_type": {
+            "$ref": "#/$defs/entityTypeCode"
+          },
+          "key_pattern": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "entity_types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entityType"
+      }
+    },
+    "event_types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/eventType"
+      }
+    },
+    "relation_types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationType"
+      }
+    },
+    "conclusion_types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/conclusionType"
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/role"
+      }
+    },
+    "measures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/measure"
+      }
+    },
+    "logical_spaces": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/logicalSpace"
+      }
+    },
+    "deprecated": {
+      "description": "Definitions this package retires: '<kind>:<code>', for example 'event_type:CYB.OLD'. New records may not use them; stored records stay valid.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(source|entity_type|event_type|relation_type|conclusion_type|role|measure|logical_space):.+$"
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "namespace": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]{0,40}$"
+    },
+    "namespaceList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/namespace"
+      },
+      "uniqueItems": true
+    },
+    "entityTypeCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]{1,60}$"
+    },
+    "eventTypeCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,6}(\\.[A-Z0-9_]{1,40}){1,4}$"
+    },
+    "relationTypeCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,60}$"
+    },
+    "lowerCode": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,60}$"
+    },
+    "attribute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "date",
+            "datetime",
+            "string_list"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "max_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "max_items": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "enum": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      }
+    },
+    "attributes": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,60}$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/attribute"
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "publisher",
+        "reliability",
+        "reliability_basis",
+        "publication_lag_days",
+        "known_at_rule"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^src:[a-z0-9][a-z0-9.-]*:[a-z0-9][a-z0-9._-]*$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        },
+        "reliability": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "reliability_basis": {
+          "type": "string"
+        },
+        "publication_lag_days": {
+          "type": "number",
+          "minimum": 0
+        },
+        "known_at_rule": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "entityType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "title"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/entityTypeCode"
+        },
+        "title": {
+          "type": "string"
+        },
+        "attributes": {
+          "$ref": "#/$defs/attributes"
+        },
+        "versioning": {
+          "enum": [
+            "versioned",
+            "immutable"
+          ],
+          "description": "versioned (default): a changed record becomes a new version; immutable: a change is refused with E-ID-CONFLICT"
+        }
+      }
+    },
+    "eventType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "title",
+        "place"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/eventTypeCode"
+        },
+        "title": {
+          "type": "string"
+        },
+        "place": {
+          "description": "Place forms an event of this type may use; at least one must be present on each record.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "point",
+              "admin",
+              "logical",
+              "unplaced"
+            ]
+          }
+        },
+        "roles": {
+          "description": "Allowed roles, each with the entity types allowed in it (empty list = any type).",
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]{0,60}$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/entityTypeCode"
+            }
+          }
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lowerCode"
+          },
+          "uniqueItems": true
+        },
+        "text": {
+          "enum": [
+            "none",
+            "optional",
+            "required"
+          ]
+        },
+        "attributes": {
+          "$ref": "#/$defs/attributes"
+        },
+        "missing": {
+          "description": "M-NULL: how absent measures must be read.",
+          "enum": [
+            "null"
+          ]
+        },
+        "versioning": {
+          "enum": [
+            "versioned",
+            "immutable"
+          ],
+          "description": "versioned (default): a changed record becomes a new version; immutable: a change is refused with E-ID-CONFLICT"
+        }
+      }
+    },
+    "relationType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "title",
+        "from",
+        "to"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/relationTypeCode"
+        },
+        "title": {
+          "type": "string"
+        },
+        "from": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entityTypeCode"
+          }
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entityTypeCode"
+          }
+        },
+        "attributes": {
+          "$ref": "#/$defs/attributes"
+        },
+        "versioning": {
+          "enum": [
+            "versioned",
+            "immutable"
+          ],
+          "description": "versioned (default): a changed record becomes a new version; immutable: a change is refused with E-ID-CONFLICT"
+        }
+      }
+    },
+    "conclusionType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "title"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/lowerCode"
+        },
+        "title": {
+          "type": "string"
+        },
+        "predicates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lowerCode"
+          },
+          "uniqueItems": true
+        },
+        "versioning": {
+          "enum": [
+            "versioned",
+            "immutable"
+          ],
+          "description": "versioned (default): a changed record becomes a new version; immutable: a change is refused with E-ID-CONFLICT"
+        }
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "title"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/lowerCode"
+        },
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "title",
+        "unit"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/lowerCode"
+        },
+        "title": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9%/._-]{1,30}$"
+        },
+        "signed": {
+          "type": "boolean",
+          "description": "true lets values go below zero (margins, tone); counts are never signed"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      }
+    },
+    "logicalSpace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "space",
+        "title",
+        "kind",
+        "max_depth"
+      ],
+      "properties": {
+        "space": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){0,3}$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "tree",
+            "graph"
+          ]
+        },
+        "max_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "closed": {
+          "type": "boolean",
+          "description": "A-CLOSED: the first path level must be one of values"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

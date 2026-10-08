@@ -1,0 +1,969 @@
+{
+ "title": "Kind, structure, source, identity and type",
+ "cases": [
+  {
+   "name": "kind 'source' is not a record kind (sources are declared in packages)",
+   "records": [
+    {
+     "kind": "source",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-KIND",
+     "path": "kind"
+    }
+   ]
+  },
+  {
+   "name": "a record without a kind",
+   "records": [
+    {
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-KIND",
+     "path": "kind"
+    }
+   ]
+  },
+  {
+   "name": "a missing known_at",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA"
+    }
+   ]
+  },
+  {
+   "name": "a property the envelope does not have",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     },
+     "colour": "red"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA"
+    }
+   ]
+  },
+  {
+   "name": "a date where an instant is required",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA"
+    }
+   ]
+  },
+  {
+   "name": "an instant with an offset instead of Z",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09+00:00",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA"
+    }
+   ]
+  },
+  {
+   "name": "reliability above 100",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 101,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA"
+    }
+   ]
+  },
+  {
+   "name": "a measure value written as a string",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": "7.5",
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA"
+    }
+   ]
+  },
+  {
+   "name": "an unknown reliability basis",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "Z9",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA",
+     "path": "reliability_basis"
+    }
+   ]
+  },
+  {
+   "name": "an unknown known_at basis",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "rumour",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA",
+     "path": "known_at_basis"
+    }
+   ]
+  },
+  {
+   "name": "a source no package declares",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:nobody:nothing",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-REGISTRY-SOURCE",
+     "path": "source"
+    }
+   ]
+  },
+  {
+   "name": "an event id with an entity prefix",
+   "records": [
+    {
+     "kind": "event",
+     "id": "ent:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-ID-NAMESPACE",
+     "path": "id"
+    }
+   ]
+  },
+  {
+   "name": "a namespace owned by another package",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:kev:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-ID-NAMESPACE",
+     "path": "id"
+    }
+   ]
+  },
+  {
+   "name": "a CVE id that does not match the shared namespace's pattern",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-24-1",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-ID-NAMESPACE",
+     "path": "id"
+    }
+   ]
+  },
+  {
+   "name": "a shared namespace used for the wrong entity type",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0002",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-ID-NAMESPACE",
+     "path": "id"
+    }
+   ]
+  },
+  {
+   "name": "an event type no package declares",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.VOLCANO",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-REGISTRY-EVENT-TYPE",
+     "path": "type"
+    }
+   ]
+  },
+  {
+   "name": "an entity type no package declares",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Supplier",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-REGISTRY-ENTITY-TYPE",
+     "path": "type"
+    }
+   ]
+  },
+  {
+   "name": "a relation type no package declares",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "MADE_BY",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 2,
+     "code": "E-REGISTRY-RELATION-TYPE",
+     "path": "type"
+    }
+   ]
+  },
+  {
+   "name": "a conclusion type no package declares",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    },
+    {
+     "kind": "conclusion",
+     "id": "con:kev-classes:conformance-vendor/widget",
+     "type": "guess",
+     "source": "src:synapsis:kev-classes",
+     "reliability": 90,
+     "reliability_basis": "model",
+     "about": [
+      "ent:kev-product:conformance-vendor/widget"
+     ],
+     "statement": {
+      "predicate": "in_logical_space",
+      "object": "cyber.product_class/EDGE_VPN"
+     },
+     "premises": [
+      "evt:kev:CVE-2099-0001"
+     ],
+     "method": {
+      "by": "agent",
+      "name": "teacher:conformance",
+      "version": "r3"
+     },
+     "confidence": 90,
+     "known_at": "2024-03-03T00:00:00Z",
+     "known_at_basis": "observed"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 5,
+     "code": "E-REGISTRY-CONCLUSION-TYPE",
+     "path": "type"
+    }
+   ]
+  },
+  {
+   "name": "the first rule broken decides: unknown source before a misaligned time",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:nobody:nothing",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "day"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-REGISTRY-SOURCE",
+     "path": "source"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,49 @@
+# CISA Known Exploited Vulnerabilities: one event per catalog entry.
+package: kev
+title: CISA Known Exploited Vulnerabilities
+description: >-
+  One event per catalog entry, when CISA confirms a vulnerability is exploited in the wild.
+  The vulnerability, the product and the vendor are entities, and each product links to its vendor.
+  Entries are versioned: when CISA edits an entry (for example the ransomware flag), the API stores a new version.
+maintainer: synapsis-feeders
+namespaces:
+  records: [kev]
+  entities: [kev-vendor, kev-product]
+
+sources:
+  - id: src:cisa:kev
+    title: Known Exploited Vulnerabilities catalog
+    publisher: Cybersecurity and Infrastructure Security Agency (CISA)
+    url: https://www.cisa.gov/known-exploited-vulnerabilities-catalog
+    license: US government work; public
+    reliability: 95
+    reliability_basis: A1
+    publication_lag_days: 1
+    known_at_rule: dateAdded plus one day; CISA publishes an entry during the day it is added.
+
+entity_types:
+  - {code: Vendor, title: A vendor or project named in the catalog}
+  - {code: Product, title: A product named in the catalog}
+
+event_types:
+  - code: CYB.VULN.KNOWN_EXPLOITED
+    title: CISA adds a vulnerability to the catalog
+    place: [logical]
+    roles: {subject: [Vulnerability], affected_product: [Product], vendor: [Vendor]}
+    text: required
+    attributes:
+      required_action: {type: string, max_length: 4000}
+      due_date: {type: date}
+      known_ransomware_campaign_use: {type: string, enum: [Known, Unknown]}
+      cwes: {type: string_list, max_items: 30, pattern: "^(CWE-[0-9]+|NVD-CWE-Other|NVD-CWE-noinfo)$"}
+      notes: {type: string, max_length: 8000}
+
+relation_types:
+  - {code: PRODUCT_OF, title: A product belongs to a vendor, from: [Product], to: [Vendor]}
+
+roles:
+  - {code: affected_product, title: The product a vulnerability affects}
+  - {code: vendor, title: The vendor of the affected product}
+
+logical_spaces:
+  - {space: cyber.vendor_product, title: Vendor and product as named in the catalog, kind: tree, max_depth: 2}

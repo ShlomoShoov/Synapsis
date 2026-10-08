@@ -1,0 +1,35 @@
+# USGS ComCat: the global earthquake catalog.
+package: usgs
+title: USGS ComCat earthquakes
+description: >-
+  One event per earthquake in the USGS Comprehensive Catalog at or above the chosen magnitude (default 5.5 since 1965,
+  the set used in round 2). Magnitudes and locations are revised; a revision becomes a new version.
+maintainer: synapsis-feeders
+namespaces:
+  records: [usgs]
+
+sources:
+  - id: src:usgs:comcat
+    title: ANSS Comprehensive Earthquake Catalog (FDSN event service)
+    publisher: US Geological Survey
+    url: https://earthquake.usgs.gov/fdsnws/event/1/
+    license: US government work; public
+    reliability: 95
+    reliability_basis: measured
+    publication_lag_days: 0.04
+    known_at_rule: Origin time plus one hour; ComCat publishes significant events within minutes (basis proxy_publication_lag).
+
+event_types:
+  - code: GEO.EARTHQUAKE
+    title: An earthquake
+    place: [point]
+    measures: [magnitude, depth_km]
+    attributes:
+      magnitude_type: {type: string, max_length: 10}
+      place_name: {type: string, max_length: 300}
+      network: {type: string, max_length: 10}
+      review_status: {type: string, max_length: 20}
+
+measures:
+  - {name: magnitude, title: Magnitude, unit: magnitude, signed: true, min: -3, max: 10}
+  - {name: depth_km, title: Depth below sea level, unit: km, signed: true, min: -10, max: 800}

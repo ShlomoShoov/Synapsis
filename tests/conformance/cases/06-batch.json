@@ -1,0 +1,1597 @@
+{
+ "title": "Duplicates, roles, references and premises across the batch",
+ "cases": [
+  {
+   "name": "an identical copy is counted once",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    },
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [],
+   "duplicates": 1
+  },
+  {
+   "name": "the same id with different content",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    },
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.4,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 1,
+     "code": "E-ID-CONFLICT",
+     "path": "id"
+    }
+   ]
+  },
+  {
+   "name": "the same id from two sources is two statements, not a conflict",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:first:epss",
+     "reliability": 85,
+     "reliability_basis": "model",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    }
+   ],
+   "rejected": []
+  },
+  {
+   "name": "an entity may follow the event that names it",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    }
+   ],
+   "rejected": []
+  },
+  {
+   "name": "a role the type does not allow",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "actor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 3,
+     "code": "E-ROLE",
+     "path": "participants[3].role"
+    }
+   ]
+  },
+  {
+   "name": "a role given the wrong entity type",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "subject"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 3,
+     "code": "E-ROLE",
+     "path": "participants[0].entity"
+    }
+   ]
+  },
+  {
+   "name": "a participant neither in the batch nor stored",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-9999",
+       "role": "subject"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-REF-MISSING",
+     "path": "participants[0].entity"
+    }
+   ]
+  },
+  {
+   "name": "an event naming a rejected entity",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2099-01-01T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-KNOWN-IN-FUTURE",
+     "path": "known_at"
+    },
+    {
+     "index": 3,
+     "code": "E-REF-MISSING",
+     "path": "participants[0].entity"
+    }
+   ]
+  },
+  {
+   "name": "a relation end neither in the batch nor stored",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 1,
+     "code": "E-REF-MISSING",
+     "path": "to"
+    }
+   ]
+  },
+  {
+   "name": "a relation in the wrong direction",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-vendor:conformance-vendor",
+     "to": "ent:kev-product:conformance-vendor/widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 2,
+     "code": "E-RELATION-DOMAIN",
+     "path": "from"
+    }
+   ]
+  },
+  {
+   "name": "a conclusion whose premise is missing",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "conclusion",
+     "id": "con:kev-classes:conformance-vendor/widget",
+     "type": "classification",
+     "source": "src:synapsis:kev-classes",
+     "reliability": 90,
+     "reliability_basis": "model",
+     "about": [
+      "ent:kev-product:conformance-vendor/widget"
+     ],
+     "statement": {
+      "predicate": "in_logical_space",
+      "object": "cyber.product_class/EDGE_VPN"
+     },
+     "premises": [
+      "evt:kev:CVE-2099-9999"
+     ],
+     "method": {
+      "by": "agent",
+      "name": "teacher:conformance",
+      "version": "r3"
+     },
+     "confidence": 90,
+     "known_at": "2024-03-03T00:00:00Z",
+     "known_at_basis": "observed"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 1,
+     "code": "E-PREMISE-MISSING",
+     "path": "premises[0]"
+    }
+   ]
+  },
+  {
+   "name": "a conclusion about a record that is missing",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    },
+    {
+     "kind": "conclusion",
+     "id": "con:kev-classes:conformance-vendor/widget",
+     "type": "classification",
+     "source": "src:synapsis:kev-classes",
+     "reliability": 90,
+     "reliability_basis": "model",
+     "about": [
+      "ent:kev-product:nobody/nothing"
+     ],
+     "statement": {
+      "predicate": "in_logical_space",
+      "object": "cyber.product_class/EDGE_VPN"
+     },
+     "premises": [
+      "evt:kev:CVE-2099-0001"
+     ],
+     "method": {
+      "by": "agent",
+      "name": "teacher:conformance",
+      "version": "r3"
+     },
+     "confidence": 90,
+     "known_at": "2024-03-03T00:00:00Z",
+     "known_at_basis": "observed"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 5,
+     "code": "E-REF-MISSING",
+     "path": "about[0]"
+    }
+   ]
+  },
+  {
+   "name": "a classification outside the closed space (rule A-CLOSED)",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    },
+    {
+     "kind": "conclusion",
+     "id": "con:kev-classes:conformance-vendor/widget",
+     "type": "classification",
+     "source": "src:synapsis:kev-classes",
+     "reliability": 90,
+     "reliability_basis": "model",
+     "about": [
+      "ent:kev-product:conformance-vendor/widget"
+     ],
+     "statement": {
+      "predicate": "in_logical_space",
+      "object": "cyber.product_class/TOASTER"
+     },
+     "premises": [
+      "evt:kev:CVE-2099-0001"
+     ],
+     "method": {
+      "by": "agent",
+      "name": "teacher:conformance",
+      "version": "r3"
+     },
+     "confidence": 90,
+     "known_at": "2024-03-03T00:00:00Z",
+     "known_at_basis": "observed"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 5,
+     "code": "E-LOGICAL-VALUE",
+     "path": "statement.object"
+    }
+   ]
+  },
+  {
+   "name": "a classification in a space no package declares",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    },
+    {
+     "kind": "conclusion",
+     "id": "con:kev-classes:conformance-vendor/widget",
+     "type": "classification",
+     "source": "src:synapsis:kev-classes",
+     "reliability": 90,
+     "reliability_basis": "model",
+     "about": [
+      "ent:kev-product:conformance-vendor/widget"
+     ],
+     "statement": {
+      "predicate": "in_logical_space",
+      "object": "cyber.classes/EDGE_VPN"
+     },
+     "premises": [
+      "evt:kev:CVE-2099-0001"
+     ],
+     "method": {
+      "by": "agent",
+      "name": "teacher:conformance",
+      "version": "r3"
+     },
+     "confidence": 90,
+     "known_at": "2024-03-03T00:00:00Z",
+     "known_at_basis": "observed"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 5,
+     "code": "E-LOGICAL-SPACE",
+     "path": "statement.object"
+    }
+   ]
+  },
+  {
+   "name": "a classification without a class",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    },
+    {
+     "kind": "conclusion",
+     "id": "con:kev-classes:conformance-vendor/widget",
+     "type": "classification",
+     "source": "src:synapsis:kev-classes",
+     "reliability": 90,
+     "reliability_basis": "model",
+     "about": [
+      "ent:kev-product:conformance-vendor/widget"
+     ],
+     "statement": {
+      "predicate": "in_logical_space",
+      "object": "cyber.product_class"
+     },
+     "premises": [
+      "evt:kev:CVE-2099-0001"
+     ],
+     "method": {
+      "by": "agent",
+      "name": "teacher:conformance",
+      "version": "r3"
+     },
+     "confidence": 90,
+     "known_at": "2024-03-03T00:00:00Z",
+     "known_at_basis": "observed"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 5,
+     "code": "E-LOGICAL-DEPTH",
+     "path": "statement.object"
+    }
+   ]
+  },
+  {
+   "name": "a method.by outside the vocabulary",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    },
+    {
+     "kind": "conclusion",
+     "id": "con:kev-classes:conformance-vendor/widget",
+     "type": "classification",
+     "source": "src:synapsis:kev-classes",
+     "reliability": 90,
+     "reliability_basis": "model",
+     "about": [
+      "ent:kev-product:conformance-vendor/widget"
+     ],
+     "statement": {
+      "predicate": "in_logical_space",
+      "object": "cyber.product_class/EDGE_VPN"
+     },
+     "premises": [
+      "evt:kev:CVE-2099-0001"
+     ],
+     "method": {
+      "by": "oracle",
+      "name": "x",
+      "version": "1"
+     },
+     "confidence": 90,
+     "known_at": "2024-03-03T00:00:00Z",
+     "known_at_basis": "observed"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 5,
+     "code": "E-SCHEMA",
+     "path": "method.by"
+    }
+   ]
+  },
+  {
+   "name": "confidence above 100",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "conformance-vendor",
+        "widget"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    },
+    {
+     "kind": "conclusion",
+     "id": "con:kev-classes:conformance-vendor/widget",
+     "type": "classification",
+     "source": "src:synapsis:kev-classes",
+     "reliability": 90,
+     "reliability_basis": "model",
+     "about": [
+      "ent:kev-product:conformance-vendor/widget"
+     ],
+     "statement": {
+      "predicate": "in_logical_space",
+      "object": "cyber.product_class/EDGE_VPN"
+     },
+     "premises": [
+      "evt:kev:CVE-2099-0001"
+     ],
+     "method": {
+      "by": "agent",
+      "name": "teacher:conformance",
+      "version": "r3"
+     },
+     "confidence": 101,
+     "known_at": "2024-03-03T00:00:00Z",
+     "known_at_basis": "observed"
+    }
+   ],
+   "rejected": [
+    {
+     "index": 5,
+     "code": "E-SCHEMA"
+    }
+   ]
+  }
+ ]
+}

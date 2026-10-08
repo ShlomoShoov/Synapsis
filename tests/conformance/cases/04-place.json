@@ -1,0 +1,963 @@
+{
+ "title": "Place forms, admin codes and logical spaces",
+ "cases": [
+  {
+   "name": "a place with only an uncertainty",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-PLACE-MISSING",
+     "path": "place"
+    }
+   ]
+  },
+  {
+   "name": "unplaced together with a place",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:epss:CVE-2099-0001-20240302",
+     "type": "CYB.VULN.EPSS_SCORE",
+     "source": "src:first:epss",
+     "reliability": 85,
+     "reliability_basis": "model",
+     "time": {
+      "start": "2024-03-02T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "unplaced": true,
+      "admin": {
+       "country": "US"
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published",
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      }
+     ],
+     "measures": [
+      {
+       "name": "epss",
+       "value": 0.97,
+       "unit": "probability"
+      },
+      {
+       "name": "epss_percentile",
+       "value": 0.999,
+       "unit": "probability"
+      }
+     ]
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-PLACE-CONFLICT",
+     "path": "place.unplaced"
+    }
+   ]
+  },
+  {
+   "name": "a place form the type does not allow",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "admin": {
+       "country": "JP"
+      }
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-PLACE-FORM",
+     "path": "place.admin"
+    }
+   ]
+  },
+  {
+   "name": "a longitude out of range",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       200,
+       37.5
+      ],
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA",
+     "path": "place.point"
+    }
+   ]
+  },
+  {
+   "name": "a point without its uncertainty",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:usgs:conformance-quake",
+     "type": "GEO.EARTHQUAKE",
+     "source": "src:usgs:comcat",
+     "reliability": 95,
+     "reliability_basis": "measured",
+     "time": {
+      "start": "2024-01-01T07:10:09Z",
+      "precision": "second"
+     },
+     "place": {
+      "point": [
+       137.27,
+       37.5
+      ]
+     },
+     "known_at": "2024-01-01T08:10:09Z",
+     "known_at_basis": "proxy_publication_lag",
+     "measures": [
+      {
+       "name": "magnitude",
+       "value": 7.5,
+       "unit": "magnitude"
+      },
+      {
+       "name": "depth_km",
+       "value": 10,
+       "unit": "km"
+      }
+     ],
+     "attributes": {
+      "magnitude_type": "mww"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 0,
+     "code": "E-SCHEMA",
+     "path": "place.uncertainty_km"
+    }
+   ]
+  },
+  {
+   "name": "an uncertainty without a point",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:pollster:conformance-polling",
+     "type": "Pollster",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "name": "Conformance Polling",
+     "known_at": "2024-11-03T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:subdivision:US-PA",
+     "type": "Subdivision",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "name": "Pennsylvania",
+     "known_at": "2000-01-01T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:wikipedia-elections:poll/2024/US-PA/conformance-polling/20241101",
+     "type": "POL.POLL.STATE",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "time": {
+      "start": "2024-11-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "admin": {
+       "country": "US",
+       "subdivision": "US-PA"
+      },
+      "uncertainty_km": 5
+     },
+     "known_at": "2024-11-03T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "participants": [
+      {
+       "entity": "ent:pollster:conformance-polling",
+       "role": "publisher"
+      },
+      {
+       "entity": "ent:subdivision:US-PA",
+       "role": "about"
+      }
+     ],
+     "measures": [
+      {
+       "name": "margin",
+       "value": -1.5,
+       "unit": "points"
+      },
+      {
+       "name": "share_r",
+       "value": 47,
+       "unit": "percent"
+      },
+      {
+       "name": "share_d",
+       "value": 48.5,
+       "unit": "percent"
+      }
+     ],
+     "attributes": {
+      "election_year": 2024,
+      "republican": "Trump",
+      "democrat": "Harris"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 2,
+     "code": "E-SCHEMA",
+     "path": "place.uncertainty_km"
+    }
+   ]
+  },
+  {
+   "name": "a country code that is not ISO 3166-1",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:pollster:conformance-polling",
+     "type": "Pollster",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "name": "Conformance Polling",
+     "known_at": "2024-11-03T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:subdivision:US-PA",
+     "type": "Subdivision",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "name": "Pennsylvania",
+     "known_at": "2000-01-01T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:wikipedia-elections:poll/2024/US-PA/conformance-polling/20241101",
+     "type": "POL.POLL.STATE",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "time": {
+      "start": "2024-11-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "admin": {
+       "country": "QQ"
+      }
+     },
+     "known_at": "2024-11-03T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "participants": [
+      {
+       "entity": "ent:pollster:conformance-polling",
+       "role": "publisher"
+      },
+      {
+       "entity": "ent:subdivision:US-PA",
+       "role": "about"
+      }
+     ],
+     "measures": [
+      {
+       "name": "margin",
+       "value": -1.5,
+       "unit": "points"
+      },
+      {
+       "name": "share_r",
+       "value": 47,
+       "unit": "percent"
+      },
+      {
+       "name": "share_d",
+       "value": 48.5,
+       "unit": "percent"
+      }
+     ],
+     "attributes": {
+      "election_year": 2024,
+      "republican": "Trump",
+      "democrat": "Harris"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 2,
+     "code": "E-PLACE-ADMIN",
+     "path": "place.admin.country"
+    }
+   ]
+  },
+  {
+   "name": "a subdivision of another country",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:pollster:conformance-polling",
+     "type": "Pollster",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "name": "Conformance Polling",
+     "known_at": "2024-11-03T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:subdivision:US-PA",
+     "type": "Subdivision",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "name": "Pennsylvania",
+     "known_at": "2000-01-01T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:wikipedia-elections:poll/2024/US-PA/conformance-polling/20241101",
+     "type": "POL.POLL.STATE",
+     "source": "src:wikipedia:polls",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "time": {
+      "start": "2024-11-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "admin": {
+       "country": "US",
+       "subdivision": "CA-ON"
+      }
+     },
+     "known_at": "2024-11-03T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "participants": [
+      {
+       "entity": "ent:pollster:conformance-polling",
+       "role": "publisher"
+      },
+      {
+       "entity": "ent:subdivision:US-PA",
+       "role": "about"
+      }
+     ],
+     "measures": [
+      {
+       "name": "margin",
+       "value": -1.5,
+       "unit": "points"
+      },
+      {
+       "name": "share_r",
+       "value": 47,
+       "unit": "percent"
+      },
+      {
+       "name": "share_d",
+       "value": 48.5,
+       "unit": "percent"
+      }
+     ],
+     "attributes": {
+      "election_year": 2024,
+      "republican": "Trump",
+      "democrat": "Harris"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 2,
+     "code": "E-PLACE-ADMIN",
+     "path": "place.admin.subdivision"
+    }
+   ]
+  },
+  {
+   "name": "a former country (ISO 3166-3) is accepted",
+   "records": [
+    {
+     "kind": "event",
+     "id": "evt:opensanctions:conformance-listing",
+     "type": "RISK.LIST.ENTRY",
+     "source": "src:opensanctions:maritime",
+     "reliability": 80,
+     "reliability_basis": "B2",
+     "time": {
+      "start": "2024-06-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "admin": {
+       "country": "SU"
+      }
+     },
+     "known_at": "2024-06-01T00:00:00Z",
+     "known_at_basis": "published",
+     "participants": [],
+     "attributes": {
+      "risk_tags": [
+       "mare.shadow"
+      ],
+      "opensanctions_id": "conformance-listing"
+     }
+    }
+   ],
+   "rejected": []
+  },
+  {
+   "name": "a logical space no package declares",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.nowhere",
+       "path": [
+        "a"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 4,
+     "code": "E-LOGICAL-SPACE",
+     "path": "place.logical.space"
+    }
+   ]
+  },
+  {
+   "name": "a path deeper than the space allows",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.vendor_product",
+       "path": [
+        "a",
+        "b",
+        "c"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 4,
+     "code": "E-LOGICAL-DEPTH",
+     "path": "place.logical.path"
+    }
+   ]
+  },
+  {
+   "name": "a value outside a closed space",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.product_class",
+       "path": [
+        "TOASTER"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    }
+   ],
+   "rejected": [
+    {
+     "index": 4,
+     "code": "E-LOGICAL-VALUE",
+     "path": "place.logical.path[0]"
+    }
+   ]
+  },
+  {
+   "name": "a registered value of a closed space",
+   "records": [
+    {
+     "kind": "entity",
+     "id": "ent:cve:CVE-2099-0001",
+     "type": "Vulnerability",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "CVE-2099-0001",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-vendor:conformance-vendor",
+     "type": "Vendor",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Conformance Vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "entity",
+     "id": "ent:kev-product:conformance-vendor/widget",
+     "type": "Product",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "name": "Widget",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "relation",
+     "id": "rel:kev:conformance-vendor/widget",
+     "type": "PRODUCT_OF",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "from": "ent:kev-product:conformance-vendor/widget",
+     "to": "ent:kev-vendor:conformance-vendor",
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "published"
+    },
+    {
+     "kind": "event",
+     "id": "evt:kev:CVE-2099-0001",
+     "type": "CYB.VULN.KNOWN_EXPLOITED",
+     "source": "src:cisa:kev",
+     "reliability": 95,
+     "reliability_basis": "A1",
+     "time": {
+      "start": "2024-03-01T00:00:00Z",
+      "precision": "day"
+     },
+     "place": {
+      "logical": {
+       "space": "cyber.product_class",
+       "path": [
+        "EDGE_VPN",
+        "conformance-vendor"
+       ]
+      }
+     },
+     "known_at": "2024-03-02T00:00:00Z",
+     "known_at_basis": "proxy_publication_lag",
+     "text": {
+      "title": "Conformance Widget remote code execution",
+      "body": "The widget runs commands it receives.",
+      "lang": "en"
+     },
+     "participants": [
+      {
+       "entity": "ent:cve:CVE-2099-0001",
+       "role": "subject"
+      },
+      {
+       "entity": "ent:kev-product:conformance-vendor/widget",
+       "role": "affected_product"
+      },
+      {
+       "entity": "ent:kev-vendor:conformance-vendor",
+       "role": "vendor"
+      }
+     ],
+     "attributes": {
+      "due_date": "2024-03-22",
+      "known_ransomware_campaign_use": "Unknown",
+      "cwes": [
+       "CWE-78"
+      ]
+     },
+     "evidence": {
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "ref": "CVE-2099-0001"
+     }
+    }
+   ],
+   "rejected": []
+  }
+ ]
+}

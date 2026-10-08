@@ -1,0 +1,35 @@
+# OpenSanctions maritime: ships and shipping organisations on sanctions, detention and risk lists.
+package: opensanctions
+title: OpenSanctions maritime risk list
+description: >-
+  Each row of OpenSanctions' maritime export is one listing: a vessel (identified by IMO number) or an organisation,
+  with the risk tags and source datasets OpenSanctions assigns (sanction, shadow fleet, port-state detention, ...).
+  A listing is an event dated from the first day the feeder saw it; when OpenSanctions changes its tags, the API stores
+  a new version, so a rewind shows the tags as they stood.
+maintainer: synapsis-feeders
+namespaces:
+  records: [opensanctions]
+  entities: [opensanctions]
+
+sources:
+  - id: src:opensanctions:maritime
+    title: OpenSanctions maritime dataset (CSV export)
+    publisher: OpenSanctions
+    url: https://www.opensanctions.org/datasets/maritime/
+    license: CC BY-NC 4.0 (non-commercial use; a commercial licence is needed otherwise)
+    reliability: 85
+    reliability_basis: B2
+    publication_lag_days: 1
+    known_at_rule: The export time of the dataset version read (published).
+
+event_types:
+  - code: RISK.LIST.ENTRY
+    title: An entity appears on a sanctions or risk list
+    place: [admin, unplaced]
+    roles: {subject: [Vessel, Organization]}
+    attributes:
+      risk_tags: {type: string_list, max_items: 30, max_length: 60}
+      datasets: {type: string_list, max_items: 100, max_length: 100}
+      countries: {type: string_list, max_items: 50, max_length: 10}
+      listed_name: {type: string, max_length: 500}
+      opensanctions_id: {type: string, max_length: 200, required: true}

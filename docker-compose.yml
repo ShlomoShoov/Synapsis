@@ -1,0 +1,281 @@
+# Synapsis: the seven stores, the model services, the API (stand-in now, C# later) and one feeder per source.
+#
+#   docker compose up -d                                   # stores + embedder
+#   docker compose --profile dev up -d                     # + the Python stand-in API on :8080
+#   docker compose --profile dev --profile feeders up -d   # + every feeder on its schedule
+#   docker compose run --rm feeder-kev run kev --since 2021-11-01   # one feeder, once, any range
+#
+# Every feeder sends to ${SYNAPSIS_API_URL}. Default: the stand-in (http://api-dev:8080). When the C# API joins
+# (profile "app"), set SYNAPSIS_API_URL=http://api:8080 in .env; for an API running on your machine, use
+# http://host.docker.internal:<port>. Keys come only from .env, which is never committed (see .env.example).
+
+name: synapsis
+
+x-feeder: &feeder
+  image: synapsis/feeders:dev
+  build:
+    context: .
+    dockerfile: feeders/Dockerfile
+  profiles: [feeders]
+  restart: unless-stopped
+  environment: &feeder-env
+    SYNAPSIS_API_URL: ${SYNAPSIS_API_URL:-http://api-dev:8080}
+    SYNAPSIS_API_KEY: ${SYNAPSIS_API_KEY:-}
+    FEEDER_CONTACT: ${FEEDER_CONTACT:-}
+    FEEDER_STATE_DIR: /state
+    FEEDER_CACHE_DIR: /cache
+  volumes:
+    - feeder-state:/state
+    - feeder-cache:/cache
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+services:
+  # ------------------------------------------------------------------------------------------------ stores
+  mongo:
+    restart: unless-stopped
+    image: mongo:7.0.14
+    command: ["--replSet", "rs0", "--bind_ip_all", "--wiredTigerCacheSizeGB", "1"]
+    ports: ["27017:27017"]
+    volumes: [mongo-data:/data/db]
+    healthcheck:   # also initiates the single-node replica set that transactions need
+      test: ["CMD", "mongosh", "--quiet", "--eval",
+             "try { rs.status().ok } catch (e) { rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]}).ok }"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 5s
+
+  kafka:
+    restart: unless-stopped
+    image: apache/kafka:3.8.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
+    volumes: [kafka-data:/var/lib/kafka/data]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 15s
+      retries: 20
+
+  kafka-topics:   # one-shot: creates the topics, then exits
+    image: apache/kafka:3.8.0
+    depends_on: {kafka: {condition: service_healthy}}
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        for t in ingest.accepted:6 alerts.raised:3 registry.changed:1 dlq.ingest.accepted:1 dlq.alerts.raised:1; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+            --topic "$${t%%:*}" --partitions "$${t##*:}" --replication-factor 1
+        done
+
+  elasticsearch:
+    restart: unless-stopped
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"          # development only; enable security with TLS outside a laptop
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+      cluster.routing.allocation.disk.threshold_enabled: "false"
+    ports: ["9200:9200"]
+    volumes: [es-data:/usr/share/elasticsearch/data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s' > /dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+
+  neo4j:
+    restart: unless-stopped
+    image: neo4j:5.26.0-community
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-synapsis-dev-password}
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512M
+    ports: ["7474:7474", "7687:7687"]
+    volumes: [neo4j-data:/data]
+
+  redis:
+    restart: unless-stopped
+    image: redis:7.4.1-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: [redis-data:/data]
+
+  minio:   # the official minio/minio image is no longer on Docker Hub; this is Bitnami's last published build
+    restart: unless-stopped
+    image: bitnamilegacy/minio:2024.10.13
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-synapsis}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-synapsis-dev-password}
+      MINIO_DEFAULT_BUCKETS: synapsis-snapshots,synapsis-raw
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [minio-data:/bitnami/minio/data]
+
+  # ------------------------------------------------------------------------------------------------ local models
+  embedder:
+    restart: unless-stopped
+    image: synapsis/embedder:dev
+    build: {context: ., dockerfile: src/python/synapsis_embedder/Dockerfile}
+    environment:
+      SEARCH_MODEL: minishlab/potion-retrieval-32M
+      MEANING_MODEL: minishlab/potion-base-8M
+      RERANK_MODEL: BAAI/bge-small-en-v1.5
+      HF_HOME: /models/hf
+      FASTEMBED_CACHE_PATH: /models/fastembed
+    ports: ["8090:8090"]
+    volumes: [models:/models]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  llm:   # optional: written answers for /v1/ask; put the GGUF file in the models volume first
+    restart: unless-stopped
+    image: ghcr.io/ggml-org/llama.cpp:server-b5350
+    profiles: [ai]
+    command: ["-m", "/models/gguf/qwen2.5-1.5b-instruct-q4_k_m.gguf", "--host", "0.0.0.0", "--port", "8081", "-c", "4096"]
+    ports: ["8081:8081"]
+    volumes: [models:/models]
+
+  # ------------------------------------------------------------------------------------------------ API
+  api-dev:   # Python stand-in for the C# API: same routes for schemas, ingest, records, semantic search
+    restart: unless-stopped
+    image: synapsis/api-dev:dev
+    build: {context: ., dockerfile: src/python/synapsis_reference/Dockerfile}
+    profiles: [dev]
+    environment:
+      MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
+      MONGO_DB: synapsis
+      ES_URL: http://elasticsearch:9200
+      EMBEDDER_URL: http://embedder:8090
+      SYNAPSIS_API_KEY: ${SYNAPSIS_API_KEY:-}
+    ports: ["8080:8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      mongo: {condition: service_healthy}
+      elasticsearch: {condition: service_healthy}
+      embedder: {condition: service_healthy}
+
+  # The C# services and the engine join under profile "app" as their code lands (see the guide, sections 6-8).
+  api:
+    restart: unless-stopped
+    image: synapsis/api:dev
+    build: {context: src/dotnet, dockerfile: Synapsis.Api/Dockerfile}
+    profiles: [app]
+    environment:
+      Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
+      Kafka__Bootstrap: kafka:9092
+      Elastic__Url: http://elasticsearch:9200
+      Neo4j__Url: bolt://neo4j:7687
+      Neo4j__Password: ${NEO4J_PASSWORD:-synapsis-dev-password}
+      Redis__Url: redis:6379
+      Embedder__Url: http://embedder:8090
+      Llm__Url: http://llm:8081
+      Schemas__SeedDir: /app/schemas/seed
+    ports: ["8088:8080"]
+    depends_on:
+      mongo: {condition: service_healthy}
+      kafka-topics: {condition: service_completed_successfully}
+      elasticsearch: {condition: service_healthy}
+      embedder: {condition: service_healthy}
+
+  projector:
+    restart: unless-stopped
+    image: synapsis/projector:dev
+    build: {context: src/dotnet, dockerfile: Synapsis.Projector/Dockerfile}
+    profiles: [app]
+    environment: {Mongo__Url: "mongodb://mongo:27017/?replicaSet=rs0", Kafka__Bootstrap: "kafka:9092",
+                  Neo4j__Url: "bolt://neo4j:7687", Neo4j__Password: "${NEO4J_PASSWORD:-synapsis-dev-password}"}
+    depends_on: [api, neo4j]
+
+  indexer:
+    restart: unless-stopped
+    image: synapsis/indexer:dev
+    build: {context: src/dotnet, dockerfile: Synapsis.Indexer/Dockerfile}
+    profiles: [app]
+    environment: {Mongo__Url: "mongodb://mongo:27017/?replicaSet=rs0", Kafka__Bootstrap: "kafka:9092",
+                  Elastic__Url: "http://elasticsearch:9200", Embedder__Url: "http://embedder:8090"}
+    depends_on: [api, elasticsearch, embedder]
+
+  engine:
+    restart: unless-stopped
+    image: synapsis/engine:dev
+    build: {context: ., dockerfile: src/python/synapsis_engine/Dockerfile}
+    profiles: [app]
+    environment: {MONGO_URL: "mongodb://mongo:27017/?replicaSet=rs0", KAFKA_BOOTSTRAP: "kafka:9092",
+                  ES_URL: "http://elasticsearch:9200", REDIS_URL: "redis://redis:6379", SYNAPSIS_API_URL: "http://api:8080",
+                  EMBEDDER_URL: "http://embedder:8090"}
+    volumes: [engine-work:/work]
+    depends_on: [api, redis]
+
+  # ------------------------------------------------------------------------------------------------ feeders
+  # One service per source. "--every" keeps the feeder running and re-runs it on that interval (a failed run is
+  # retried after 1, 2, 4... minutes). Feeders without it load a closed archive once and exit; Docker restarts them
+  # only if they fail. Each gets only the key it needs; a scheduled feeder whose key is missing stays idle and says so.
+  feeder-kev:                {<<: *feeder, command: ["run", "kev", "--every", "24h"]}
+  feeder-kev-classes:        {<<: *feeder, command: ["run", "kev-classes"], restart: "on-failure:5"}
+  feeder-ransomware-live:    {<<: *feeder, command: ["run", "ransomware-live", "--every", "6h"]}
+  feeder-ucdp:               {<<: *feeder, command: ["run", "ucdp", "--every", "7d"]}
+  feeder-gdelt:              {<<: *feeder, command: ["run", "gdelt", "--every", "24h"]}
+  feeder-firms:
+    <<: *feeder
+    command: ["run", "firms", "--every", "6h"]
+    environment: {<<: *feeder-env, FIRMS_MAP_KEY: "${FIRMS_MAP_KEY:-}"}
+  feeder-fdic:               {<<: *feeder, command: ["run", "fdic", "--every", "7d"]}
+  feeder-delphi:             {<<: *feeder, command: ["run", "delphi"], restart: "on-failure:5"}
+  feeder-jhu-covid:          {<<: *feeder, command: ["run", "jhu-covid"], restart: "on-failure:5"}
+  feeder-reddit:             {<<: *feeder, command: ["run", "reddit", "--every", "24h"]}
+  feeder-hackernews:         {<<: *feeder, command: ["run", "hackernews", "--every", "6h"]}
+  feeder-wikipedia-elections: {<<: *feeder, command: ["run", "wikipedia-elections", "--every", "7d"]}
+  feeder-epss:               {<<: *feeder, command: ["run", "epss", "--every", "24h"]}
+  feeder-nvd:
+    <<: *feeder
+    command: ["run", "nvd", "--every", "6h"]
+    environment: {<<: *feeder-env, NVD_API_KEY: "${NVD_API_KEY:-}"}
+  feeder-opensanctions:      {<<: *feeder, command: ["run", "opensanctions", "--every", "24h"]}
+  feeder-gfw:
+    <<: *feeder
+    command: ["run", "gfw", "--every", "7d"]
+    environment: {<<: *feeder-env, GFW_TOKEN: "${GFW_TOKEN:-}"}
+  feeder-polymarket:         {<<: *feeder, command: ["run", "polymarket", "--every", "24h"]}
+  feeder-usgs:               {<<: *feeder, command: ["run", "usgs", "--every", "1h"]}
+  feeder-gtd:
+    <<: *feeder
+    command: ["run", "gtd"]
+    restart: "on-failure:5"
+    environment: {<<: *feeder-env, GTD_URL: "${GTD_URL:-}"}
+  feeder-xz-git:             {<<: *feeder, command: ["run", "xz-git", "--every", "24h"]}
+  feeder-fred:
+    <<: *feeder
+    command: ["run", "fred", "--every", "24h"]
+    environment: {<<: *feeder-env, FRED_API_KEY: "${FRED_API_KEY:-}"}
+
+volumes:
+  mongo-data:
+  kafka-data:
+  es-data:
+  neo4j-data:
+  redis-data:
+  minio-data:
+  models:
+  engine-work:
+  feeder-state:
+  feeder-cache:
