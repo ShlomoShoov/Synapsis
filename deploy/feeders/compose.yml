@@ -1,0 +1,88 @@
+# Synapsis feeders (demo only): one long-running service per public source. Start the core first.
+#
+#   cp deploy/feeders/.env.example deploy/feeders/.env        (first time only; fill in the keys you have)
+#   docker compose -f deploy/feeders/compose.yml up -d --build
+#   docker compose -f deploy/feeders/compose.yml down          (add -v to forget cursors and downloads too)
+#
+# Each feeder registers its own schema package at start-up, sends what is new at its source, then waits for its timer
+# (--every) or a manual trigger, and runs again. A manual trigger, for example for kev:
+#   docker kill --signal SIGUSR1 synapsis-feeders-feeder-kev-1
+#
+# Settings: deploy/feeders/.env, every name starting with FEEDERS_. The environment blocks below map each one onto the
+# name the feeder program reads (left: program, right: your setting). Each feeder receives only its own source key.
+
+name: synapsis-feeders
+
+networks:
+  default:
+    name: synapsis            # the core's network, where the API answers as http://api:8080
+    external: true
+
+volumes:
+  feeder-state:               # per feeder: cursor.json, runs.jsonl, rejections.jsonl, memo/, observed/
+  feeder-cache:               # downloaded archives (UCDP, GTD, EPSS, the git clone)
+
+x-feeder: &feeder
+  image: synapsis/feeders:dev
+  build: {context: ../.., dockerfile: feeders/Dockerfile}
+  restart: unless-stopped
+  environment: &feeder-env
+    SYNAPSIS_API_URL: ${FEEDERS_API_URL:-http://api:8080}
+    SYNAPSIS_API_KEY: ${FEEDERS_API_KEY:-}
+    FEEDER_CONTACT: ${FEEDERS_CONTACT:-}
+    FEEDER_STATE_DIR: /state
+    FEEDER_CACHE_DIR: /cache
+  volumes:
+    - feeder-state:/state
+    - feeder-cache:/cache
+  extra_hosts:
+    - "host.docker.internal:host-gateway"    # lets FEEDERS_API_URL point at an API running on the host
+
+services:
+  # ------------------------------------------------------------------------------------------------ cyber
+  feeder-kev:                 {<<: *feeder, command: ["serve", "kev", "--every", "24h"]}
+  feeder-kev-classes:         {<<: *feeder, command: ["serve", "kev-classes"]}
+  feeder-nvd:
+    <<: *feeder
+    command: ["serve", "nvd", "--every", "6h"]
+    environment: {<<: *feeder-env, NVD_API_KEY: "${FEEDERS_NVD_API_KEY:-}"}
+  feeder-epss:                {<<: *feeder, command: ["serve", "epss", "--every", "24h"]}
+  feeder-ransomware-live:     {<<: *feeder, command: ["serve", "ransomware-live", "--every", "6h"]}
+  feeder-xz-git:              {<<: *feeder, command: ["serve", "xz-git", "--every", "24h"]}
+
+  # ------------------------------------------------------------------------------------------------ conflict and security
+  feeder-ucdp:                {<<: *feeder, command: ["serve", "ucdp", "--every", "7d"]}
+  feeder-gdelt:               {<<: *feeder, command: ["serve", "gdelt", "--every", "24h"]}
+  feeder-gtd:
+    <<: *feeder
+    command: ["serve", "gtd"]
+    environment: {<<: *feeder-env, GTD_URL: "${FEEDERS_GTD_URL:-}"}
+  feeder-opensanctions:       {<<: *feeder, command: ["serve", "opensanctions", "--every", "24h"]}
+  feeder-gfw:
+    <<: *feeder
+    command: ["serve", "gfw", "--every", "7d"]
+    environment: {<<: *feeder-env, GFW_TOKEN: "${FEEDERS_GFW_TOKEN:-}"}
+
+  # ------------------------------------------------------------------------------------------------ environment
+  feeder-firms:
+    <<: *feeder
+    command: ["serve", "firms", "--every", "6h"]
+    environment: {<<: *feeder-env, FIRMS_MAP_KEY: "${FEEDERS_FIRMS_MAP_KEY:-}"}
+  feeder-usgs:                {<<: *feeder, command: ["serve", "usgs", "--every", "1h"]}
+
+  # ------------------------------------------------------------------------------------------------ finance and markets
+  feeder-fdic:                {<<: *feeder, command: ["serve", "fdic", "--every", "7d"]}
+  feeder-fred:
+    <<: *feeder
+    command: ["serve", "fred", "--every", "24h"]
+    environment: {<<: *feeder-env, FRED_API_KEY: "${FEEDERS_FRED_API_KEY:-}"}
+  feeder-polymarket:          {<<: *feeder, command: ["serve", "polymarket", "--every", "24h"]}
+
+  # ------------------------------------------------------------------------------------------------ health
+  feeder-delphi:              {<<: *feeder, command: ["serve", "delphi"]}
+  feeder-jhu-covid:           {<<: *feeder, command: ["serve", "jhu-covid"]}
+
+  # ------------------------------------------------------------------------------------------------ elections and social
+  feeder-wikipedia-elections: {<<: *feeder, command: ["serve", "wikipedia-elections", "--every", "7d"]}
+  feeder-reddit:              {<<: *feeder, command: ["serve", "reddit", "--every", "24h"]}
+  feeder-hackernews:          {<<: *feeder, command: ["serve", "hackernews", "--every", "6h"]}

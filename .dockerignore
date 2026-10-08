@@ -1,12 +1,13 @@
 # Keep secrets, local state and build output out of every image's build context.
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 **/.feeder-state
 **/.feeder-cache
 **/__pycache__
 **/*.pyc
 **/.pytest_cache
+**/.venv
 **/node_modules
 **/bin
 **/obj

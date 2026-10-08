@@ -1,6 +1,6 @@
 # Python stand-in for the C# API (development only). Build context: the repository root (it needs schemas/).
 FROM python:3.12.7-slim-bookworm
-COPY docker/certs/ /usr/local/share/ca-certificates/extra/
+COPY deploy/certs/ /usr/local/share/ca-certificates/extra/
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && update-ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
