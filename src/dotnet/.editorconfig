@@ -1,0 +1,6 @@
+# Code-style rules the build enforces (Directory.Build.props sets EnforceCodeStyleInBuild).
+root = true
+
+[*.cs]
+# A using directive that nothing in the file needs fails the build: each file lists exactly what it uses.
+dotnet_diagnostic.IDE0005.severity = warning

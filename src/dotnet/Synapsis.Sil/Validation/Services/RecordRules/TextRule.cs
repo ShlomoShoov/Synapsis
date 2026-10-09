@@ -1,8 +1,9 @@
-using Synapsis.Sil.Models.Records;
+using Synapsis.Sil.Models.Descriptions;
+using Synapsis.Sil.Models.Domain.Records;
+using Synapsis.Sil.Models.Domain.Vocabulary.Types;
 using Synapsis.Sil.Models.Results;
-using Synapsis.Sil.Models.Vocabulary.Types;
 using Synapsis.Sil.Validation.Abstractions;
-using Synapsis.Sil.Validation.Models;
+using Synapsis.Sil.Validation.Models.Requests;
 
 namespace Synapsis.Sil.Validation.Services.RecordRules;
 

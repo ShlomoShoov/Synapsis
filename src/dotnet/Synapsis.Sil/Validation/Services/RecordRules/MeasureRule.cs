@@ -1,11 +1,12 @@
 using System.Collections.Generic;
-using Synapsis.Sil.Models.Records;
-using Synapsis.Sil.Models.Records.Parts;
+using Synapsis.Sil.Models.Descriptions;
+using Synapsis.Sil.Models.Domain.Records;
+using Synapsis.Sil.Models.Domain.Records.Parts;
+using Synapsis.Sil.Models.Domain.Vocabulary.Terms;
+using Synapsis.Sil.Models.Domain.Vocabulary.Types;
 using Synapsis.Sil.Models.Results;
-using Synapsis.Sil.Models.Vocabulary.Terms;
-using Synapsis.Sil.Models.Vocabulary.Types;
 using Synapsis.Sil.Validation.Abstractions;
-using Synapsis.Sil.Validation.Models;
+using Synapsis.Sil.Validation.Models.Requests;
 
 namespace Synapsis.Sil.Validation.Services.RecordRules;
 

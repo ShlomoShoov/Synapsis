@@ -1,8 +1,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Synapsis.Sil.Models.Descriptions;
 using Synapsis.Sil.Models.Results;
 using Synapsis.Sil.Validation.Abstractions;
-using Synapsis.Sil.Validation.Models;
+using Synapsis.Sil.Validation.Models.Domain;
+using Synapsis.Sil.Validation.Models.Requests;
+using Synapsis.Sil.Validation.Models.Results;
 
 namespace Synapsis.Sil.Validation.Services.BatchRules;
 

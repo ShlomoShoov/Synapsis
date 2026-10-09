@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
-using Synapsis.Sil.Validation.Models;
+using Synapsis.Sil.Validation.Models.Requests;
+using Synapsis.Sil.Validation.Models.Results;
 
 namespace Synapsis.Sil.Validation.Abstractions;
 

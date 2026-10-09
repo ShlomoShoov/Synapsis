@@ -1,5 +1,5 @@
 using Synapsis.Sil.Models.Results;
-using Synapsis.Sil.Validation.Models;
+using Synapsis.Sil.Validation.Models.Requests;
 
 namespace Synapsis.Sil.Validation.Abstractions;
 

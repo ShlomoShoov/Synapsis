@@ -8,5 +8,7 @@
     <!-- Every public class and member needs a /// <summary>: a missing one (CS1591) fails the build. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Applies the style rules of .editorconfig during the build (unused usings fail it). -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 </Project>

@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using Synapsis.Sil.Fingerprinting.Abstractions;
-using Synapsis.Sil.Fingerprinting.Services;
+using Synapsis.Sil.Fingerprinting.Services.Domain;
 using Synapsis.Sil.Reading.Abstractions;
-using Synapsis.Sil.Reading.Services;
+using Synapsis.Sil.Reading.Services.Readers;
 using Synapsis.Sil.Registry.Abstractions;
-using Synapsis.Sil.Registry.Services;
+using Synapsis.Sil.Registry.Services.Domain;
 using Synapsis.Sil.Validation.Abstractions;
-using Synapsis.Sil.Validation.Services;
 using Synapsis.Sil.Validation.Services.BatchRules;
 using Synapsis.Sil.Validation.Services.EnvelopeRules;
+using Synapsis.Sil.Validation.Services.Orchestrators;
 using Synapsis.Sil.Validation.Services.RecordRules;
 
 namespace Synapsis.Sil;

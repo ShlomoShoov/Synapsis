@@ -1,5 +1,5 @@
+using Synapsis.Sil.Models.Domain.Vocabulary;
 using Synapsis.Sil.Models.Results;
-using Synapsis.Sil.Models.Vocabulary;
 
 namespace Synapsis.Sil.Reading.Abstractions;
 

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Json.Schema;
+using Synapsis.Sil.Models.Descriptions;
 using Synapsis.Sil.Models.Results;
 using Synapsis.Sil.Validation.Abstractions;
 

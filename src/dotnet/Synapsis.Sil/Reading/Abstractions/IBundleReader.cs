@@ -1,4 +1,4 @@
-using Synapsis.Sil.Models.Records;
+using Synapsis.Sil.Models.Dtos;
 using Synapsis.Sil.Models.Results;
 
 namespace Synapsis.Sil.Reading.Abstractions;

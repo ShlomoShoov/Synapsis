@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Synapsis.Sil.Models.Vocabulary.Attributes;
+using Synapsis.Sil.Models.Domain.Vocabulary.Attributes;
 using Synapsis.Sil.Registry.Abstractions;
 
 namespace Synapsis.Sil.Validation.Services.RecordRules;

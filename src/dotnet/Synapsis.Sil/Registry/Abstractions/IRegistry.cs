@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Synapsis.Sil.Models.Records;
-using Synapsis.Sil.Models.Vocabulary.Attributes;
-using Synapsis.Sil.Models.Vocabulary.Ownership;
-using Synapsis.Sil.Models.Vocabulary.Sources;
-using Synapsis.Sil.Models.Vocabulary.Terms;
-using Synapsis.Sil.Models.Vocabulary.Types;
+using Synapsis.Sil.Models.Domain.Records;
+using Synapsis.Sil.Models.Domain.Vocabulary.Attributes;
+using Synapsis.Sil.Models.Domain.Vocabulary.Ownership;
+using Synapsis.Sil.Models.Domain.Vocabulary.Sources;
+using Synapsis.Sil.Models.Domain.Vocabulary.Terms;
+using Synapsis.Sil.Models.Domain.Vocabulary.Types;
 
 namespace Synapsis.Sil.Registry.Abstractions;
 

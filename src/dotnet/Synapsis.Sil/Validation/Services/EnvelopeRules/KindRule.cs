@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Synapsis.Sil.Models.Descriptions;
 using Synapsis.Sil.Models.Results;
 using Synapsis.Sil.Validation.Abstractions;
 

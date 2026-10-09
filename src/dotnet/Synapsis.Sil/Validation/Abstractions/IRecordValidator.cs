@@ -1,6 +1,6 @@
-using Synapsis.Sil.Models.Records;
+using Synapsis.Sil.Models.Domain.Records;
 using Synapsis.Sil.Models.Results;
-using Synapsis.Sil.Validation.Models;
+using Synapsis.Sil.Validation.Models.Requests;
 
 namespace Synapsis.Sil.Validation.Abstractions;
 
