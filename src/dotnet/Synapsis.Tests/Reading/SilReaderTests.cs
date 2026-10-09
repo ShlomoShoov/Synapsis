@@ -5,7 +5,7 @@ using Synapsis.Sil.Reading;
 using Synapsis.Sil.Records;
 using Xunit;
 
-namespace Synapsis.Tests;
+namespace Synapsis.Tests.Reading;
 
 /// <summary>
 /// Checks that SIL JSON becomes the right typed classes, using the records of the conformance file 01-valid.json

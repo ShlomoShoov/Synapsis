@@ -10,7 +10,7 @@ using Synapsis.Sil.Reading;
 using Xunit;
 using YamlDotNet.Core;
 
-namespace Synapsis.Tests;
+namespace Synapsis.Tests.Reading;
 
 /// <summary>
 /// Checks that the real schema packages (feeders/packages/*.yaml and schemas/seed/core.yaml) read into the typed
