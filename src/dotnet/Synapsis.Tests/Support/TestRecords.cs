@@ -28,6 +28,30 @@ public static class TestRecords
         return ValidCase(4);
     }
 
+    /// <summary>A bank's quarterly report: a logical and an admin place, FDIC measures (case 3, the event).</summary>
+    public static JsonObject BankQuarter()
+    {
+        return ValidCase(3)[1];
+    }
+
+    /// <summary>The KEV catalog event on its own (case 1, the event).</summary>
+    public static JsonObject KevEvent()
+    {
+        return ValidCase(1)[4];
+    }
+
+    /// <summary>The CVE entity in the shared cve namespace (case 1, the first record).</summary>
+    public static JsonObject CveEntity()
+    {
+        return ValidCase(1)[0];
+    }
+
+    /// <summary>The product-class conclusion on its own (case 4, the last record).</summary>
+    public static JsonObject Classification()
+    {
+        return ValidCase(4)[5];
+    }
+
     /// <summary>The records of one case of 01-valid.json, as changeable JSON objects.</summary>
     public static List<JsonObject> ValidCase(int caseIndex)
     {
