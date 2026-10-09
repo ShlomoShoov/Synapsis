@@ -1,0 +1,12 @@
+<Project>
+  <!-- Settings every Synapsis C# project shares. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <!-- Every file lists its own usings, so it is clear where each type comes from. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- Every public class and member needs a /// <summary>: a missing one (CS1591) fails the build. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

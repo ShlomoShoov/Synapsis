@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.Sil", "Synapsis.Sil\Synapsis.Sil.csproj", "{EB82A377-C344-4578-A27F-E7D04D78D421}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.Tests", "Synapsis.Tests\Synapsis.Tests.csproj", "{29FC8ACB-770E-4795-94DB-B3F2CB096E29}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EB82A377-C344-4578-A27F-E7D04D78D421}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB82A377-C344-4578-A27F-E7D04D78D421}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB82A377-C344-4578-A27F-E7D04D78D421}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB82A377-C344-4578-A27F-E7D04D78D421}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29FC8ACB-770E-4795-94DB-B3F2CB096E29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29FC8ACB-770E-4795-94DB-B3F2CB096E29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29FC8ACB-770E-4795-94DB-B3F2CB096E29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29FC8ACB-770E-4795-94DB-B3F2CB096E29}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
