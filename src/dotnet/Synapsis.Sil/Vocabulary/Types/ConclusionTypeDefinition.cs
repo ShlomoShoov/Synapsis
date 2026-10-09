@@ -1,4 +1,4 @@
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Types;
 
 /// <summary>
 /// A conclusion type, for example classification, spark or forecast.

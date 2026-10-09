@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Synapsis.Sil.Vocabulary.Attributes;
 
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Types;
 
 /// <summary>
 /// An event type, for example CYB.VULN.KNOWN_EXPLOITED: which place forms, roles, measures, text and attributes

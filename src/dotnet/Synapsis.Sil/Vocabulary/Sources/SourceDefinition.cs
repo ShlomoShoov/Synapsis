@@ -1,4 +1,4 @@
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Sources;
 
 /// <summary>
 /// A source of records: who publishes it, how much to trust it, and how its "known at" time is set.

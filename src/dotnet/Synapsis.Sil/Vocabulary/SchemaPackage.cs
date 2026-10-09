@@ -1,12 +1,17 @@
 using System.Collections.Generic;
+using Synapsis.Sil.Vocabulary.Ownership;
+using Synapsis.Sil.Vocabulary.Sources;
+using Synapsis.Sil.Vocabulary.Terms;
+using Synapsis.Sil.Vocabulary.Types;
 using YamlDotNet.Serialization;
 
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary;
 
 /// <summary>
-/// A schema package: the vocabulary one source (or the core) adds to the record language. It declares sources,
-/// record types, roles, measures and logical spaces, and the id namespaces it owns. Its format is
-/// schemas/sil/schema-package.schema.json; the files are feeders/packages/*.yaml and schemas/seed/core.yaml.
+/// A schema package: one YAML file of vocabulary (feeders/packages/*.yaml, or schemas/seed/core.yaml), read into
+/// objects. It says which sources exist, which record types they may send, which roles, measures and logical spaces
+/// those types use, and which id namespaces the package owns. Its format is schemas/sil/schema-package.schema.json.
+/// Each section of the file is one property below, in the same order as in the files.
 /// </summary>
 public sealed class SchemaPackage
 {

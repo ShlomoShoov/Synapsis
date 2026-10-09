@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Synapsis.Sil.Vocabulary.Attributes;
 
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Types;
 
 /// <summary>
 /// An entity type, for example Bank or Vulnerability, and the attributes its records may carry.

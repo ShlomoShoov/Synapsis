@@ -1,4 +1,4 @@
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Types;
 
 /// <summary>
 /// The four forms of place an event type can allow. Fixed by the package format, so it is a C# enum.

@@ -1,4 +1,4 @@
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Attributes;
 
 /// <summary>
 /// The value type of a declared attribute. Fixed by the package format, so it is a C# enum.

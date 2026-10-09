@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Terms;
 
 /// <summary>
 /// A logical space: a tree of positions that are not on a map, such as vendor then product. A closed space only

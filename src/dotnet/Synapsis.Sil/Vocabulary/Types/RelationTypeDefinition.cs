@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Synapsis.Sil.Vocabulary.Attributes;
 
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Types;
 
 /// <summary>
 /// A relation type, for example PRODUCT_OF, and which entity types it may link.

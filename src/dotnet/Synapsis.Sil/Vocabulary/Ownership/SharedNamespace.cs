@@ -1,4 +1,4 @@
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Ownership;
 
 /// <summary>
 /// An authority namespace any package may create entities in (core only), with the entity type and the key format it

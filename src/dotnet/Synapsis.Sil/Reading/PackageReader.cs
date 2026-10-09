@@ -1,4 +1,4 @@
-using Synapsis.Sil.Packages;
+using Synapsis.Sil.Vocabulary;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 

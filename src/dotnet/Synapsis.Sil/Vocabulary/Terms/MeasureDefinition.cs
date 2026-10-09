@@ -1,4 +1,4 @@
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Terms;
 
 /// <summary>
 /// A measure: its unit, whether it may go below zero, and its allowed range.

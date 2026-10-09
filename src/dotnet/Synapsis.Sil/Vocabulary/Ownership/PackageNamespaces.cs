@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Ownership;
 
 /// <summary>
 /// The id namespaces a package owns. Only records whose source belongs to this package may use them, which keeps

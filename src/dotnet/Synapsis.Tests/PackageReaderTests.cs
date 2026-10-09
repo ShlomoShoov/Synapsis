@@ -1,6 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
-using Synapsis.Sil.Packages;
+using Synapsis.Sil.Vocabulary;
+using Synapsis.Sil.Vocabulary.Attributes;
+using Synapsis.Sil.Vocabulary.Ownership;
+using Synapsis.Sil.Vocabulary.Sources;
+using Synapsis.Sil.Vocabulary.Terms;
+using Synapsis.Sil.Vocabulary.Types;
 using Synapsis.Sil.Reading;
 using Xunit;
 using YamlDotNet.Core;

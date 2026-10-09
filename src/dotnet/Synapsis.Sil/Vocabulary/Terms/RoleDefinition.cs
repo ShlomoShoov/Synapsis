@@ -1,4 +1,4 @@
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Terms;
 
 /// <summary>
 /// A role an entity can play in an event, for example subject, actor or vendor.

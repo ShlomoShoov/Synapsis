@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
-namespace Synapsis.Sil.Packages;
+namespace Synapsis.Sil.Vocabulary.Attributes;
 
 /// <summary>
 /// One attribute a record type declares: its value type and the limits its values must respect.
