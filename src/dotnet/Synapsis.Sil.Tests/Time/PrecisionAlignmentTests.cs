@@ -1,8 +1,8 @@
 using System;
-using Synapsis.Sil.Validation.Services.RecordRules.Time;
+using Synapsis.Sil.Services.Time;
 using Xunit;
 
-namespace Synapsis.Sil.Tests.Validation.RecordRules.Time;
+namespace Synapsis.Sil.Tests.Time;
 
 /// <summary>Checks the alignment of a start to each of the eight precisions.</summary>
 public class PrecisionAlignmentTests

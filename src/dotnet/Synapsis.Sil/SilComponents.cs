@@ -10,6 +10,8 @@ using Synapsis.Sil.Validation.Services.BatchRules;
 using Synapsis.Sil.Validation.Services.EnvelopeRules;
 using Synapsis.Sil.Validation.Services.Orchestrators;
 using Synapsis.Sil.Validation.Services.RecordRules;
+using Synapsis.Sil.Versioning.Abstractions;
+using Synapsis.Sil.Versioning.Services.Domain;
 
 namespace Synapsis.Sil;
 
@@ -64,6 +66,12 @@ public static class SilComponents
     public static IBatchValidator CreateBatchValidator(IReferenceResolver storedRecords)
     {
         return new BatchValidator(CreateRecordValidator(), CreateFingerprinter(), BatchRulesInOrder(storedRecords));
+    }
+
+    /// <summary>Decides whether an accepted record is new, unchanged, or the next version of what is stored.</summary>
+    public static IVersionPlanner CreateVersionPlanner()
+    {
+        return new VersionPlanner();
     }
 
     /// <summary>Rules 1 and 2, on the raw JSON.</summary>

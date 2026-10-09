@@ -1,8 +1,8 @@
 using System;
-using Synapsis.Sil.Validation.Services.RecordRules.Time;
+using Synapsis.Sil.Services.Time;
 using Xunit;
 
-namespace Synapsis.Sil.Tests.Validation.RecordRules.Time;
+namespace Synapsis.Sil.Tests.Time;
 
 /// <summary>Checks the one accepted time format.</summary>
 public class InstantTests
@@ -28,5 +28,24 @@ public class InstantTests
     public void Other_formats_and_impossible_moments_are_refused(string text)
     {
         Assert.False(Instant.TryParse(text, out DateTime _));
+    }
+
+    /// <summary>Whole seconds are written without a fraction; a fraction is written to at most six digits.</summary>
+    [Fact]
+    public void An_instant_is_written_in_the_SIL_format()
+    {
+        DateTime whole = new DateTime(2026, 10, 9, 8, 15, 0, DateTimeKind.Utc);
+        Assert.Equal("2026-10-09T08:15:00Z", Instant.Format(whole));
+        Assert.Equal("2026-10-09T08:15:00.25Z", Instant.Format(whole.AddMilliseconds(250)));
+        Assert.Equal("2026-10-09T08:15:00.000001Z", Instant.Format(whole.AddTicks(15)));
+    }
+
+    /// <summary>What Format writes, TryParse reads back (to the microsecond).</summary>
+    [Fact]
+    public void A_written_instant_reads_back()
+    {
+        DateTime moment = new DateTime(2026, 10, 9, 8, 15, 7, DateTimeKind.Utc).AddTicks(1234560);
+        Assert.True(Instant.TryParse(Instant.Format(moment), out DateTime read));
+        Assert.Equal(moment, read);
     }
 }

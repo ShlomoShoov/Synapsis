@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Synapsis.Sil.Fingerprinting.Abstractions;
+using Synapsis.Sil.Models.Domain.Vocabulary;
 using Xunit;
 
 namespace Synapsis.Sil.Tests.Fingerprinting.Domain;
@@ -62,5 +63,29 @@ public class FingerprinterTests
     {
         using JsonDocument document = JsonDocument.Parse(json);
         return Fingerprinter.OfRecord(document.RootElement);
+    }
+
+    /// <summary>A package's comments, spacing and key order do not change its fingerprint.</summary>
+    [Fact]
+    public void A_package_fingerprint_ignores_comments_and_spacing()
+    {
+        string text = RepositoryFiles.ReadText("feeders/packages/kev.yaml");
+        string reformatted = "# a comment added at the top\n\n" + text.Replace("\nnamespaces:", "\n\n# owned namespaces\nnamespaces:");
+        Assert.Equal(Fingerprinter.OfPackage(Package(text)), Fingerprinter.OfPackage(Package(reformatted)));
+    }
+
+    /// <summary>A change in what a package declares changes its fingerprint.</summary>
+    [Fact]
+    public void A_package_fingerprint_changes_with_its_content()
+    {
+        string text = RepositoryFiles.ReadText("feeders/packages/kev.yaml");
+        string changed = text.Replace("reliability: 95", "reliability: 94");
+        Assert.NotEqual(Fingerprinter.OfPackage(Package(text)), Fingerprinter.OfPackage(Package(changed)));
+    }
+
+    /// <summary>Reads a package from its YAML text.</summary>
+    private static SchemaPackage Package(string text)
+    {
+        return SilComponents.CreatePackageReader().Read(text).Value!;
     }
 }

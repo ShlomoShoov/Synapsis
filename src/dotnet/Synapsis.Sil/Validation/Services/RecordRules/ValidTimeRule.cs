@@ -2,9 +2,9 @@ using System;
 using Synapsis.Sil.Models.Descriptions;
 using Synapsis.Sil.Models.Domain.Records.Parts;
 using Synapsis.Sil.Models.Results;
+using Synapsis.Sil.Services.Time;
 using Synapsis.Sil.Validation.Abstractions;
 using Synapsis.Sil.Validation.Models.Requests;
-using Synapsis.Sil.Validation.Services.RecordRules.Time;
 
 namespace Synapsis.Sil.Validation.Services.RecordRules;
 

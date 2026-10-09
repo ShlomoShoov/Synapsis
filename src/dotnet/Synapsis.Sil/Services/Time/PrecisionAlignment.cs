@@ -1,6 +1,6 @@
 using System;
 
-namespace Synapsis.Sil.Validation.Services.RecordRules.Time;
+namespace Synapsis.Sil.Services.Time;
 
 /// <summary>
 /// Whether a start time sits on the boundary of its precision. A record must not claim more precision than it has:

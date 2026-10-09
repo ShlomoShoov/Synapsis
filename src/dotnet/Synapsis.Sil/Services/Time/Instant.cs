@@ -2,16 +2,16 @@ using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Synapsis.Sil.Validation.Services.RecordRules.Time;
+namespace Synapsis.Sil.Services.Time;
 
 /// <summary>
-/// Reads the one time format SIL accepts: a UTC instant such as "2023-06-02T00:00:00Z", optionally with up to six
+/// Reads and writes the one time format SIL accepts: a UTC instant such as "2023-06-02T00:00:00Z", optionally with up to six
 /// digits of fractions of a second ("2023-06-02T07:10:09.5Z"). No offsets, no local times.
 /// </summary>
 public static class Instant
 {
     /// <summary>The format: year-month-dayThour:minute:second, optional .fraction, then Z.</summary>
-    private static readonly Regex Format = new Regex(
+    private static readonly Regex TextPattern = new Regex(
         "^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\\.([0-9]{1,6}))?Z$",
         RegexOptions.Compiled);
 
@@ -22,7 +22,7 @@ public static class Instant
     public static bool TryParse(string text, out DateTime instant)
     {
         instant = default;
-        Match match = Format.Match(text);
+        Match match = TextPattern.Match(text);
         if (!match.Success)
         {
             return false;
@@ -40,6 +40,23 @@ public static class Instant
         DateTime whole = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc);
         instant = whole.AddTicks(FractionTicks(match.Groups[7].Value));
         return true;
+    }
+
+    /// <summary>
+    /// Writes an instant in the SIL format: "2026-10-09T08:15:00Z", with the fraction of a second only when there is
+    /// one, to at most six digits ("2026-10-09T08:15:00.25Z"). <see cref="TryParse"/> reads it back unchanged.
+    /// </summary>
+    public static string Format(DateTime instant)
+    {
+        DateTime utc = instant.ToUniversalTime();
+        string whole = utc.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture);
+        long ticksInSecond = utc.Ticks % TimeSpan.TicksPerSecond;
+        string fraction = ticksInSecond.ToString("D7", CultureInfo.InvariantCulture).Substring(0, 6).TrimEnd('0');
+        if (fraction.Length == 0)
+        {
+            return whole + "Z";
+        }
+        return whole + "." + fraction + "Z";
     }
 
     /// <summary>One numeric group of the match.</summary>
