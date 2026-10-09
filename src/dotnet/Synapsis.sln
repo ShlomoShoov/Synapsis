@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.Storage", "Synapsi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.IntegrationTests", "Synapsis.IntegrationTests\Synapsis.IntegrationTests.csproj", "{BD217846-7C99-4662-812E-0A586999435E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.Api", "Synapsis.Api\Synapsis.Api.csproj", "{75B9F893-5CEE-408D-9D1B-F73FAB689CF2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.Api.Tests", "Synapsis.Api.Tests\Synapsis.Api.Tests.csproj", "{33EE3C4B-60B9-41E3-AB55-4DD7DC67F88C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +40,13 @@ Global
 		{BD217846-7C99-4662-812E-0A586999435E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD217846-7C99-4662-812E-0A586999435E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD217846-7C99-4662-812E-0A586999435E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{75B9F893-5CEE-408D-9D1B-F73FAB689CF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75B9F893-5CEE-408D-9D1B-F73FAB689CF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75B9F893-5CEE-408D-9D1B-F73FAB689CF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75B9F893-5CEE-408D-9D1B-F73FAB689CF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33EE3C4B-60B9-41E3-AB55-4DD7DC67F88C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33EE3C4B-60B9-41E3-AB55-4DD7DC67F88C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33EE3C4B-60B9-41E3-AB55-4DD7DC67F88C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33EE3C4B-60B9-41E3-AB55-4DD7DC67F88C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
