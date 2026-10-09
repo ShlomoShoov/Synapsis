@@ -1,5 +1,85 @@
+using System;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Synapsis.Api.Http.Models.Configuration;
+using Synapsis.Api.Http.Services.Filters;
+using Synapsis.Api.Http.Services.Handlers;
+using Synapsis.Api.Http.Services.Mappers;
+using Synapsis.Api.Ingestion.Abstractions;
+using Synapsis.Api.Ingestion.Services.Domain;
+using Synapsis.Api.Ingestion.Services.Orchestrators;
+using Synapsis.Api.Registration.Abstractions;
+using Synapsis.Api.Registration.Services.Orchestrators;
+using Synapsis.Api.Startup.Services.Initializers;
+using Synapsis.Api.Vocabulary.Abstractions;
+using Synapsis.Api.Vocabulary.Services.Providers;
+using Synapsis.Sil;
+using Synapsis.Sil.Fingerprinting.Abstractions;
+using Synapsis.Sil.PackageValidation.Abstractions;
+using Synapsis.Sil.Reading.Abstractions;
+using Synapsis.Sil.Registry.Abstractions;
+using Synapsis.Sil.Validation.Abstractions;
+using Synapsis.Sil.Versioning.Abstractions;
+using Synapsis.Storage;
+using Synapsis.Storage.Database.Models.Configuration;
 
+// The composition root: every component of the server is registered here, in three groups, then the HTTP pipeline.
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+ApiOptions api = builder.Configuration.GetSection("Api").Get<ApiOptions>() ?? new ApiOptions();
+MongoOptions mongo = builder.Configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
+
+AddRecordLanguage(builder.Services);
+builder.Services.AddSynapsisStorage(mongo);
+AddProcesses(builder.Services);
+AddHttp(builder, api);
+
 WebApplication app = builder.Build();
+app.UseExceptionHandler();
+app.UseRequestDecompression();
+app.MapControllers();
+app.MapHealthChecks("/health");
 app.Run();
+
+// Synapsis.Sil: the record language, built by its own composition (SilComponents), which holds the rule order.
+static void AddRecordLanguage(IServiceCollection services)
+{
+    services.AddSingleton<IBundleReader>(SilComponents.CreateBundleReader());
+    services.AddSingleton<IPackageReader>(SilComponents.CreatePackageReader());
+    services.AddSingleton<IFingerprinter>(SilComponents.CreateFingerprinter());
+    services.AddSingleton<IRegistryBuilder>(SilComponents.CreateRegistryBuilder());
+    services.AddSingleton<IPackageValidator>(SilComponents.CreatePackageValidator());
+    services.AddSingleton<IVersionPlanner>(SilComponents.CreateVersionPlanner());
+    services.AddSingleton<IBatchValidator>(provider => SilComponents.CreateBatchValidator(provider.GetRequiredService<IReferenceResolver>()));
+}
+
+// The processes: the vocabulary in force, registration, ingestion, and the work done once at start-up.
+static void AddProcesses(IServiceCollection services)
+{
+    services.AddSingleton(TimeProvider.System);
+    services.AddSingleton<IVocabularyProvider, VocabularyProvider>();
+    services.AddSingleton<IRegistrationOrchestrator, RegistrationOrchestrator>();
+    services.AddSingleton<IReceiptBuilder, ReceiptBuilder>();
+    services.AddSingleton<IIngestionOrchestrator, IngestionOrchestrator>();
+    services.AddHostedService<StartupInitializer>();
+}
+
+// HTTP: controllers with snake_case JSON, the key filter, gzip bodies, the body limit, errors as {code, message, details}.
+static void AddHttp(WebApplicationBuilder builder, ApiOptions api)
+{
+    builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = api.MaxBodyMb * 1024L * 1024L);
+    builder.Services.AddSingleton(api);
+    builder.Services.AddSingleton<ApiKeyFilter>();
+    builder.Services.AddControllers()
+        .AddJsonOptions(json => ApiJson.Apply(json.JsonSerializerOptions))
+        .ConfigureApiBehaviorOptions(behavior => behavior.InvalidModelStateResponseFactory = ErrorMapper.ToParameterResult);
+    builder.Services.AddRequestDecompression();
+    builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
+    builder.Services.AddProblemDetails();
+}
+
+/// <summary>The program's entry point, named so the HTTP tests can start the server in-process.</summary>
+public partial class Program
+{
+}
