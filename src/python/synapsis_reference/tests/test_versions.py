@@ -18,47 +18,41 @@ def head(*versions):
 
 
 def test_first_statement_is_version_one_known_as_sent():
-    d = plan(None, "A", t(2006, 5, 15), NOW, immutable=False)
+    d = plan(None, "A", t(2006, 5, 15), NOW)
     assert (d.outcome, d.version, d.known_at, d.ingested) == ("new", 1, t(2006, 5, 15), False)
 
 
 def test_same_content_as_latest_is_unchanged_even_with_an_earlier_known_at():
-    assert plan(head(("A", t(2025, 5, 16))), "A", t(2006, 5, 15), NOW, False).outcome == "unchanged"
+    assert plan(head(("A", t(2025, 5, 16))), "A", t(2006, 5, 15), NOW).outcome == "unchanged"
 
 
 def test_change_known_later_becomes_the_next_version_known_as_sent():
-    d = plan(head(("A", t(2006, 5, 15))), "B", t(2012, 8, 14), NOW, False)
+    d = plan(head(("A", t(2006, 5, 15))), "B", t(2012, 8, 14), NOW)
     assert (d.outcome, d.version, d.known_at, d.ingested) == ("versioned", 2, t(2012, 8, 14), False)
 
 
 def test_rereading_the_past_repeats_what_was_known_then():
     # A bank named A from 2006, renamed B in 2026; a re-run of 2025 sends A again with its 2025 known_at
     h = head(("A", t(2006, 5, 15)), ("B", t(2026, 5, 15)))
-    assert plan(h, "A", t(2025, 5, 16), NOW, False).outcome == "unchanged"
+    assert plan(h, "A", t(2025, 5, 16), NOW).outcome == "unchanged"
 
 
 def test_a_past_that_differs_from_what_was_known_then_is_stored_as_learned_now():
     # FDIC restated a 2025 figure: different from the version current in 2025, so it is new knowledge, known now
     h = head(("A", t(2006, 5, 15)), ("B", t(2026, 5, 15)))
-    d = plan(h, "C", t(2025, 5, 16), NOW, False)
+    d = plan(h, "C", t(2025, 5, 16), NOW)
     assert (d.outcome, d.version, d.known_at, d.ingested) == ("versioned", 3, NOW, True)
 
 
 def test_older_information_loaded_after_newer_is_known_now():
     # 2025 loaded first, then the 2006 backfill: nothing was current in 2006, so the 2006 name is learned now
-    d = plan(head(("B", t(2025, 5, 16))), "A", t(2006, 5, 15), NOW, False)
+    d = plan(head(("B", t(2025, 5, 16))), "A", t(2006, 5, 15), NOW)
     assert (d.outcome, d.version, d.known_at, d.ingested) == ("versioned", 2, NOW, True)
 
 
 def test_known_at_in_the_future_of_the_receipt_is_replaced_by_the_receive_time():
-    d = plan(head(("A", t(2006, 5, 15))), "B", t(2027, 1, 1), NOW, False)
+    d = plan(head(("A", t(2006, 5, 15))), "B", t(2027, 1, 1), NOW)
     assert (d.known_at, d.ingested) == (NOW, True)
-
-
-def test_an_immutable_type_refuses_a_change_but_not_a_repeat_of_its_past():
-    h = head(("A", t(2020, 1, 1)))
-    assert plan(h, "B", t(2021, 1, 1), NOW, immutable=True).outcome == "conflict"
-    assert plan(h, "A", t(2021, 1, 1), NOW, immutable=True).outcome == "unchanged"
 
 
 def test_current_at_picks_the_latest_version_known_by_then():

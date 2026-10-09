@@ -6,7 +6,6 @@ the same order, because a record that breaks two rules must get the same code fr
 from __future__ import annotations
 
 import json
-import math
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -119,8 +118,6 @@ class SilValidator:
         source = rec["source"]
         if source not in reg.sources:
             raise RecordError(E.E_REGISTRY_SOURCE, "source", f"source '{source}' is not registered")
-        if reg.is_deprecated("source", source):
-            raise RecordError(E.E_REGISTRY_DEPRECATED, "source", f"source '{source}' is deprecated")
         if rec["reliability_basis"] not in reg.reliability_bases:
             raise RecordError(E.E_SCHEMA, "reliability_basis", f"unknown reliability basis '{rec['reliability_basis']}'")
         if rec["known_at_basis"] not in reg.known_at_bases:
@@ -145,8 +142,6 @@ class SilValidator:
         tdef = reg.types[kind].get(rec["type"])
         if tdef is None:
             raise RecordError(E.E_REGISTRY_TYPE[kind], "type", f"{kind} type '{rec['type']}' is not registered")
-        if reg.is_deprecated(f"{kind}_type", rec["type"]):
-            raise RecordError(E.E_REGISTRY_DEPRECATED, "type", f"{kind} type '{rec['type']}' is deprecated")
 
         # valid time
         start = None
@@ -188,9 +183,6 @@ class SilValidator:
         if kind == "conclusion":
             if rec["method"]["by"] not in reg.method_by:
                 raise RecordError(E.E_SCHEMA, "method.by", f"method.by must be one of {sorted(reg.method_by)}")
-            preds = tdef.get("predicates")
-            if preds and rec["statement"]["predicate"] not in preds:
-                raise RecordError(E.E_SCHEMA, "statement.predicate", f"predicate not allowed for '{rec['type']}'")
             if rec["statement"]["predicate"] == "in_logical_space":     # rule A-CLOSED for classifications
                 space_name, _, rest = (rec["statement"].get("object") or "").partition("/")
                 space = reg.spaces.get(space_name)
@@ -234,8 +226,6 @@ class SilValidator:
             space = reg.spaces.get(lg["space"])
             if space is None:
                 raise RecordError(E.E_LOGICAL_SPACE, "place.logical.space", f"logical space '{lg['space']}' is not registered")
-            if reg.is_deprecated("logical_space", lg["space"]):
-                raise RecordError(E.E_REGISTRY_DEPRECATED, "place.logical.space", f"logical space '{lg['space']}' is deprecated")
             if len(lg["path"]) > space["max_depth"]:
                 raise RecordError(E.E_LOGICAL_DEPTH, "place.logical.path", f"'{lg['space']}' is at most {space['max_depth']} deep")
             if space["closed"] and lg["path"][0] not in space["values"]:
@@ -253,8 +243,6 @@ class SilValidator:
             if m["unit"] != mdef["unit"]:
                 raise RecordError(E.E_UNIT, f"measures[{i}].unit", f"'{name}' is measured in '{mdef['unit']}'")
             v = m["value"]
-            if isinstance(v, bool) or not math.isfinite(v):
-                raise RecordError(E.E_SCHEMA, f"measures[{i}].value", "a measure value must be a finite number")
             if v < 0 and not mdef["signed"]:
                 raise RecordError(E.E_MEASURE_NEGATIVE, f"measures[{i}].value", f"'{name}' cannot be negative")
             if (mdef["min"] is not None and v < mdef["min"]) or (mdef["max"] is not None and v > mdef["max"]):
@@ -355,7 +343,7 @@ class SilValidator:
                 if not types:
                     raise RecordError(E.E_REF_MISSING, f"participants[{i}].entity", f"entity '{eid}' is neither in the batch nor stored")
                 allowed = tdef["roles"][role]
-                if allowed and not types & set(allowed):
+                if not types & set(allowed):
                     raise RecordError(E.E_ROLE, f"participants[{i}].entity", f"role '{role}' takes {allowed}, not {sorted(types)}")
         elif p.kind == "relation":
             tdef = reg.types["relation"][r["type"]]
@@ -386,11 +374,9 @@ def _attribute_ok(value, rule: AttributeRule) -> tuple[bool, str]:
         if rule.max_items is not None and len(value) > rule.max_items:
             return False, f"at most {rule.max_items} items"
         items = value
-    elif t in ("number", "integer"):
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or (t == "integer" and not float(value).is_integer()):
-            return False, f"must be a{'n integer' if t == 'integer' else ' number'}"
-        if not math.isfinite(value):
-            return False, "must be finite"
+    elif t == "integer":
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not float(value).is_integer():
+            return False, "must be an integer"
         if rule.min is not None and value < rule.min or rule.max is not None and value > rule.max:
             return False, f"must lie in [{rule.min}, {rule.max}]"
         if rule.enum is not None and value not in rule.enum:
@@ -405,10 +391,6 @@ def _attribute_ok(value, rule: AttributeRule) -> tuple[bool, str]:
             datetime.strptime(value, "%Y-%m-%d")
         except ValueError:
             return False, "is not a real date"
-        return True, ""
-    elif t == "datetime":
-        if not isinstance(value, str) or not INSTANT.match(value):
-            return False, "must be a UTC instant like 2024-01-31T00:00:00Z"
         return True, ""
     else:
         return False, f"unknown attribute type {t}"

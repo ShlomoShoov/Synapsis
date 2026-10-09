@@ -77,37 +77,28 @@ def definitions(package: dict) -> dict[str, dict]:
     for src in package.get("sources") or []:
         out[f"source:{src['id']}"] = dict(sorted(src.items()))
     for t in package.get("entity_types") or []:
-        out[f"entity_type:{t['code']}"] = {"code": t["code"], "title": t["title"], "attributes": _attrs(t.get("attributes")),
-                                           "versioning": t.get("versioning", "versioned")}
+        out[f"entity_type:{t['code']}"] = {"code": t["code"], "title": t["title"], "attributes": _attrs(t.get("attributes"))}
     for t in package.get("event_types") or []:
         out[f"event_type:{t['code']}"] = {
             "code": t["code"], "title": t["title"], "place": sorted(t["place"]),
             "roles": {r: sorted(types) for r, types in sorted((t.get("roles") or {}).items())},
             "measures": sorted(t.get("measures") or []), "text": t.get("text", "none"),
-            "attributes": _attrs(t.get("attributes")), "missing": t.get("missing"),
-            "versioning": t.get("versioning", "versioned")}
+            "attributes": _attrs(t.get("attributes"))}
     for t in package.get("relation_types") or []:
         out[f"relation_type:{t['code']}"] = {"code": t["code"], "title": t["title"], "from": sorted(t["from"]),
-                                             "to": sorted(t["to"]), "attributes": _attrs(t.get("attributes")),
-                                             "versioning": t.get("versioning", "versioned")}
+                                             "to": sorted(t["to"]), "attributes": _attrs(t.get("attributes"))}
     for t in package.get("conclusion_types") or []:
-        out[f"conclusion_type:{t['code']}"] = {"code": t["code"], "title": t["title"],
-                                               "predicates": sorted(t["predicates"]) if t.get("predicates") else None,
-                                               "versioning": t.get("versioning", "versioned")}
+        out[f"conclusion_type:{t['code']}"] = {"code": t["code"], "title": t["title"]}
     for r in package.get("roles") or []:
         out[f"role:{r['code']}"] = {"code": r["code"], "title": r["title"]}
     for m in package.get("measures") or []:
         out[f"measure:{m['name']}"] = {"name": m["name"], "title": m["title"], "unit": m["unit"],
                                        "signed": bool(m.get("signed", False)), "min": m.get("min"), "max": m.get("max")}
     for s in package.get("logical_spaces") or []:
-        out[f"logical_space:{s['space']}"] = {"space": s["space"], "title": s["title"], "kind": s["kind"],
+        out[f"logical_space:{s['space']}"] = {"space": s["space"], "title": s["title"],
                                               "max_depth": s["max_depth"], "closed": bool(s.get("closed", False)),
                                               "values": sorted(s.get("values") or [])}
     return out
-
-
-def deprecated_keys(package: dict) -> set[str]:
-    return set(package.get("deprecated") or [])
 
 
 # ------------------------------------------------------------------------------------------------- change rules
@@ -148,9 +139,6 @@ def breaking_reasons(key: str, old: dict, new: dict) -> list[str]:
     elif kind == "shared_namespace":
         if old["entity_type"] != new["entity_type"] or old["key_pattern"] != new["key_pattern"]:
             r.append(f"{key}: entity type or key pattern changed")
-    elif kind in ("entity_type", "relation_type", "conclusion_type", "event_type") and \
-            old.get("versioning") == "versioned" and new.get("versioning") == "immutable":
-        r.append(f"{key}: versioned type made immutable")
     if kind == "entity_type":
         r += _attribute_breaks(key, old["attributes"], new["attributes"])
     elif kind == "event_type":
@@ -160,7 +148,7 @@ def breaking_reasons(key: str, old: dict, new: dict) -> list[str]:
         for role, types in old["roles"].items():
             if role not in new["roles"]:
                 r.append(f"{key}: role '{role}' removed")
-            elif new["roles"][role] and (not types or set(types) - set(new["roles"][role])):
+            elif set(types) - set(new["roles"][role]):
                 r.append(f"{key}: role '{role}' allows fewer entity types")
         lost_measures = set(old["measures"]) - set(new["measures"])
         if lost_measures:
@@ -168,8 +156,6 @@ def breaking_reasons(key: str, old: dict, new: dict) -> list[str]:
         widening = {("none", "optional"), ("required", "optional")}
         if old["text"] != new["text"] and (old["text"], new["text"]) not in widening:
             r.append(f"{key}: text policy {old['text']} -> {new['text']}")
-        if old.get("missing") != new.get("missing"):
-            r.append(f"{key}: missing-value semantics changed")
         r += _attribute_breaks(key, old["attributes"], new["attributes"])
     elif kind == "relation_type":
         for end in ("from", "to"):
@@ -177,9 +163,6 @@ def breaking_reasons(key: str, old: dict, new: dict) -> list[str]:
             if lost:
                 r.append(f"{key}: '{end}' lost entity types {sorted(lost)}")
         r += _attribute_breaks(key, old["attributes"], new["attributes"])
-    elif kind == "conclusion_type":
-        if new["predicates"] is not None and (old["predicates"] is None or set(old["predicates"]) - set(new["predicates"])):
-            r.append(f"{key}: allowed predicates narrowed")
     elif kind == "measure":
         if old["unit"] != new["unit"]:
             r.append(f"{key}: unit changed {old['unit']} -> {new['unit']}")
@@ -190,8 +173,6 @@ def breaking_reasons(key: str, old: dict, new: dict) -> list[str]:
         if new["max"] is not None and (old["max"] is None or new["max"] < old["max"]):
             r.append(f"{key}: maximum lowered")
     elif kind == "logical_space":
-        if old["kind"] != new["kind"]:
-            r.append(f"{key}: kind changed {old['kind']} -> {new['kind']}")
         if new["max_depth"] < old["max_depth"]:
             r.append(f"{key}: max_depth lowered {old['max_depth']} -> {new['max_depth']}")
         if new["closed"] and not old["closed"]:
@@ -208,7 +189,7 @@ def diff(old: dict[str, dict], new: dict[str, dict]) -> tuple[list[dict], list[s
     for key in sorted(set(old) | set(new)):
         if key not in new:
             changes.append({"op": "remove", "key": key})
-            breaks.append(f"{key}: removed (deprecate it instead)")
+            breaks.append(f"{key}: removed (add a new code instead; the old one stays)")
         elif key not in old:
             changes.append({"op": "add", "key": key})
         elif canonical_json(old[key]) != canonical_json(new[key]):

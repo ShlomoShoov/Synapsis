@@ -8,7 +8,6 @@ from __future__ import annotations
 E_KIND = "E-KIND"
 E_SCHEMA = "E-SCHEMA"
 E_REGISTRY_SOURCE = "E-REGISTRY-SOURCE"
-E_REGISTRY_DEPRECATED = "E-REGISTRY-DEPRECATED"
 E_ID_NAMESPACE = "E-ID-NAMESPACE"
 E_REGISTRY_TYPE = {
     "entity": "E-REGISTRY-ENTITY-TYPE",
@@ -42,7 +41,6 @@ E_ID_CONFLICT = "E-ID-CONFLICT"
 # --- request-level codes ---------------------------------------------------------------------------------------------
 E_BUNDLE = "E-BUNDLE"
 E_PARAM = "E-PARAM"
-E_BATCH_CONFLICT = "E-BATCH-CONFLICT"
 E_TOO_LARGE = "E-TOO-LARGE"
 E_AUTH = "E-AUTH"
 E_NOT_FOUND = "E-NOT-FOUND"

@@ -11,7 +11,6 @@ event_types:
     title: One day's value of a public-health signal for one place
     place: [admin, logical]
     measures: [admissions, cases, cli_share, symptom_search, wcli_share]
-    missing: "null"
     attributes:
       issue: {type: date, title: Date of the version stored (Delphi)}
       lag_days: {type: integer, min: 0, title: Days between the value's date and that version}
@@ -24,5 +23,5 @@ measures:
   - {name: wcli_share, title: Weighted share of survey respondents with COVID-like illness, unit: percent, min: 0, max: 100}
 
 logical_spaces:
-  - {space: health.signal, title: Data source then signal name, kind: tree, max_depth: 2}
-  - {space: health.region, title: Country then province as the source names them, kind: tree, max_depth: 2}
+  - {space: health.signal, title: Data source then signal name, max_depth: 2}
+  - {space: health.region, title: Country then province as the source names them, max_depth: 2}

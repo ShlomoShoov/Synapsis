@@ -29,7 +29,6 @@ event_types:
     roles: &gtd_roles {actor: [ArmedActor]}
     measures: &gtd_measures [killed, wounded]
     text: optional
-    missing: "null"
     attributes: &gtd_attributes
       gtd_eventid: {type: string, max_length: 20, required: true}
       target_type: {type: string, max_length: 100}
@@ -38,14 +37,14 @@ event_types:
       success: {type: boolean}
       suicide: {type: boolean}
       specificity: {type: integer, min: 1, max: 5}
-  - {code: SEC.ATTACK.ARMED_ASSAULT, title: Armed assault, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, missing: "null", attributes: *gtd_attributes}
-  - {code: SEC.ATTACK.BOMBING, title: Bombing or explosion, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, missing: "null", attributes: *gtd_attributes}
-  - {code: SEC.ATTACK.HIJACKING, title: Hijacking, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, missing: "null", attributes: *gtd_attributes}
-  - {code: SEC.ATTACK.HOSTAGE_BARRICADE, title: Hostage taking (barricade incident), place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, missing: "null", attributes: *gtd_attributes}
-  - {code: SEC.ATTACK.KIDNAPPING, title: Hostage taking (kidnapping), place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, missing: "null", attributes: *gtd_attributes}
-  - {code: SEC.ATTACK.FACILITY, title: Facility or infrastructure attack, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, missing: "null", attributes: *gtd_attributes}
-  - {code: SEC.ATTACK.UNARMED_ASSAULT, title: Unarmed assault, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, missing: "null", attributes: *gtd_attributes}
-  - {code: SEC.ATTACK.UNKNOWN, title: Attack of unknown type, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, missing: "null", attributes: *gtd_attributes}
+  - {code: SEC.ATTACK.ARMED_ASSAULT, title: Armed assault, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, attributes: *gtd_attributes}
+  - {code: SEC.ATTACK.BOMBING, title: Bombing or explosion, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, attributes: *gtd_attributes}
+  - {code: SEC.ATTACK.HIJACKING, title: Hijacking, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, attributes: *gtd_attributes}
+  - {code: SEC.ATTACK.HOSTAGE_BARRICADE, title: Hostage taking (barricade incident), place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, attributes: *gtd_attributes}
+  - {code: SEC.ATTACK.KIDNAPPING, title: Hostage taking (kidnapping), place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, attributes: *gtd_attributes}
+  - {code: SEC.ATTACK.FACILITY, title: Facility or infrastructure attack, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, attributes: *gtd_attributes}
+  - {code: SEC.ATTACK.UNARMED_ASSAULT, title: Unarmed assault, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, attributes: *gtd_attributes}
+  - {code: SEC.ATTACK.UNKNOWN, title: Attack of unknown type, place: *gtd_place, roles: *gtd_roles, measures: *gtd_measures, text: optional, attributes: *gtd_attributes}
 
 measures:
   - {name: killed, title: People killed, unit: count, min: 0}

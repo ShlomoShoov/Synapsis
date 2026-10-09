@@ -1,7 +1,7 @@
 """BatchSender: groups records into batches of at most FEEDER_BATCH_SIZE (5,000), sends them, reads the receipts.
 
-Batch ids are derived from content (feeder name + hash of the records), so re-sending the same records reuses the
-same id and the API answers with its stored receipt instead of doing the work twice."""
+Batch ids are derived from content (feeder name + hash of the records), so the same records always travel under the
+same id; the API answers records it already holds with "unchanged"."""
 from __future__ import annotations
 
 import hashlib
@@ -17,10 +17,9 @@ log = logging.getLogger("feeder.batch")
 
 
 class BatchSender:
-    def __init__(self, api: SynapsisApi | None, feeder: str, producer: str, package: str, package_version: int | None,
-                 batch_size: int, state: FeederState, dry_run_dir: Path | None = None):
+    def __init__(self, api: SynapsisApi | None, feeder: str, producer: str, batch_size: int, state: FeederState,
+                 dry_run_dir: Path | None = None):
         self.api, self.feeder, self.producer = api, feeder, producer
-        self.package, self.package_version = package, package_version
         self.batch_size, self.state, self.dry_run_dir = batch_size, state, dry_run_dir
         self.buffer: list[dict] = []
         self.counts: Counter = Counter()
@@ -40,10 +39,7 @@ class BatchSender:
     def _send(self, records: list[dict]) -> None:
         digest = hashlib.sha256(json.dumps(records, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
                                 .encode("utf-8")).hexdigest()[:24]
-        bundle = {"sil": "1.2", "batch_id": f"{self.feeder}-{digest}", "producer": self.producer,
-                  "package": self.package, "records": records}
-        if self.package_version:
-            bundle["package_version"] = self.package_version
+        bundle = {"sil": "1.2", "batch_id": f"{self.feeder}-{digest}", "producer": self.producer, "records": records}
         self.batches += 1
         if self.dry_run_dir is not None:
             self.dry_run_dir.mkdir(parents=True, exist_ok=True)
@@ -59,19 +55,11 @@ class BatchSender:
                 self._send(records[half:])
                 return
             raise
-        if receipt.get("replayed"):
-            # the API already holds this exact batch: nothing new was written this time
-            self.counts["received"] += receipt["counts"]["received"]
-            self.counts["replayed"] += receipt["counts"]["received"]
-            log.info("%s %s: replay of a stored batch, nothing written", self.feeder, bundle["batch_id"])
-            return
         for k, v in receipt["counts"].items():
             self.counts[k] += v
         for r in receipt.get("rejected", []):
             self.codes[r["code"]] += 1
         self.state.log_rejections(bundle["batch_id"], receipt.get("rejected", []))
-        log.info("%s %s: %s%s", self.feeder, bundle["batch_id"], receipt["status"],
-                 " (replayed)" if receipt.get("replayed") else "",
-                 extra={"counts": receipt["counts"]})
+        log.info("%s %s: %s", self.feeder, bundle["batch_id"], receipt["status"])
         log.info("   new %d, versioned %d, unchanged %d, rejected %d", receipt["counts"]["new"],
                  receipt["counts"]["versioned"], receipt["counts"]["unchanged"], receipt["counts"]["rejected"])

@@ -16,8 +16,7 @@ from pymongo.errors import DuplicateKeyError
 
 from .errors import (ApiError, E_NOT_FOUND, E_SCHEMA_BREAKING, E_SCHEMA_OWNERSHIP, E_SCHEMA_PACKAGE,
                      E_SCHEMA_REF, E_SCHEMA_VERSION)
-from .packages import (PackageSchema, check_references, content_hash, definitions, deprecated_keys, diff,
-                       parse_package)
+from .packages import PackageSchema, check_references, content_hash, definitions, diff, parse_package
 from .registry import RegistrySnapshot
 
 
@@ -75,7 +74,7 @@ class RegistryStore:
         entries = list(self.db.registry_entries.find({}).sort("_id", 1))
         return {"revision": self.current_revision(),
                 "definitions": [{"key": e["_id"], "owner": e["owner"], "since_version": e["since_version"],
-                                 "deprecated": bool(e.get("deprecated")), "definition": e["def"]} for e in entries]}
+                                 "definition": e["def"]} for e in entries]}
 
     # ------------------------------------------------------------------------------------------------- writing
     def put_package(self, name: str, raw: bytes | str | dict, content_type: str | None, actor: str,
@@ -97,11 +96,6 @@ class RegistryStore:
         old_pkg = self.db.schema_packages.find_one({"_id": f"{name}@{head['version']}"})["body"] if head else None
         new_defs = definitions(pkg)
         old_defs = definitions(old_pkg) if old_pkg else {}
-        dep_new, dep_old = deprecated_keys(pkg), deprecated_keys(old_pkg) if old_pkg else set()
-        foreign = [k for k in dep_new if k not in new_defs]
-        if foreign:
-            raise ApiError(422, E_SCHEMA_PACKAGE, "A package may only deprecate definitions it owns.",
-                           [{"message": k} for k in foreign])
 
         owned = list(self.db.registry_entries.find({"_id": {"$in": list(new_defs)}, "owner": {"$ne": name}},
                                                    {"_id": 1, "owner": 1}))
@@ -110,8 +104,6 @@ class RegistryStore:
                            [{"key": d["_id"], "owner": d["owner"]} for d in owned])
 
         changes, breaks = diff(old_defs, new_defs)
-        changes += [{"op": "deprecate", "key": k} for k in sorted(dep_new - dep_old)]
-        changes += [{"op": "undeprecate", "key": k} for k in sorted(dep_old - dep_new)]
         if breaks:
             raise ApiError(409, E_SCHEMA_BREAKING, f"{len(breaks)} change(s) would invalidate stored records.",
                            [{"message": b} for b in breaks])
@@ -139,8 +131,7 @@ class RegistryStore:
             for key, d in new_defs.items():
                 since = existing[key]["since_version"] if key in existing else version
                 db.registry_entries.replace_one({"_id": key}, {"_id": key, "owner": name, "since_version": since,
-                                                               "updated_version": version, "def": d,
-                                                               "deprecated": key in dep_new}, upsert=True,
+                                                               "updated_version": version, "def": d}, upsert=True,
                                                 session=session)
             if head is None:
                 db.schema_heads.insert_one({"_id": name, "version": version, "hash": new_hash, "updated_at": now},

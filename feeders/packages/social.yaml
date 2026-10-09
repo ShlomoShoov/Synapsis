@@ -25,4 +25,4 @@ event_types:
       post: {type: string, max_length: 300, required: true}
 
 logical_spaces:
-  - {space: social.forum, title: Platform then community, kind: tree, max_depth: 2}
+  - {space: social.forum, title: Platform then community, max_depth: 2}

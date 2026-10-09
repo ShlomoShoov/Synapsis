@@ -102,7 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except Exception as exc:  # noqa: BLE001
             raise ApiError(400, E.E_PARAM, f"as_of must be a date or a UTC instant: {exc}") from exc
 
-    @app.get("/v1/health")
+    @app.get("/health")
     def health():
         services.client.admin.command("ping")
         backlog = services.db.outbox.count_documents({"topic": "ingest.accepted", "indexed_at": None})
@@ -110,19 +110,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "search": bool(services.search), "index_backlog": backlog}
 
     # ----------------------------------------------------------------------------------------------- schemas
-    @app.get("/v1/schemas")
+    @app.get("/schemas")
     def list_schemas():
         return {"packages": services.registry_store.list_packages(), "revision": services.registry_store.current_revision()}
 
-    @app.get("/v1/schemas/{package}")
+    @app.get("/schemas/{package}")
     def get_schema(package: str, version: int | None = None):
         return services.registry_store.get_package(package, version)
 
-    @app.get("/v1/schemas/{package}/versions")
+    @app.get("/schemas/{package}/versions")
     def schema_versions(package: str):
         return {"package": package, "versions": services.registry_store.versions(package)}
 
-    @app.put("/v1/schemas/{package}")
+    @app.put("/schemas/{package}")
     async def put_schema(package: str, request: Request, dry_run: bool = False,
                          if_match: str | None = Header(default=None),
                          authorization: str | None = Header(default=None), x_api_key: str | None = Header(default=None)):
@@ -135,12 +135,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             services.registry.invalidate()
         return JSONResponse(status_code=status, content=result)
 
-    @app.get("/v1/registry")
+    @app.get("/registry")
     def registry():
         return services.registry_store.registry()
 
     # ----------------------------------------------------------------------------------------------- ingest
-    @app.post("/v1/ingest")
+    @app.post("/ingest")
     async def ingest(request: Request, dry_run: bool = False, authorization: str | None = Header(default=None),
                      x_api_key: str | None = Header(default=None)):
         who = principal_of(authorization, x_api_key)
@@ -149,16 +149,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                                           dry_run)
         return JSONResponse(content=_jsonable(receipt))
 
-    @app.get("/v1/receipts/{batch_id}")
+    @app.get("/receipts/{batch_id}")
     def receipt(batch_id: str):
-        doc = services.db.receipts.find_one({"_id": batch_id})
+        """The latest receipt of this batch id (a batch sent again gets a receipt of its own)."""
+        doc = services.db.receipts.find_one({"batch_id": batch_id}, sort=[("received_at", -1)])
         if not doc:
             raise ApiError(404, E.E_NOT_FOUND, f"No receipt for batch '{batch_id}'.")
         doc.pop("_id")
         return _jsonable(doc)
 
     # ----------------------------------------------------------------------------------------------- reads
-    @app.get("/v1/records/{record_id:path}")
+    @app.get("/records/{record_id:path}")
     def record(record_id: str, as_of: str | None = None, source: str | None = None):
         """Every source's latest version of this id known by as_of (ids may contain '/')."""
         found = services.records.record_as_of(record_id, as_of_param(as_of), source)
@@ -167,11 +168,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"id": record_id, "as_of": as_of_param(as_of).isoformat(),
                 "statements": [_jsonable(_public(d)) for d in found]}
 
-    @app.get("/v1/stats")
+    @app.get("/stats")
     def stats():
         return services.records.stats()
 
-    @app.get("/v1/search/semantic")
+    @app.get("/search/semantic")
     def semantic(q: str = Query(min_length=2, max_length=500), as_of: str | None = None, k: int = Query(20, ge=1, le=100),
                  kinds: str | None = None, types: str | None = None, sources: str | None = None, rerank: bool = False,
                  mode: str = Query("hybrid", pattern="^(hybrid|vector|keyword)$")):

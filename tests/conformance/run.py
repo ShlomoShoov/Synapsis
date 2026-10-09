@@ -3,7 +3,7 @@ C# API).
 
   python tests/conformance/run.py --api http://localhost:8080 [--only 03-time] [--verbose]
 
-Each case in cases/*.json is sent as one bundle to POST /v1/ingest?dry_run=true, so nothing is written. A record case
+Each case in cases/*.json is sent as one bundle to POST /ingest?dry_run=true, so nothing is written. A record case
 passes when the receipt rejects exactly the listed records with the listed codes (and paths, where a case gives one)
 and accepts every other record. A request case passes when the API answers with the listed status and code.
 
@@ -42,8 +42,8 @@ def send(api: str, method: str, path: str, body: bytes, headers: dict, key: str 
 
 
 def post(api: str, body: bytes, headers: dict, key: str | None) -> tuple[int, dict]:
-    """POST one bundle to /v1/ingest?dry_run=true, so nothing is written."""
-    return send(api, "POST", "/v1/ingest?dry_run=true", body, {"Content-Type": "application/json", **headers}, key)
+    """POST one bundle to /ingest?dry_run=true, so nothing is written."""
+    return send(api, "POST", "/ingest?dry_run=true", body, {"Content-Type": "application/json", **headers}, key)
 
 
 def register_packages(api: str, key: str | None) -> None:
@@ -53,7 +53,7 @@ def register_packages(api: str, key: str | None) -> None:
     for _ in range(3):
         retry = []
         for path in pending:
-            status, body = send(api, "PUT", f"/v1/schemas/{path.stem}", path.read_bytes(),
+            status, body = send(api, "PUT", f"/schemas/{path.stem}", path.read_bytes(),
                                 {"Content-Type": "application/yaml"}, key)
             if status in (200, 201):
                 continue

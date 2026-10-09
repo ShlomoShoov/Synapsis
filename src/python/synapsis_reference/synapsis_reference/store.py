@@ -1,4 +1,4 @@
-"""MongoRecordStore: the truth. One collection per record kind, plus raw_bundles, receipts and outbox.
+"""MongoRecordStore: the truth. One collection per record kind, plus receipts and outbox.
 
 Each stored document is the validated record plus storage fields:
   _id      '<id>|<source>|<version>'  (a record is identified by its id and its source; versions never overwrite)
@@ -44,6 +44,7 @@ class MongoRecordStore:
         self.db.conclusions.create_index([("type", ASCENDING), ("about", ASCENDING)])
         self.db.conclusions.create_index([("premises", ASCENDING)])
         self.db.receipts.create_index([("producer", ASCENDING), ("received_at", DESCENDING)])
+        self.db.receipts.create_index([("batch_id", ASCENDING), ("received_at", DESCENDING)])
         self.db.outbox.create_index([("sent_at", ASCENDING)])
         self.db.outbox.create_index([("indexed_at", ASCENDING)])
 
@@ -113,5 +114,4 @@ class MongoRecordStore:
             out[name] = sorted(({"source": r["_id"]["source"], "type": r["_id"]["type"], "documents": r["n"],
                                  "distinct_ids": r["distinct"]} for r in rows), key=lambda r: (r["source"], r["type"]))
         out["receipts"] = self.db.receipts.estimated_document_count()
-        out["raw_bundles"] = self.db.raw_bundles.estimated_document_count()
         return out

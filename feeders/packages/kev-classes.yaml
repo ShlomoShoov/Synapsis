@@ -21,7 +21,6 @@ sources:
 logical_spaces:
   - space: cyber.product_class
     title: Functional class of a product, then vendor
-    kind: tree
     max_depth: 2
     closed: true
     values: [BACKUP_STORAGE, BROWSER, DEV_TOOLS, EDGE_VPN, EMAIL_COLLAB, ENTERPRISE_APP, FIREWALL, IDENTITY, IOT_OT,

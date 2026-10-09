@@ -32,4 +32,4 @@ measures:
   - {name: rate, title: Interest rate or spread, unit: percent, signed: true, min: -50, max: 100}
 
 logical_spaces:
-  - {space: finance.series, title: Publisher then series id, kind: tree, max_depth: 2}
+  - {space: finance.series, title: Publisher then series id, max_depth: 2}

@@ -48,14 +48,11 @@ event_types:
     measures: [assets, deposits, deposits_uninsured, deposits_brokered, deposits_core, equity, roa, net_chargeoffs_ratio,
                noncurrent_loans_ratio, securities, afs_amortized_cost, afs_fair_value, htm_amortized_cost, htm_fair_value,
                net_loans, leverage_ratio, interest_expense_ratio, net_interest_margin]
-    missing: "null"
-    versioning: versioned
   - code: FIN.BANK.FAILURE
     title: A bank fails and is closed
     place: [logical, admin]
     roles: {subject: [Bank]}
     measures: [assets_at_failure, deposits_at_failure, estimated_cost]
-    missing: "null"
     attributes: &failure_attributes
       resolution: {type: string, max_length: 20}
       insurance_fund: {type: string, max_length: 20}
@@ -67,7 +64,6 @@ event_types:
     place: [logical, admin]
     roles: {subject: [Bank]}
     measures: [assets_at_failure, deposits_at_failure, estimated_cost]
-    missing: "null"
     attributes: *failure_attributes
 
 relation_types:
@@ -100,4 +96,4 @@ measures:
   - {name: estimated_cost, title: Estimated cost to the insurance fund (latest estimate), unit: usd_k, signed: true}
 
 logical_spaces:
-  - {space: finance.bank, title: Country then FDIC certificate number, kind: tree, max_depth: 2}
+  - {space: finance.bank, title: Country then FDIC certificate number, max_depth: 2}

@@ -10,7 +10,7 @@ later with Compose v2, and at least 8 GB of memory for Docker.
    ```bash
    cp deploy/core/.env.example deploy/core/.env        # first time only
    docker compose -f deploy/core/compose.yml up -d --build --wait
-   curl -s localhost:8080/v1/health
+   curl -s localhost:8080/health
    ```
 
 2. The feeders: demo data from 21 public sources. Fill in the keys in `deploy/feeders/.env` first.

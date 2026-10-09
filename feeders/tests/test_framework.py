@@ -41,13 +41,13 @@ def test_slug_and_key_are_stable():
 
 def test_batches_are_split_and_ids_come_from_content(tmp_path: Path):
     api = FakeApi()
-    sender = BatchSender(api, "t", "feeder:t", "t", 1, 2, FeederState(tmp_path, "t"))
+    sender = BatchSender(api, "t", "feeder:t", 2, FeederState(tmp_path, "t"))
     for i in range(5):
         sender.add({"i": i})
     sender.flush()
     assert [len(b["records"]) for b in api.bundles] == [2, 2, 1]
     again = FakeApi()
-    sender2 = BatchSender(again, "t", "feeder:t", "t", 1, 2, FeederState(tmp_path, "t"))
+    sender2 = BatchSender(again, "t", "feeder:t", 2, FeederState(tmp_path, "t"))
     for i in range(5):
         sender2.add({"i": i})
     sender2.flush()

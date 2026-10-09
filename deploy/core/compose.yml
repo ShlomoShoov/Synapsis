@@ -83,7 +83,7 @@ services:
       default:
         aliases: [api]        # the stable address other deployments use: http://api:8080
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/health', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 30

@@ -1,27 +1,24 @@
-"""IngestService: the one door. A batch of up to 5,000 records goes through four steps:
+"""IngestService: the one door. A batch of up to 5,000 records goes through three steps:
 
-1. Batch identity: the same batch id with the same content returns the stored receipt; different content is a 409.
-2. Rules: SilValidator checks every record against the registry snapshot of this moment.
-3. Versions: a record identical to its latest stored version is a no-op; a changed one becomes version n + 1
-   (or E-ID-CONFLICT for an immutable type); its known_at is never earlier than the previous version's.
-4. Write: one MongoDB transaction stores the raw request, the new documents, the receipt and an outbox entry."""
+1. Rules: SilValidator checks every record against the registry snapshot of this moment.
+2. Versions: a record identical to its latest stored version is a no-op; a changed one becomes version n + 1, and its
+   known_at is never earlier than the previous version's.
+3. Write: one MongoDB transaction stores the new documents, the receipt and an outbox entry.
+
+A batch sent again is simply processed again: every record it holds is found unchanged and nothing is written."""
 from __future__ import annotations
 
 import gzip
-import hashlib
 import json
 import time
-import zlib
 from datetime import datetime, timezone
 
-from bson import Binary
 from pymongo.database import Database
 from pymongo.errors import BulkWriteError, PyMongoError
 
 from . import errors as E
 from .errors import ApiError
 from .lattice import lattice_keys
-from .packages import canonical_json
 from .registry import RegistryCache
 from .settings import Settings
 from .store import COLLECTION, MongoRecordStore, content_digest, doc_id
@@ -47,7 +44,7 @@ class IngestService:
         self.db, self.store, self.validator, self.registry, self.settings = db, store, validator, registry, settings
 
     # ------------------------------------------------------------------------------------------------ parsing
-    def parse(self, body: bytes, content_encoding: str | None) -> tuple[dict, bytes]:
+    def parse(self, body: bytes, content_encoding: str | None) -> dict:
         if content_encoding and "gzip" in content_encoding.lower():
             try:
                 body = gzip.decompress(body)
@@ -66,7 +63,7 @@ class IngestService:
         problems = self.validator.bundle_errors(bundle)
         if problems:
             raise ApiError(400, E.E_BUNDLE, "The bundle envelope is invalid.", problems)
-        return bundle, body
+        return bundle
 
     # ------------------------------------------------------------------------------------------------ ingest
     def ingest(self, body: bytes, content_encoding: str | None, principal: str, dry_run: bool = False) -> dict:
@@ -74,18 +71,8 @@ class IngestService:
         receipt says what would be stored and what would be rejected (conformance tests, feeder development)."""
         started = time.perf_counter()
         received_at = utcnow()
-        bundle, raw = self.parse(body, content_encoding)
+        bundle = self.parse(body, content_encoding)
         batch_id = bundle["batch_id"]
-        batch_hash = "sha256:" + hashlib.sha256(canonical_json(bundle["records"]).encode("utf-8")).hexdigest()
-
-        stored = self.db.receipts.find_one({"_id": batch_id}, {"batch_hash": 1} if dry_run else None)
-        if stored and not dry_run:
-            if stored["batch_hash"] != batch_hash:
-                raise ApiError(409, E.E_BATCH_CONFLICT, f"Batch id '{batch_id}' was already used for different content.")
-            stored.pop("_id", None)
-            stored["replayed"] = True
-            return stored
-
         reg = self.registry.get()
         accepted, rejected, duplicates = self.validator.validate_batch(bundle["records"], reg, self.store, received_at)
 
@@ -102,14 +89,9 @@ class IngestService:
             for p in items:
                 rec = p.record
                 digest = content_digest(p.content)
-                decision = plan(heads.get((rec["id"], rec["source"])), digest, p.known_at, received_at,
-                                reg.types[kind][rec["type"]].get("versioning") == "immutable")
+                decision = plan(heads.get((rec["id"], rec["source"])), digest, p.known_at, received_at)
                 if decision.outcome == "unchanged":
                     counts["unchanged"] += 1
-                    continue
-                if decision.outcome == "conflict":
-                    rejected.append({"index": p.index, "id": rec["id"], "code": E.E_ID_CONFLICT, "path": "id",
-                                     "message": "this type is immutable and the stored record differs"})
                     continue
                 version, known_at = decision.version, decision.known_at
                 if decision.ingested:
@@ -138,14 +120,13 @@ class IngestService:
         status = ("rejected" if counts["rejected"] == counts["received"] else
                   "partial" if counts["rejected"] else
                   "unchanged" if written == 0 else "accepted")
-        receipt = {"batch_id": batch_id, "batch_hash": batch_hash, "status": status, "producer": bundle["producer"],
-                   "package": bundle.get("package"), "principal": principal, "received_at": received_at,
+        receipt = {"batch_id": batch_id, "status": status, "producer": bundle["producer"],
+                   "principal": principal, "received_at": received_at,
                    "registry_revision": reg.revision, "counts": counts, "rejected": rejected,
                    "versioned": versioned_ids}
 
         if dry_run:
-            receipt.update(dry_run=True, batch_id_used=stored is not None,
-                           duration_ms=round((time.perf_counter() - started) * 1000))
+            receipt.update(dry_run=True, duration_ms=round((time.perf_counter() - started) * 1000))
             return receipt
 
         touched = {"h3_3": set(), "week": set(), "lspace": set()}
@@ -156,15 +137,12 @@ class IngestService:
 
         def write(session):
             db = self.db
-            db.raw_bundles.insert_one({"_id": batch_id, "producer": bundle["producer"], "package": bundle.get("package"),
-                                       "received_at": received_at, "batch_hash": batch_hash, "bytes": len(raw),
-                                       "body": Binary(zlib.compress(raw, 6))}, session=session)
             for kind, items in docs.items():
                 db[COLLECTION[kind]].insert_many(items, ordered=False, session=session)
             receipt["duration_ms"] = round((time.perf_counter() - started) * 1000)
-            db.receipts.insert_one({"_id": batch_id, **receipt}, session=session)
+            db.receipts.insert_one(dict(receipt), session=session)
             if docs:
-                db.outbox.insert_one({"_id": f"batch:{batch_id}", "topic": "ingest.accepted", "batch_id": batch_id,
+                db.outbox.insert_one({"topic": "ingest.accepted", "batch_id": batch_id,
                                       "docs": {COLLECTION[k]: [d["_id"] for d in v] for k, v in docs.items()},
                                       "touched": {k: sorted(v) for k, v in touched.items()},
                                       "created_at": received_at, "sent_at": None, "indexed_at": None}, session=session)

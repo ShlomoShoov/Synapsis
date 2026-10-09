@@ -39,4 +39,4 @@ event_types:
       press_source: {type: string, max_length: 2000}
 
 logical_spaces:
-  - {space: cyber.ransom_group, title: Ransomware group (normalised name), kind: tree, max_depth: 1}
+  - {space: cyber.ransom_group, title: Ransomware group (normalised name), max_depth: 1}

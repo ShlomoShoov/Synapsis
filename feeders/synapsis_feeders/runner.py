@@ -61,7 +61,7 @@ def register_packages(name: str, settings: Settings, api: SynapsisApi) -> int:
 
 
 def _register_one(name: str, package: str, settings: Settings, api: SynapsisApi) -> int:
-    """Send one package file to PUT /v1/schemas/{package}, log the answer and return the package's version."""
+    """Send one package file to PUT /schemas/{package}, log the answer and return the package's version."""
     body = settings.package_file(package).read_bytes()
     answer = api.register_schema(package, body)
     log.info("%s: schema package '%s' %s (version %s)", name, package, answer["status"], answer["version"])
@@ -89,8 +89,7 @@ def run_once(name: str, settings: Settings, *, since: date | None = None, until:
         api = SynapsisApi(settings)
         version = register_packages(name, settings, api)
 
-    sender = BatchSender(api, name, f"feeder:{name}", feeder_class.package, version, settings.batch_size, state,
-                         dry_run_dir)
+    sender = BatchSender(api, name, f"feeder:{name}", settings.batch_size, state, dry_run_dir)
     ctx = _context(name, feeder_class, settings, state, cursor, since, until, started, options, dry_run_dir, api)
     sent, outcome = _send_records(feeder_class(ctx), sender, state, limit, dry_run_dir)
 

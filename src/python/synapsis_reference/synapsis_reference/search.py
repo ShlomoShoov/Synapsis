@@ -2,7 +2,7 @@
 
 TextIndexer does, for the stand-in, what the C# indexer does in the product: it follows the outbox, loads the records
 of each accepted batch, embeds those that carry text and bulk-indexes them. HybridSearch answers
-/v1/search/semantic: one k-nearest-neighbour query and one keyword query, both filtered by known_at <= as_of,
+/search/semantic: one k-nearest-neighbour query and one keyword query, both filtered by known_at <= as_of,
 merged by reciprocal-rank fusion, newest known version per record."""
 from __future__ import annotations
 

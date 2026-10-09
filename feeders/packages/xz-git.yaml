@@ -43,4 +43,4 @@ measures:
   - {name: files_changed, title: Files changed, unit: count, min: 0}
 
 logical_spaces:
-  - {space: code.repo, title: Repository then folders, kind: tree, max_depth: 4}
+  - {space: code.repo, title: Repository then folders, max_depth: 4}

@@ -56,12 +56,12 @@ class SynapsisApi:
         raise RuntimeError("unreachable")
 
     def health(self) -> dict:
-        r = self._call("GET", "/v1/health", attempts=3)
+        r = self._call("GET", "/health", attempts=3)
         return r.json()
 
     def record_exists(self, record_id: str) -> bool:
         """True when Synapsis holds the record (any source, any version known now)."""
-        r = self._call("GET", f"/v1/records/{quote(record_id, safe=':/@')}")
+        r = self._call("GET", f"/records/{quote(record_id, safe=':/@')}")
         if r.status_code == 404:
             return False
         if r.status_code != 200:
@@ -69,7 +69,7 @@ class SynapsisApi:
         return True
 
     def register_schema(self, package: str, body: bytes) -> dict:
-        r = self._call("PUT", f"/v1/schemas/{package}", content=body, headers={"Content-Type": "application/yaml"})
+        r = self._call("PUT", f"/schemas/{package}", content=body, headers={"Content-Type": "application/yaml"})
         if r.status_code not in (200, 201):
             raise ApiRefused(r.status_code, _body(r))
         return r.json()
@@ -77,7 +77,7 @@ class SynapsisApi:
     def ingest(self, bundle: dict) -> dict:
         """POST one batch (gzip). Returns the receipt. Raises ApiRefused on 4xx: the batch itself is wrong."""
         payload = gzip.compress(json.dumps(bundle, separators=(",", ":"), ensure_ascii=False).encode("utf-8"), 6)
-        r = self._call("POST", "/v1/ingest", content=payload,
+        r = self._call("POST", "/ingest", content=payload,
                        headers={"Content-Type": "application/json", "Content-Encoding": "gzip"})
         if r.status_code != 200:
             raise ApiRefused(r.status_code, _body(r))

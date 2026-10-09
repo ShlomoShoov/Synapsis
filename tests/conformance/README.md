@@ -9,8 +9,8 @@ python tests/conformance/run.py --api http://localhost:8080            # every g
 python tests/conformance/run.py --api http://localhost:8088 --only 04  # one group, against the C# API
 ```
 
-The runner sends each case as one bundle to `POST /v1/ingest?dry_run=true`, so nothing is written. It needs only the
-Python standard library and the seed packages that every API registers on start.
+The runner sends each case as one bundle to `POST /ingest?dry_run=true`, so nothing is written. It needs only the
+Python standard library; it first registers the feeders' schema packages (`feeders/packages/`) that the cases use.
 
 ## Files
 

@@ -36,7 +36,6 @@ class RegistrySnapshot:
 
     def __init__(self, entries: list[dict], revision: int):
         self.revision = revision
-        self.deprecated: set[str] = {e["_id"] for e in entries if e.get("deprecated")}
         by_kind: dict[str, dict[str, dict]] = {}
         self.owner: dict[str, str] = {}
         for e in entries:
@@ -62,9 +61,6 @@ class RegistrySnapshot:
         self.attributes: dict[tuple[str, str], dict[str, AttributeRule]] = {
             (kind, code): {name: AttributeRule.compile(spec) for name, spec in d.get("attributes", {}).items()}
             for kind in ("entity", "event", "relation") for code, d in self.types[kind].items()}
-
-    def is_deprecated(self, kind: str, code: str) -> bool:
-        return f"{kind}:{code}" in self.deprecated
 
     def summary(self) -> dict:
         return {"revision": self.revision, "sources": len(self.sources),
