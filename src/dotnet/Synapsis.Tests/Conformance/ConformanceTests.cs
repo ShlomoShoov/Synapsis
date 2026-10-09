@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Synapsis.Sil.Validation;
-using Synapsis.Sil.Validation.Batch;
+using Synapsis.Sil;
+using Synapsis.Sil.Validation.Models;
 using Synapsis.Tests.Support;
 using Xunit;
 
@@ -47,13 +47,14 @@ public class ConformanceTests
         {
             records.Add(record);
         }
-        BatchResult result = await BatchValidator.ValidateAsync(records, TestRegistry.All, new FakeResolver(), DateTime.UtcNow);
+        BatchValidationRequest request = new BatchValidationRequest(records, TestRegistry.All, DateTime.UtcNow);
+        BatchValidationResult result = await SilComponents.CreateBatchValidator(new FakeResolver()).ValidateAsync(request);
         List<string> problems = Compare(testCase, result);
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
     }
 
     /// <summary>The differences between the expected and the actual answer (empty when they agree).</summary>
-    private static List<string> Compare(JsonElement testCase, BatchResult result)
+    private static List<string> Compare(JsonElement testCase, BatchValidationResult result)
     {
         List<string> problems = new List<string>();
         Dictionary<int, Rejection> actual = new Dictionary<int, Rejection>();
@@ -72,7 +73,7 @@ public class ConformanceTests
         {
             if (!expectedIndexes.Contains(rejection.Index))
             {
-                problems.Add($"record {rejection.Index}: expected to be accepted, got {rejection.Code} ({rejection.Path}: {rejection.Message})");
+                problems.Add($"record {rejection.Index}: expected to be accepted, got {rejection.Problem.Code} ({rejection.Problem.Path}: {rejection.Problem.Message})");
             }
         }
         int expectedDuplicates = 0;
@@ -96,14 +97,14 @@ public class ConformanceTests
             problems.Add($"record {index}: expected {code}, but it was accepted");
             return;
         }
-        if (rejection.Code != code)
+        if (rejection.Problem.Code != code)
         {
-            problems.Add($"record {index}: expected {code}, got {rejection.Code} ({rejection.Path}: {rejection.Message})");
+            problems.Add($"record {index}: expected {code}, got {rejection.Problem.Code} ({rejection.Problem.Path}: {rejection.Problem.Message})");
             return;
         }
-        if (expected.TryGetProperty("path", out JsonElement path) && path.GetString() != rejection.Path)
+        if (expected.TryGetProperty("path", out JsonElement path) && path.GetString() != rejection.Problem.Path)
         {
-            problems.Add($"record {index}: {code} expected at '{path.GetString()}', reported at '{rejection.Path}'");
+            problems.Add($"record {index}: {code} expected at '{path.GetString()}', reported at '{rejection.Problem.Path}'");
         }
     }
 

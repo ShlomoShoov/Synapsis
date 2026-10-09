@@ -1,14 +1,15 @@
 using System.Collections.Generic;
 using System.IO;
-using Synapsis.Sil.Vocabulary;
-using Synapsis.Sil.Vocabulary.Attributes;
-using Synapsis.Sil.Vocabulary.Ownership;
-using Synapsis.Sil.Vocabulary.Sources;
-using Synapsis.Sil.Vocabulary.Terms;
-using Synapsis.Sil.Vocabulary.Types;
-using Synapsis.Sil.Reading;
+using Synapsis.Sil.Models.Vocabulary;
+using Synapsis.Sil.Models.Vocabulary.Attributes;
+using Synapsis.Sil.Models.Vocabulary.Ownership;
+using Synapsis.Sil.Models.Vocabulary.Sources;
+using Synapsis.Sil.Models.Vocabulary.Terms;
+using Synapsis.Sil.Models.Vocabulary.Types;
+using Synapsis.Sil;
+using Synapsis.Sil.Models.Results;
+using Synapsis.Sil.Reading.Abstractions;
 using Xunit;
-using YamlDotNet.Core;
 
 namespace Synapsis.Tests.Reading;
 
@@ -18,6 +19,9 @@ namespace Synapsis.Tests.Reading;
 /// </summary>
 public class PackageReaderTests
 {
+    /// <summary>The package reader, through its abstraction.</summary>
+    private static readonly IPackageReader Reader = SilComponents.CreatePackageReader();
+
     /// <summary>The file of every package in the repository, one test case each.</summary>
     public static IEnumerable<object[]> AllPackageFiles()
     {
@@ -35,7 +39,7 @@ public class PackageReaderTests
     [MemberData(nameof(AllPackageFiles))]
     public void Every_package_reads_and_is_named_like_its_file(string file)
     {
-        SchemaPackage package = PackageReader.Read(RepositoryFiles.ReadText(file));
+        SchemaPackage package = Read(file);
         Assert.Equal(Path.GetFileNameWithoutExtension(file), package.Name);
         Assert.False(string.IsNullOrEmpty(package.Title));
     }
@@ -114,13 +118,16 @@ public class PackageReaderTests
     public void An_unknown_field_is_refused()
     {
         string package = "package: demo\ntitle: Demo package\nversioning: immutable\n";
-        Assert.Throws<YamlException>(() => PackageReader.Read(package));
+        Result<SchemaPackage> result = Reader.Read(package);
+        Assert.Equal(ErrorCodes.SchemaPackage, result.Problem!.Code);
     }
 
     /// <summary>Reads a package file given relative to the repository root.</summary>
     private static SchemaPackage Read(string file)
     {
-        return PackageReader.Read(RepositoryFiles.ReadText(file));
+        Result<SchemaPackage> result = Reader.Read(RepositoryFiles.ReadText(file));
+        Assert.True(result.Succeeded, result.Problem?.Message);
+        return result.Value!;
     }
 
     /// <summary>The measure with this name in the package.</summary>

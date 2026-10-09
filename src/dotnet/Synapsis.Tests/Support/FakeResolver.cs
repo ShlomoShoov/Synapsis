@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Synapsis.Sil.Validation.Batch;
+using Synapsis.Sil.Validation.Abstractions;
 
 namespace Synapsis.Tests.Support;
 

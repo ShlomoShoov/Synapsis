@@ -1,7 +1,10 @@
 using System;
 using System.Text.Json.Nodes;
-using Synapsis.Sil.Records;
-using Synapsis.Sil.Validation;
+using Synapsis.Sil;
+using Synapsis.Sil.Models.Records;
+using Synapsis.Sil.Models.Results;
+using Synapsis.Sil.Validation.Abstractions;
+using Synapsis.Sil.Validation.Models;
 using Xunit;
 
 namespace Synapsis.Tests.Support;
@@ -9,18 +12,23 @@ namespace Synapsis.Tests.Support;
 /// <summary>Runs one record through the record validator (rules 1 to 12) with the real registry.</summary>
 public static class RuleCheck
 {
-    /// <summary>The error the record gets, or null when it passes.</summary>
-    public static RecordError? ErrorOf(JsonObject record)
+    /// <summary>The record validator, built once through the composition.</summary>
+    private static readonly IRecordValidator Validator = SilComponents.CreateRecordValidator();
+
+    /// <summary>The problem the record gets, or null when it passes.</summary>
+    public static Problem? ErrorOf(JsonObject record)
     {
-        return RecordValidator.Check(TestRecords.ToElement(record), TestRegistry.All, DateTime.UtcNow, out SilRecord? _);
+        RecordValidationRequest request = new RecordValidationRequest(TestRecords.ToElement(record), TestRegistry.All, DateTime.UtcNow);
+        Result<SilRecord> result = Validator.Validate(request);
+        return result.Problem;
     }
 
     /// <summary>Asserts the record is refused with this code at this path.</summary>
     public static void Refused(JsonObject record, string code, string path)
     {
-        RecordError? error = ErrorOf(record);
-        Assert.NotNull(error);
-        Assert.Equal(code, error.Code);
-        Assert.Equal(path, error.Path);
+        Problem? problem = ErrorOf(record);
+        Assert.NotNull(problem);
+        Assert.Equal(code, problem.Code);
+        Assert.Equal(path, problem.Path);
     }
 }

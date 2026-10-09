@@ -1,5 +1,5 @@
 using System;
-using Synapsis.Sil.Validation.Time;
+using Synapsis.Sil.Validation.Services.Time;
 using Xunit;
 
 namespace Synapsis.Tests.Validation.Time;
