@@ -170,3 +170,13 @@ def test_memos_are_cleared_by_reset_but_observations_are_kept(tmp_path: Path):
     state.reset()
     assert ctx.load_memo("sent", []) == []
     assert ctx.load_memo("first_seen", {}, survives_reset=True) == {"x": "2026-01-01"}
+
+
+def test_kev_entry_read_on_the_day_it_is_added_is_known_when_it_was_read():
+    from synapsis_feeders.sources.kev import known_at
+
+    added = datetime(2026, 10, 8, tzinfo=timezone.utc)
+    read_next_week = datetime(2026, 10, 15, 6, 0, tzinfo=timezone.utc)
+    read_same_day = datetime(2026, 10, 8, 18, 10, 11, tzinfo=timezone.utc)
+    assert known_at(added, read_next_week) == (datetime(2026, 10, 9, tzinfo=timezone.utc), "published")
+    assert known_at(added, read_same_day) == (read_same_day, "observed")

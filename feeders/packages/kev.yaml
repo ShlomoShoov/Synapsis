@@ -19,7 +19,9 @@ sources:
     reliability: 95
     reliability_basis: A1
     publication_lag_days: 1
-    known_at_rule: dateAdded plus one day; CISA publishes an entry during the day it is added.
+    known_at_rule: >-
+      dateAdded plus one day (basis published); CISA publishes an entry during the day it is added. An entry read
+      on the day it is added is known from the moment the feeder read the catalog (basis observed).
 
 entity_types:
   - {code: Vendor, title: A vendor or project named in the catalog}

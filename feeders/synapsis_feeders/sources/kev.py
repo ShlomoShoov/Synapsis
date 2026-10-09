@@ -7,7 +7,7 @@ from __future__ import annotations
 from ..base import Checkpoint, Feeder, register
 from ..fetch import SourceError
 from ..sil import attributes, entity, event, logical, participant, relation, slug, text, time_spec, utc
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 MIRROR = "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
@@ -16,6 +16,18 @@ CATALOG_PAGE = "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
 
 def vendor_id(vendor: str) -> str:
     return f"ent:kev-vendor:{slug(vendor)}"
+
+
+def known_at(added: datetime, seen: datetime) -> tuple[datetime, str]:
+    """When an entry became known, and how that was established (its known_at basis).
+
+    CISA publishes an entry during the day it is added, so the package's rule is "date added plus one day" (basis
+    published). For an entry read on the very day it is added, that time is still in the future, and the API would
+    refuse it. The entry was in fact known when the feeder read the catalog, so that moment is used (basis observed)."""
+    published = added + timedelta(days=1)
+    if published <= seen:
+        return published, "published"
+    return seen, "observed"
 
 
 def product_id(vendor: str, product: str) -> str:
@@ -36,6 +48,7 @@ class KevFeeder(Feeder):
         except SourceError as exc:
             ctx.log.warning("CISA feed failed (%s); using the cisagov/kev-data mirror", exc)
             catalog = ctx.http.json(MIRROR)
+        seen = datetime.now(timezone.utc).replace(microsecond=0)     # when this run read the catalog
         version = catalog["catalogVersion"]
         if ctx.cursor.get("catalog_version") == version and ctx.since is None:
             ctx.log.info("catalog %s already loaded; nothing to send", version)
@@ -53,22 +66,23 @@ class KevFeeder(Feeder):
             added = utc(v["dateAdded"])
             if (ctx.since and added.date() < ctx.since) or (ctx.until and added.date() > ctx.until):
                 continue
-            known = added + timedelta(days=1)
+            known, basis = known_at(added, seen)
             vend, prod, cve = v["vendorProject"].strip(), v["product"].strip(), v["cveID"].strip()
             vid, pid, cid = vendor_id(vend), product_id(vend, prod), f"ent:cve:{cve}"
             if ctx.once(cid):
-                yield entity(cid, "Vulnerability", cve, src, known, "published")
+                yield entity(cid, "Vulnerability", cve, src, known, basis)
             if ctx.once(vid):
                 d, name = first_vendor[vid]
-                yield entity(vid, "Vendor", name, src, utc(d) + timedelta(days=1), "published")
+                vknown, vbasis = known_at(utc(d), seen)
+                yield entity(vid, "Vendor", name, src, vknown, vbasis)
             if ctx.once(pid):
                 d, name, _ = first_product[pid]
-                pknown = utc(d) + timedelta(days=1)
-                yield entity(pid, "Product", name, src, pknown, "published")
-                yield relation(f"rel:kev:product-of/{pid.split(':', 2)[2]}", "PRODUCT_OF", src, pid, vid, pknown, "published")
+                pknown, pbasis = known_at(utc(d), seen)
+                yield entity(pid, "Product", name, src, pknown, pbasis)
+                yield relation(f"rel:kev:product-of/{pid.split(':', 2)[2]}", "PRODUCT_OF", src, pid, vid, pknown, pbasis)
             yield event(
                 f"evt:kev:{cve}", "CYB.VULN.KNOWN_EXPLOITED", src, time_spec(added, "day"),
-                logical("cyber.vendor_product", vend, prod), known, "published",
+                logical("cyber.vendor_product", vend, prod), known, basis,
                 participants=[participant(cid, "subject"), participant(pid, "affected_product"), participant(vid, "vendor")],
                 text=text(v.get("vulnerabilityName"), v.get("shortDescription")),
                 attributes=attributes(required_action=v.get("requiredAction"), due_date=v.get("dueDate"),
