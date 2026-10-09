@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Synapsis.Sil: the record language. Records, schema packages, and reading them from text. No database, no HTTP. -->
+  <!-- Synapsis.Sil: the record language. Records, schema packages, the registry, the record rules. No database, no HTTP. -->
   <ItemGroup>
     <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The record envelope's JSON Schema, copied into the DLL at build time from the repository's one copy. -->
+    <EmbeddedResource Include="../../../schemas/sil/sil-1.2.schema.json" LogicalName="sil-1.2.schema.json" />
   </ItemGroup>
 </Project>
