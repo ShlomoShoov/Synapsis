@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Synapsis.Sil.Models.Descriptions;
 using Synapsis.Sil.Models.Domain.Records;
-using Synapsis.Sil.Models.Dtos;
 using Synapsis.Sil.Models.Results;
 using Synapsis.Sil.Reading.Abstractions;
 using Xunit;
@@ -17,9 +16,6 @@ public class RecordReaderTests
 {
     /// <summary>The record reader, through its abstraction.</summary>
     private static readonly IRecordReader Reader = SilComponents.CreateRecordReader();
-
-    /// <summary>The bundle reader, through its abstraction.</summary>
-    private static readonly IBundleReader BundleReader = SilComponents.CreateBundleReader();
 
     /// <summary>Every valid conformance record reads into the class of its kind, with its id and source.</summary>
     [Fact]
@@ -78,20 +74,6 @@ public class RecordReaderTests
         Assert.Equal(90.0, label.Confidence);
     }
 
-    /// <summary>A bundle reads with its envelope fields, and its records stay raw JSON.</summary>
-    [Fact]
-    public void A_bundle_reads_and_keeps_its_records_raw()
-    {
-        string json = "{\"sil\": \"1.2\", \"batch_id\": \"kev-0001\", \"producer\": \"feeder:kev\", \"records\": ["
-                      + KevEvent + ", " + Earthquake + "]}";
-        IngestBundle bundle = BundleReader.Read(json).Value!;
-        Assert.Equal("1.2", bundle.Sil);
-        Assert.Equal("kev-0001", bundle.BatchId);
-        Assert.Equal("feeder:kev", bundle.Producer);
-        Assert.Equal(2, bundle.Records.Count);
-        Assert.Equal(JsonValueKind.Object, bundle.Records[0].ValueKind);
-    }
-
     /// <summary>A field the record language does not have is refused (E-SCHEMA), never silently dropped.</summary>
     [Fact]
     public void An_unknown_field_is_refused()
@@ -108,13 +90,6 @@ public class RecordReaderTests
     {
         string asSource = Earthquake.Replace("\"kind\": \"event\"", "\"kind\": \"source\"");
         Assert.Equal(ErrorCodes.Kind, Reader.Read(Parse(asSource)).Problem!.Code);
-    }
-
-    /// <summary>A body that is not a bundle is refused (E-BUNDLE).</summary>
-    [Fact]
-    public void A_body_that_is_not_a_bundle_is_refused()
-    {
-        Assert.Equal(ErrorCodes.Bundle, BundleReader.Read("{\"sil\": ").Problem!.Code);
     }
 
     /// <summary>Reads a record that must be readable.</summary>

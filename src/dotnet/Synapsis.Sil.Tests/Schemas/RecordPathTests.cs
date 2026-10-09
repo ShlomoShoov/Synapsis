@@ -1,7 +1,7 @@
-using Synapsis.Sil.Validation.Services.EnvelopeRules;
+using Synapsis.Sil.Services.Schemas;
 using Xunit;
 
-namespace Synapsis.Sil.Tests.Validation.EnvelopeRules;
+namespace Synapsis.Sil.Tests.Schemas;
 
 /// <summary>Checks the conversion of JSON Pointer locations into the contract's path format.</summary>
 public class RecordPathTests

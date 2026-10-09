@@ -11,11 +11,35 @@ public static class ErrorCodes
     /// <summary>A request body that is not a bundle: not JSON, or the bundle envelope is wrong.</summary>
     public const string Bundle = "E-BUNDLE";
 
+    /// <summary>A request too large: more than 5,000 records in a batch, or a body over the size limit.</summary>
+    public const string TooLarge = "E-TOO-LARGE";
+
+    /// <summary>A query parameter that is missing or invalid (for example an as_of that is not a date).</summary>
+    public const string Param = "E-PARAM";
+
+    /// <summary>A write without the API key, when the API requires one.</summary>
+    public const string Auth = "E-AUTH";
+
+    /// <summary>Nothing found for the request (a record id unknown as of the date asked).</summary>
+    public const string NotFound = "E-NOT-FOUND";
+
+    /// <summary>The store did not accept the write (it is down, or another writer stored the same version first): send again.</summary>
+    public const string Unavailable = "E-UNAVAILABLE";
+
     /// <summary>A schema package that breaks the package format (schemas/sil/schema-package.schema.json).</summary>
     public const string SchemaPackage = "E-SCHEMA-PACKAGE";
 
     /// <summary>A vocabulary code defined by two packages: every code has one owner.</summary>
     public const string SchemaOwnership = "E-SCHEMA-OWNERSHIP";
+
+    /// <summary>A new version of a package that removes something, or changes a measure's unit: stored records depend on it.</summary>
+    public const string SchemaBreaking = "E-SCHEMA-BREAKING";
+
+    /// <summary>A package that points to a code no package declares (a role, an entity type, a measure).</summary>
+    public const string SchemaRef = "E-SCHEMA-REF";
+
+    /// <summary>Another writer saved a new version of the same package first: send it again.</summary>
+    public const string SchemaVersion = "E-SCHEMA-VERSION";
 
     /// <summary>Rule 1: "kind" is not entity, event, relation or conclusion (a source sent as a record, a typo).</summary>
     public const string Kind = "E-KIND";

@@ -9,6 +9,6 @@ namespace Synapsis.Sil.Reading.Abstractions;
 /// </summary>
 public interface IBundleReader
 {
-    /// <summary>The bundle, or E-BUNDLE when the text is not one.</summary>
+    /// <summary>The bundle; E-TOO-LARGE when it holds more than 5,000 records; E-BUNDLE when the text is not a bundle.</summary>
     Result<IngestBundle> Read(string json);
 }

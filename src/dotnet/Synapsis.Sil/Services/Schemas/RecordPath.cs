@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Synapsis.Sil.Validation.Services.EnvelopeRules;
+namespace Synapsis.Sil.Services.Schemas;
 
 /// <summary>
 /// Writes the location of a problem in the contract's path format: names joined by dots, list positions in brackets,

@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using Synapsis.Sil.Fingerprinting.Abstractions;
 using Synapsis.Sil.Fingerprinting.Services.Domain;
+using Synapsis.Sil.PackageValidation.Abstractions;
+using Synapsis.Sil.PackageValidation.Services.Orchestrators;
+using Synapsis.Sil.PackageValidation.Services.PackageRules;
 using Synapsis.Sil.Reading.Abstractions;
 using Synapsis.Sil.Reading.Services.Readers;
 using Synapsis.Sil.Registry.Abstractions;
@@ -74,6 +77,12 @@ public static class SilComponents
         return new VersionPlanner();
     }
 
+    /// <summary>Decides whether a schema package may become current, and gives the vocabulary that will then be in force.</summary>
+    public static IPackageValidator CreatePackageValidator()
+    {
+        return new PackageValidator(PackageRulesInOrder(), CreateRegistryBuilder());
+    }
+
     /// <summary>Rules 1 and 2, on the raw JSON.</summary>
     private static IReadOnlyList<IEnvelopeRule> EnvelopeRulesInOrder()
     {
@@ -99,6 +108,18 @@ public static class SilComponents
             new TextRule(),            // rule 10
             new AttributeRule(),       // rule 11
             new ConclusionRule(),      // rule 12
+        };
+    }
+
+    /// <summary>The package rules: format, name, compatibility with the stored version, references. Ownership comes last, when the vocabulary is built.</summary>
+    private static IReadOnlyList<IPackageRule> PackageRulesInOrder()
+    {
+        return new IPackageRule[]
+        {
+            new FormatRule(),
+            new NameRule(),
+            new CompatibilityRule(),
+            new PackageReferenceRule(),
         };
     }
 

@@ -14,7 +14,8 @@ namespace Synapsis.Sil.Registry.Services.Domain;
 
 /// <summary>
 /// Builds an <see cref="InMemoryRegistry"/>: puts every source, namespace, type, measure and logical space of the packages
-/// into lookup tables and compiles every pattern once. A code defined by two packages is refused.
+/// into lookup tables and compiles every pattern once. A code defined by two packages is refused, roles included (the
+/// registry itself needs no list of roles: records are checked against the roles their event type allows).
 /// </summary>
 public sealed class RegistryBuilder : IRegistryBuilder
 {
@@ -46,6 +47,7 @@ public sealed class RegistryBuilder : IRegistryBuilder
         private readonly Dictionary<string, EventTypeDefinition> _eventTypes = new Dictionary<string, EventTypeDefinition>();
         private readonly Dictionary<string, RelationTypeDefinition> _relationTypes = new Dictionary<string, RelationTypeDefinition>();
         private readonly Dictionary<string, ConclusionTypeDefinition> _conclusionTypes = new Dictionary<string, ConclusionTypeDefinition>();
+        private readonly Dictionary<string, RoleDefinition> _roles = new Dictionary<string, RoleDefinition>();
         private readonly Dictionary<string, MeasureDefinition> _measures = new Dictionary<string, MeasureDefinition>();
         private readonly Dictionary<string, LogicalSpaceDefinition> _logicalSpaces = new Dictionary<string, LogicalSpaceDefinition>();
         private readonly Dictionary<string, Regex> _patterns = new Dictionary<string, Regex>();
@@ -65,6 +67,10 @@ public sealed class RegistryBuilder : IRegistryBuilder
                 _sourcePackages[source.Id] = package.Name;
             }
             AddTypes(package);
+            foreach (RoleDefinition role in package.Roles)
+            {
+                AddUnique(_roles, role.Code, role, "role");
+            }
             foreach (MeasureDefinition measure in package.Measures)
             {
                 AddUnique(_measures, measure.Name, measure, "measure");

@@ -8,5 +8,7 @@
     <!-- Description files, copied into the DLL at build time from the repository's one copy in schemas/.
          Link shows them under Models/Descriptions/ in the editor; there is no second copy. -->
     <EmbeddedResource Include="../../../schemas/sil/sil-1.2.schema.json" Link="Models/Descriptions/sil-1.2.schema.json" LogicalName="sil-1.2.schema.json" />
+    <EmbeddedResource Include="../../../schemas/sil/schema-package.schema.json" Link="Models/Descriptions/schema-package.schema.json" LogicalName="schema-package.schema.json" />
+    <EmbeddedResource Include="../../../schemas/seed/core.yaml" Link="Models/Descriptions/core.yaml" LogicalName="core.yaml" />
   </ItemGroup>
 </Project>
