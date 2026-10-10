@@ -59,6 +59,15 @@ public static class Instant
         return whole + "." + fraction + "Z";
     }
 
+    /// <summary>
+    /// The instant cut to whole milliseconds. MongoDB keeps dates to the millisecond, so a time cut this way is read back
+    /// exactly as it was written.
+    /// </summary>
+    public static DateTime ToMilliseconds(DateTime instant)
+    {
+        return instant.AddTicks(-(instant.Ticks % TimeSpan.TicksPerMillisecond));
+    }
+
     /// <summary>One numeric group of the match.</summary>
     private static int Part(Match match, int group)
     {

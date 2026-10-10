@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Synapsis.Api.Models.Ingestion;
 using Synapsis.Sil.Models.Records;
 using Synapsis.Sil.Models.Versioning;
 using Synapsis.Storage.Models;

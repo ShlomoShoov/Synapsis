@@ -51,6 +51,45 @@ public sealed class VersionPlanner : IVersionPlanner
         return VersionPlan.NewVersion(next, request.ReceivedAt, AsLearnedNow(record.Raw, request.ReceivedAt));
     }
 
+    /// <inheritdoc/>
+    public IReadOnlyList<StatementKey> StatementsOf(IReadOnlyList<CheckedRecord> accepted)
+    {
+        List<StatementKey> keys = new List<StatementKey>();
+        foreach (CheckedRecord record in accepted)
+        {
+            keys.Add(StatementOf(record));
+        }
+        return keys;
+    }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<PlannedRecord> PlanBatch(IReadOnlyList<CheckedRecord> accepted, IReadOnlyDictionary<StatementKey, IReadOnlyList<StoredVersion>> stored, DateTime receivedAt)
+    {
+        List<PlannedRecord> planned = new List<PlannedRecord>();
+        foreach (CheckedRecord record in accepted)
+        {
+            IReadOnlyList<StoredVersion> versions = StoredOf(stored, StatementOf(record));
+            planned.Add(new PlannedRecord(record, Plan(new VersionPlanRequest(record, versions, receivedAt))));
+        }
+        return planned;
+    }
+
+    /// <summary>The statement a record belongs to: its id from its source.</summary>
+    private static StatementKey StatementOf(CheckedRecord record)
+    {
+        return new StatementKey { Id = record.Record.Id, Source = record.Record.Source };
+    }
+
+    /// <summary>The stored versions of one statement; none when it is new.</summary>
+    private static IReadOnlyList<StoredVersion> StoredOf(IReadOnlyDictionary<StatementKey, IReadOnlyList<StoredVersion>> stored, StatementKey key)
+    {
+        if (stored.TryGetValue(key, out IReadOnlyList<StoredVersion>? versions))
+        {
+            return versions;
+        }
+        return Array.Empty<StoredVersion>();
+    }
+
     /// <summary>The record's known_at. It passed validation, so it is a valid instant.</summary>
     private static DateTime KnownAtOf(CheckedRecord record)
     {

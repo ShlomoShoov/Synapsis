@@ -1,6 +1,5 @@
 using Synapsis.Sil.Models.Validation;
-using Synapsis.Sil.Models.Versioning;
-namespace Synapsis.Api.Models.Ingestion;
+namespace Synapsis.Sil.Models.Versioning;
 
 /// <summary>An accepted record and the version planner's decision for it.</summary>
 public sealed class PlannedRecord
