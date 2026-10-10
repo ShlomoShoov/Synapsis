@@ -82,7 +82,6 @@ services:
     environment:
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
       Mongo__Database: synapsis_next
-      Api__Key: ${CORE_API_KEY:-}
       Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log)
       Api__CorsOrigins__0: http://localhost:1897   # the UI may read the API from the browser
     ports: ["8080:8080"]
@@ -105,7 +104,6 @@ services:
       MONGO_DB: synapsis
       ES_URL: http://elasticsearch:9200
       EMBEDDER_URL: http://embedder:8090
-      SYNAPSIS_API_KEY: ${CORE_API_KEY:-}
     ports: ["8089:8080"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=3)"]

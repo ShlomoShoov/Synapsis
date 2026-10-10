@@ -18,7 +18,7 @@ Options for run, serve and run-all:
 Only for run and run-all:
   --dry-run DIR        write the batches to DIR instead of sending them
 
-Environment: SYNAPSIS_API_URL (default http://localhost:8080), SYNAPSIS_API_KEY, FEEDER_STATE_DIR,
+Environment: SYNAPSIS_API_URL (default http://localhost:8080), FEEDER_STATE_DIR,
 FEEDER_CACHE_DIR, FEEDER_BATCH_SIZE, FEEDER_PACKAGES_DIR, and each source's key (FIRMS_MAP_KEY, GFW_TOKEN,
 FRED_API_KEY)."""
 from __future__ import annotations

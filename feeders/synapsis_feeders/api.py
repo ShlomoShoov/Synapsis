@@ -29,8 +29,6 @@ class ApiRefused(RuntimeError):
 class SynapsisApi:
     def __init__(self, settings: Settings):
         headers = {"User-Agent": settings.user_agent}
-        if settings.api_key:
-            headers["Authorization"] = f"Bearer {settings.api_key}"
         # trust_env=False: the API is a local or internal address and must not go through an outbound proxy
         self.http = httpx.Client(base_url=settings.api_url, headers=headers, timeout=300, trust_env=False)
         self.url = settings.api_url
@@ -54,10 +52,6 @@ class SynapsisApi:
                 continue
             return r
         raise RuntimeError("unreachable")
-
-    def health(self) -> dict:
-        r = self._call("GET", "/health", attempts=3)
-        return r.json()
 
     def record_exists(self, record_id: str) -> bool:
         """True when Synapsis holds the record (any source, any version known now)."""

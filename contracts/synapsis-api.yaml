@@ -7,10 +7,10 @@ info:
     to Elasticsearch, which the UI reads directly (see x-elasticsearch at the end of this file).
 
     - JSON field names are snake_case. Times are UTC instants such as "2026-10-10T08:15:00Z".
-    - Every error has the same body: Error. Its code decides the HTTP status (E-PARAM 400, E-AUTH 401, E-NOT-FOUND 404,
+    - Every error has the same body: Error. Its code decides the HTTP status (E-BUNDLE/E-PARAM 400, E-NOT-FOUND 404,
       E-SCHEMA-* 409/422, E-TOO-LARGE 413, E-UNAVAILABLE 503).
-    - Writes (PUT /schemas, POST /ingest) need the API key, when one is set, as "Authorization: Bearer <key>" or
-      "X-Api-Key: <key>". Reads are open. Browsers may read from the origins in Api:CorsOrigins (the UI: http://localhost:1897).
+    - No authentication for now: every route is open. Browsers may read from the origins in Api:CorsOrigins (the UI:
+      http://localhost:1897).
     - The record format itself (SIL 1.2) is defined in schemas/sil/; the schema package format in
       schemas/sil/schema-package.schema.json.
 servers:
@@ -42,21 +42,18 @@ paths:
         "404": {$ref: "#/components/responses/Error"}
     put:
       summary: Registers a package (feeders only). Adding or widening makes a new version; removing or narrowing is refused.
-      security: [{bearer: []}, {apiKey: []}]
       requestBody:
         required: true
         content: {application/yaml: {schema: {type: string}}, application/json: {schema: {type: object}}}
       responses:
         "201": {description: Created (version 1)., content: {application/json: {schema: {$ref: "#/components/schemas/Registration"}}}}
         "200": {description: Updated or unchanged., content: {application/json: {schema: {$ref: "#/components/schemas/Registration"}}}}
-        "401": {$ref: "#/components/responses/Error"}
         "409": {$ref: "#/components/responses/Error"}
         "422": {$ref: "#/components/responses/Error"}
 
   /ingest:
     post:
       summary: Ingests a batch of SIL records (feeders only). The body may be gzip-compressed (Content-Encoding gzip).
-      security: [{bearer: []}, {apiKey: []}]
       parameters:
         - {name: dry_run, in: query, schema: {type: boolean, default: false}, description: Validate and answer without storing or logging.}
       requestBody:
@@ -74,7 +71,6 @@ paths:
       responses:
         "200": {description: The receipt., content: {application/json: {schema: {$ref: "#/components/schemas/Receipt"}}}}
         "400": {$ref: "#/components/responses/Error"}
-        "401": {$ref: "#/components/responses/Error"}
         "413": {$ref: "#/components/responses/Error"}
         "503": {$ref: "#/components/responses/Error"}
 
@@ -91,10 +87,6 @@ paths:
         "404": {$ref: "#/components/responses/Error"}
 
 components:
-  securitySchemes:
-    bearer: {type: http, scheme: bearer}
-    apiKey: {type: apiKey, in: header, name: X-Api-Key}
-
   responses:
     Error:
       description: The request was refused; the code says why.

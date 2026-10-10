@@ -31,7 +31,6 @@ def _user_agent(contact: str | None) -> str:
 @dataclass(frozen=True)
 class Settings:
     api_url: str
-    api_key: str | None
     state_dir: Path
     cache_dir: Path
     packages_dir: Path
@@ -43,7 +42,6 @@ class Settings:
     def from_env() -> "Settings":
         return Settings(
             api_url=_env("SYNAPSIS_API_URL", "http://localhost:8080").rstrip("/"),
-            api_key=_env("SYNAPSIS_API_KEY"),
             state_dir=Path(_env("FEEDER_STATE_DIR", "./.feeder-state")),
             cache_dir=Path(_env("FEEDER_CACHE_DIR", "./.feeder-cache")),
             packages_dir=_packages_dir(),

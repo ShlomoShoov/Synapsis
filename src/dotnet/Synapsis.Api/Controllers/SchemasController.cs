@@ -6,7 +6,6 @@ using Synapsis.Sil.Models.Results;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Synapsis.Api.Services.Http;
 using Synapsis.Api.Services.Http.Mappers;
 using Synapsis.Api.Orchestrators;
 using Synapsis.Api.Models.Registration;
@@ -53,7 +52,6 @@ public sealed class SchemasController : ControllerBase
     /// <summary>201 created, 200 updated or unchanged, with {status, package, version}; or the problem.</summary>
     [HttpPut("schemas/{package}")]
     [RawBody("application/yaml")]
-    [ServiceFilter(typeof(ApiKeyFilter))]
     public async Task<IActionResult> Put(string package)
     {
         using StreamReader body = new StreamReader(Request.Body);

@@ -47,13 +47,12 @@ static void AddProcesses(IServiceCollection services)
     services.AddHostedService<StartupInitializer>();
 }
 
-// HTTP: controllers with snake_case JSON, the key filter, gzip bodies, the body limit, browser reads from the UI (CORS),
+// HTTP: controllers with snake_case JSON, gzip bodies, the body limit, browser reads from the UI (CORS),
 // errors as {code, message, details}.
 static void AddHttp(WebApplicationBuilder builder, ApiOptions api)
 {
     builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = api.MaxBodyMb * 1024L * 1024L);
     builder.Services.AddSingleton(api);
-    builder.Services.AddSingleton<ApiKeyFilter>();
     builder.Services.AddControllers()
         .AddJsonOptions(json => ApiJson.Apply(json.JsonSerializerOptions))
         .ConfigureApiBehaviorOptions(behavior => behavior.InvalidModelStateResponseFactory = ErrorMapper.ToParameterResult);
@@ -65,7 +64,6 @@ static void AddHttp(WebApplicationBuilder builder, ApiOptions api)
 }
 
 // Swagger: the API described at /swagger/v1/swagger.json and testable in the browser at /swagger, in every environment.
-// The key box ("Authorize") sends X-Api-Key for the writes.
 static void AddSwagger(IServiceCollection services)
 {
     services.AddEndpointsApiExplorer();
@@ -73,10 +71,6 @@ static void AddSwagger(IServiceCollection services)
     {
         swagger.SwaggerDoc("v1", new OpenApiInfo { Title = "Synapsis API", Version = "v1" });
         swagger.OperationFilter<RawBodyOperationFilter>();
-        OpenApiSecurityScheme key = new OpenApiSecurityScheme { Name = "X-Api-Key", In = ParameterLocation.Header, Type = SecuritySchemeType.ApiKey };
-        swagger.AddSecurityDefinition("ApiKey", key);
-        OpenApiSecurityScheme keyReference = new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "ApiKey" } };
-        swagger.AddSecurityRequirement(new OpenApiSecurityRequirement { [keyReference] = new string[0] });
     });
 }
 

@@ -28,7 +28,6 @@ x-feeder: &feeder
   restart: unless-stopped
   environment: &feeder-env
     SYNAPSIS_API_URL: ${FEEDERS_API_URL:-http://api:8080}
-    SYNAPSIS_API_KEY: ${FEEDERS_API_KEY:-}
     FEEDER_CONTACT: ${FEEDERS_CONTACT:-}
     FEEDER_STATE_DIR: /state
     FEEDER_CACHE_DIR: /cache

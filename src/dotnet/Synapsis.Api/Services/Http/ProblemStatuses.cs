@@ -13,7 +13,6 @@ public static class ProblemStatuses
     {
         [ErrorCodes.Bundle] = 400,
         [ErrorCodes.Param] = 400,
-        [ErrorCodes.Auth] = 401,
         [ErrorCodes.NotFound] = 404,
         [ErrorCodes.SchemaOwnership] = 409,
         [ErrorCodes.SchemaBreaking] = 409,

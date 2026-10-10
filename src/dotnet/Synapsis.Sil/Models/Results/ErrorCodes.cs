@@ -15,9 +15,6 @@ public static class ErrorCodes
     /// <summary>A query parameter that is missing or invalid (for example an as_of that is not a date).</summary>
     public const string Param = "E-PARAM";
 
-    /// <summary>A write without the API key, when the API requires one.</summary>
-    public const string Auth = "E-AUTH";
-
     /// <summary>Nothing found for the request (a record id unknown as of the date asked).</summary>
     public const string NotFound = "E-NOT-FOUND";
 

@@ -45,7 +45,6 @@ python -m synapsis_feeders serve usgs --every 1h                  # keep running
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `SYNAPSIS_API_URL` | `http://localhost:8080` | The API every feeder sends to |
-| `SYNAPSIS_API_KEY` | none | Sent as `Authorization: Bearer` when set |
 | `FEEDER_CONTACT` | none | A URL or mailbox for the User-Agent; Wikipedia refuses clients without one |
 | `FEEDER_STATE_DIR` | `./.feeder-state` | Cursors, memos and logs, one folder per feeder |
 | `FEEDER_CACHE_DIR` | `./.feeder-cache` | Downloaded archives, so a re-run does not fetch them again |

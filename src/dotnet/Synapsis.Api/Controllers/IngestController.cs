@@ -2,7 +2,6 @@ using Synapsis.Api.Services.Swagger;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Synapsis.Api.Services.Http;
 using Synapsis.Api.Services.Http.Mappers;
 using Synapsis.Api.Orchestrators;
 using Synapsis.Api.Models.Ingestion;
@@ -25,7 +24,6 @@ public sealed class IngestController : ControllerBase
     /// <summary>200 with the receipt; or the problem with the whole request.</summary>
     [HttpPost("ingest")]
     [RawBody("application/json")]
-    [ServiceFilter(typeof(ApiKeyFilter))]
     public async Task<IActionResult> Post([FromQuery(Name = "dry_run")] bool dryRun = false)
     {
         using StreamReader body = new StreamReader(Request.Body);
