@@ -6,7 +6,7 @@ from both, so the rule order in the two validators must stay the same.
 
 ```bash
 python tests/conformance/run.py --api http://localhost:8080            # every group
-python tests/conformance/run.py --api http://localhost:8088 --only 04  # one group, against the C# API
+python tests/conformance/run.py --api http://localhost:8080 --only 04  # one group
 ```
 
 The runner sends each case as one bundle to `POST /ingest?dry_run=true`, so nothing is written. It needs only the

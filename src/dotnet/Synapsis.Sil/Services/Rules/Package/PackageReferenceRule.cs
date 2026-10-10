@@ -33,12 +33,12 @@ public sealed class PackageReferenceRule : IPackageRule
         return Result.Failure(ErrorCodes.SchemaRef, string.Empty, problems[0]);
     }
 
-    /// <summary>Roles, entity types and measures named by the package's event and relation types.</summary>
+    /// <summary>PackageCodes.Roles, entity types and measures named by the package's event and relation types.</summary>
     private static void AddTypeReferences(SchemaPackage package, List<SchemaPackage> all, List<string> problems)
     {
-        HashSet<string> entityTypes = EntityTypes(all);
-        HashSet<string> roles = Roles(all);
-        HashSet<string> measures = Measures(all);
+        HashSet<string> entityTypes = PackageCodes.EntityTypes(all);
+        HashSet<string> roles = PackageCodes.Roles(all);
+        HashSet<string> measures = PackageCodes.Measures(all);
         foreach (EventTypeDefinition type in package.EventTypes)
         {
             foreach (KeyValuePair<string, List<string>> role in type.Roles)
@@ -58,12 +58,12 @@ public sealed class PackageReferenceRule : IPackageRule
     /// <summary>Shared namespaces, sources, logical spaces and entity namespaces.</summary>
     private static void AddOtherReferences(SchemaPackage package, List<SchemaPackage> all, List<string> problems)
     {
-        HashSet<string> entityTypes = EntityTypes(all);
+        HashSet<string> entityTypes = PackageCodes.EntityTypes(all);
         foreach (SharedNamespace shared in package.SharedEntityNamespaces)
         {
             AddUnknown("entity type", shared.EntityType, entityTypes, $"shared namespace '{shared.Namespace}'", problems);
         }
-        HashSet<string>? bases = Vocabulary(all, ReliabilityBasisVocabulary);
+        HashSet<string>? bases = PackageCodes.Vocabulary(all, ReliabilityBasisVocabulary);
         foreach (SourceDefinition source in package.Sources)
         {
             if (bases != null)
@@ -78,7 +78,7 @@ public sealed class PackageReferenceRule : IPackageRule
                 problems.Add($"the closed logical space '{space.Space}' has no values");
             }
         }
-        HashSet<string> shareds = SharedNamespaces(all);
+        HashSet<string> shareds = PackageCodes.SharedNamespaces(all);
         foreach (string entityNamespace in package.Namespaces.Entities)
         {
             if (shareds.Contains(entityNamespace))
@@ -106,72 +106,4 @@ public sealed class PackageReferenceRule : IPackageRule
         }
     }
 
-    /// <summary>Every entity type code of the packages.</summary>
-    private static HashSet<string> EntityTypes(List<SchemaPackage> packages)
-    {
-        HashSet<string> codes = new HashSet<string>();
-        foreach (SchemaPackage package in packages)
-        {
-            foreach (EntityTypeDefinition type in package.EntityTypes)
-            {
-                codes.Add(type.Code);
-            }
-        }
-        return codes;
-    }
-
-    /// <summary>Every role code of the packages.</summary>
-    private static HashSet<string> Roles(List<SchemaPackage> packages)
-    {
-        HashSet<string> codes = new HashSet<string>();
-        foreach (SchemaPackage package in packages)
-        {
-            foreach (RoleDefinition role in package.Roles)
-            {
-                codes.Add(role.Code);
-            }
-        }
-        return codes;
-    }
-
-    /// <summary>Every measure name of the packages.</summary>
-    private static HashSet<string> Measures(List<SchemaPackage> packages)
-    {
-        HashSet<string> names = new HashSet<string>();
-        foreach (SchemaPackage package in packages)
-        {
-            foreach (MeasureDefinition measure in package.Measures)
-            {
-                names.Add(measure.Name);
-            }
-        }
-        return names;
-    }
-
-    /// <summary>Every shared namespace of the packages.</summary>
-    private static HashSet<string> SharedNamespaces(List<SchemaPackage> packages)
-    {
-        HashSet<string> names = new HashSet<string>();
-        foreach (SchemaPackage package in packages)
-        {
-            foreach (SharedNamespace shared in package.SharedEntityNamespaces)
-            {
-                names.Add(shared.Namespace);
-            }
-        }
-        return names;
-    }
-
-    /// <summary>The values of the named vocabulary, or null when no package declares it.</summary>
-    private static HashSet<string>? Vocabulary(List<SchemaPackage> packages, string name)
-    {
-        foreach (SchemaPackage package in packages)
-        {
-            if (package.Vocabularies.TryGetValue(name, out List<string>? values))
-            {
-                return new HashSet<string>(values);
-            }
-        }
-        return null;
-    }
 }

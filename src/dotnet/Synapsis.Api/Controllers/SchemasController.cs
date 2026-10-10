@@ -1,3 +1,4 @@
+using Synapsis.Api.Services.Swagger;
 using System.Collections.Generic;
 using Synapsis.Storage.Models;
 using Synapsis.Storage.Repositories;
@@ -51,6 +52,7 @@ public sealed class SchemasController : ControllerBase
 
     /// <summary>201 created, 200 updated or unchanged, with {status, package, version}; or the problem.</summary>
     [HttpPut("schemas/{package}")]
+    [RawBody("application/yaml")]
     [ServiceFilter(typeof(ApiKeyFilter))]
     public async Task<IActionResult> Put(string package)
     {

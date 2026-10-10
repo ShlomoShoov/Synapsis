@@ -1,9 +1,10 @@
 openapi: 3.1.0
 info:
-  title: Synapsis API (Phase 1, the C# ingestion server)
+  title: Synapsis API (Phase 1, the C# ingestion server) and the ingestion log
   version: "1.0"
   description: |
-    The routes the C# API answers today (api-next, http://localhost:8088), and the ingestion log it writes.
+    The routes the C# API answers today (http://localhost:8080; Swagger UI at /swagger), and the ingestion log it writes
+    to Elasticsearch, which the UI reads directly (see x-elasticsearch at the end of this file).
 
     - JSON field names are snake_case. Times are UTC instants such as "2026-10-10T08:15:00Z".
     - Every error has the same body: Error. Its code decides the HTTP status (E-PARAM 400, E-AUTH 401, E-NOT-FOUND 404,
@@ -13,7 +14,7 @@ info:
     - The record format itself (SIL 1.2) is defined in schemas/sil/; the schema package format in
       schemas/sil/schema-package.schema.json.
 servers:
-  - url: http://localhost:8088
+  - url: http://localhost:8080
 
 paths:
   /health:
@@ -88,31 +89,6 @@ paths:
         "200": {description: The statements., content: {application/json: {schema: {$ref: "#/components/schemas/Statements"}}}}
         "400": {$ref: "#/components/responses/Error"}
         "404": {$ref: "#/components/responses/Error"}
-
-  /observe/ingest:
-    get:
-      summary: The ingestion log, newest first. For a live view, poll with since = the newest timestamp you have.
-      parameters:
-        - {name: since, in: query, schema: {type: string, format: date-time}, description: Only entries after this UTC instant.}
-        - {name: source, in: query, schema: {type: string}, example: "src:cisa:kev"}
-        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 1000, default: 100}}
-      responses:
-        "200":
-          description: The entries (empty when Elasticsearch is off).
-          content: {application/json: {schema: {type: array, items: {$ref: "#/components/schemas/IngestLogEntry"}}}}
-        "400": {$ref: "#/components/responses/Error"}
-        "503": {$ref: "#/components/responses/Error"}
-
-  /observe/stats:
-    get:
-      summary: Totals of the ingestion log over a period, per source and per error code.
-      parameters:
-        - {name: from, in: query, schema: {type: string, format: date-time}, description: Default 24 hours before "to".}
-        - {name: to, in: query, schema: {type: string, format: date-time}, description: Default now.}
-      responses:
-        "200": {description: The totals., content: {application/json: {schema: {$ref: "#/components/schemas/IngestStats"}}}}
-        "400": {$ref: "#/components/responses/Error"}
-        "503": {$ref: "#/components/responses/Error"}
 
 components:
   securitySchemes:
@@ -213,8 +189,9 @@ components:
     IngestLogEntry:
       type: object
       description: |
-        One line of the ingestion log: what one batch brought from one source. Stored as is in the Elasticsearch index
-        "synapsis-ingest-log". received = new + changed + unchanged + duplicates + rejected. Dry runs are not logged.
+        One document of the Elasticsearch index "synapsis-ingest-log": what one batch brought from one source. A batch
+        whose records name two sources gives two documents. received = new + changed + unchanged + duplicates + rejected.
+        Dry runs are not logged. The Elasticsearch type of each field is in x-elasticsearch.mapping.
       required: [timestamp, batch_id, producer, source, received, new, changed, unchanged, duplicates, rejected, rejection_counts, rejections, duration_ms]
       properties:
         timestamp: {type: string, format: date-time, description: When the API received the batch.}
@@ -250,26 +227,74 @@ components:
         code: {type: string, example: E-UNIT}
         count: {type: integer}
 
-    IngestStats:
-      type: object
-      required: [from, to, sources, codes]
-      properties:
-        from: {type: string, format: date-time}
-        to: {type: string, format: date-time}
-        sources:
-          type: array
-          items:
-            type: object
-            required: [source, batches, received, new, changed, unchanged, duplicates, rejected]
-            properties:
-              source: {type: string}
-              batches: {type: integer}
-              received: {type: integer}
-              new: {type: integer}
-              changed: {type: integer}
-              unchanged: {type: integer}
-              duplicates: {type: integer}
-              rejected: {type: integer}
-        codes:
-          type: array
-          items: {$ref: "#/components/schemas/RejectionCount"}
+x-elasticsearch:
+  description: |
+    The ingestion log, for the UI to query directly. Elasticsearch: http://localhost:9200 (browser access allowed from
+    http://localhost:1897; no login in development). One document per (batch, source), shape: IngestLogEntry above.
+    The index is created by the API on the first stored batch; before that, searches answer 404 index_not_found
+    (add ?ignore_unavailable=true to get an empty answer instead).
+  index: synapsis-ingest-log
+  mapping:
+    timestamp: {type: date, meaning: When the API received the batch (UTC). Sort and filter on it.}
+    batch_id: {type: keyword, meaning: The producer's batch id (exact match).}
+    producer: {type: keyword, meaning: 'Who sent the batch, such as "feeder:kev".'}
+    source: {type: keyword, meaning: 'The source the records name, such as "src:cisa:kev"; "unknown" for a refused record without one.'}
+    received: {type: long, meaning: Records of this source in the batch.}
+    new: {type: long, meaning: Stored for the first time.}
+    changed: {type: long, meaning: Stored as a new version.}
+    unchanged: {type: long, meaning: Already stored as they are; nothing written.}
+    duplicates: {type: long, meaning: Exact copies inside the batch, dropped.}
+    rejected: {type: long, meaning: Refused with an error code.}
+    duration_ms: {type: long, meaning: Time the API took for the whole batch.}
+    rejection_counts: {type: nested, fields: {code: keyword, count: long}, meaning: Refused records per error code. Aggregate with a nested aggregation.}
+    rejections: {type: object, enabled: false, meaning: 'The first 50 refused records ({index, id, code, path}): returned in _source, not searchable.'}
+  queries:
+    live_flow:
+      description: The newest documents; poll every few seconds with gt = the newest timestamp already shown.
+      request: POST /synapsis-ingest-log/_search?ignore_unavailable=true
+      body:
+        size: 100
+        sort: [{timestamp: desc}]
+        query: {bool: {filter: [{range: {timestamp: {gt: "2026-10-10T08:00:00.000Z"}}}, {term: {source: "src:cisa:kev"}}]}}
+    totals_per_source:
+      description: What each source sent over a period (doc_count = number of batches).
+      request: POST /synapsis-ingest-log/_search?ignore_unavailable=true
+      body:
+        size: 0
+        query: {range: {timestamp: {gte: "now-24h"}}}
+        aggs:
+          sources:
+            terms: {field: source, size: 500}
+            aggs:
+              received: {sum: {field: received}}
+              new: {sum: {field: new}}
+              changed: {sum: {field: changed}}
+              unchanged: {sum: {field: unchanged}}
+              duplicates: {sum: {field: duplicates}}
+              rejected: {sum: {field: rejected}}
+    rejections_per_code:
+      description: How many records each error code refused over a period (add a term filter on source for one source).
+      request: POST /synapsis-ingest-log/_search?ignore_unavailable=true
+      body:
+        size: 0
+        query: {range: {timestamp: {gte: "now-24h"}}}
+        aggs:
+          codes:
+            nested: {path: rejection_counts}
+            aggs:
+              by_code:
+                terms: {field: rejection_counts.code, size: 200}
+                aggs: {count: {sum: {field: rejection_counts.count}}}
+    records_per_hour:
+      description: A time chart of records received per hour, per source.
+      request: POST /synapsis-ingest-log/_search?ignore_unavailable=true
+      body:
+        size: 0
+        query: {range: {timestamp: {gte: "now-7d"}}}
+        aggs:
+          per_hour:
+            date_histogram: {field: timestamp, fixed_interval: 1h}
+            aggs:
+              sources:
+                terms: {field: source, size: 50}
+                aggs: {received: {sum: {field: received}}}

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Synapsis.Sil.Models.Results;
@@ -38,24 +37,24 @@ public sealed class CompatibilityRule : IPackageRule
     /// <summary>Whole definitions: sources, types, roles, measures, spaces, namespaces, vocabularies.</summary>
     private static void AddRemovedDefinitions(SchemaPackage before, SchemaPackage after, List<string> problems)
     {
-        AddRemoved("source", "", before.Sources.Select(s => s.Id), after.Sources.Select(s => s.Id), problems);
-        AddRemoved("entity type", "", before.EntityTypes.Select(t => t.Code), after.EntityTypes.Select(t => t.Code), problems);
-        AddRemoved("event type", "", before.EventTypes.Select(t => t.Code), after.EventTypes.Select(t => t.Code), problems);
-        AddRemoved("relation type", "", before.RelationTypes.Select(t => t.Code), after.RelationTypes.Select(t => t.Code), problems);
-        AddRemoved("conclusion type", "", before.ConclusionTypes.Select(t => t.Code), after.ConclusionTypes.Select(t => t.Code), problems);
-        AddRemoved("role", "", before.Roles.Select(r => r.Code), after.Roles.Select(r => r.Code), problems);
-        AddRemoved("measure", "", before.Measures.Select(m => m.Name), after.Measures.Select(m => m.Name), problems);
-        AddRemoved("logical space", "", before.LogicalSpaces.Select(s => s.Space), after.LogicalSpaces.Select(s => s.Space), problems);
-        AddRemoved("records namespace", "", before.Namespaces.Records, after.Namespaces.Records, problems);
-        AddRemoved("entity namespace", "", before.Namespaces.Entities, after.Namespaces.Entities, problems);
-        AddRemoved("shared namespace", "", before.SharedEntityNamespaces.Select(n => n.Namespace), after.SharedEntityNamespaces.Select(n => n.Namespace), problems);
-        AddRemoved("vocabulary", "", before.Vocabularies.Keys, after.Vocabularies.Keys, problems);
+        DefinitionDiff.AddRemoved("source", "", before.Sources.Select(s => s.Id), after.Sources.Select(s => s.Id), problems);
+        DefinitionDiff.AddRemoved("entity type", "", before.EntityTypes.Select(t => t.Code), after.EntityTypes.Select(t => t.Code), problems);
+        DefinitionDiff.AddRemoved("event type", "", before.EventTypes.Select(t => t.Code), after.EventTypes.Select(t => t.Code), problems);
+        DefinitionDiff.AddRemoved("relation type", "", before.RelationTypes.Select(t => t.Code), after.RelationTypes.Select(t => t.Code), problems);
+        DefinitionDiff.AddRemoved("conclusion type", "", before.ConclusionTypes.Select(t => t.Code), after.ConclusionTypes.Select(t => t.Code), problems);
+        DefinitionDiff.AddRemoved("role", "", before.Roles.Select(r => r.Code), after.Roles.Select(r => r.Code), problems);
+        DefinitionDiff.AddRemoved("measure", "", before.Measures.Select(m => m.Name), after.Measures.Select(m => m.Name), problems);
+        DefinitionDiff.AddRemoved("logical space", "", before.LogicalSpaces.Select(s => s.Space), after.LogicalSpaces.Select(s => s.Space), problems);
+        DefinitionDiff.AddRemoved("records namespace", "", before.Namespaces.Records, after.Namespaces.Records, problems);
+        DefinitionDiff.AddRemoved("entity namespace", "", before.Namespaces.Entities, after.Namespaces.Entities, problems);
+        DefinitionDiff.AddRemoved("shared namespace", "", before.SharedEntityNamespaces.Select(n => n.Namespace), after.SharedEntityNamespaces.Select(n => n.Namespace), problems);
+        DefinitionDiff.AddRemoved("vocabulary", "", before.Vocabularies.Keys, after.Vocabularies.Keys, problems);
     }
 
     /// <summary>Inside each event type kept: place forms, roles and their entity types, measures, attributes.</summary>
     private static void AddNarrowedEventTypes(SchemaPackage before, SchemaPackage after, List<string> problems)
     {
-        Dictionary<string, EventTypeDefinition> kept = Index(after.EventTypes, t => t.Code);
+        Dictionary<string, EventTypeDefinition> kept = DefinitionDiff.Index(after.EventTypes, t => t.Code);
         foreach (EventTypeDefinition old in before.EventTypes)
         {
             if (!kept.TryGetValue(old.Code, out EventTypeDefinition? now))
@@ -63,40 +62,40 @@ public sealed class CompatibilityRule : IPackageRule
                 continue;
             }
             string where = $" of event type '{old.Code}'";
-            AddRemoved("place form", where, old.Place.Select(p => p.ToString()), now.Place.Select(p => p.ToString()), problems);
-            AddRemoved("role", where, old.Roles.Keys, now.Roles.Keys, problems);
+            DefinitionDiff.AddRemoved("place form", where, old.Place.Select(p => p.ToString()), now.Place.Select(p => p.ToString()), problems);
+            DefinitionDiff.AddRemoved("role", where, old.Roles.Keys, now.Roles.Keys, problems);
             foreach (KeyValuePair<string, List<string>> role in old.Roles)
             {
                 if (now.Roles.TryGetValue(role.Key, out List<string>? allowed))
                 {
-                    AddRemoved("entity type", $" in role '{role.Key}'{where}", role.Value, allowed, problems);
+                    DefinitionDiff.AddRemoved("entity type", $" in role '{role.Key}'{where}", role.Value, allowed, problems);
                 }
             }
-            AddRemoved("measure", where, old.Measures, now.Measures, problems);
-            AddRemoved("attribute", where, old.Attributes.Keys, now.Attributes.Keys, problems);
+            DefinitionDiff.AddRemoved("measure", where, old.Measures, now.Measures, problems);
+            DefinitionDiff.AddRemoved("attribute", where, old.Attributes.Keys, now.Attributes.Keys, problems);
         }
     }
 
     /// <summary>Inside each entity and relation type kept: attributes, and a relation's allowed ends.</summary>
     private static void AddNarrowedOtherTypes(SchemaPackage before, SchemaPackage after, List<string> problems)
     {
-        Dictionary<string, EntityTypeDefinition> entities = Index(after.EntityTypes, t => t.Code);
+        Dictionary<string, EntityTypeDefinition> entities = DefinitionDiff.Index(after.EntityTypes, t => t.Code);
         foreach (EntityTypeDefinition old in before.EntityTypes)
         {
             if (entities.TryGetValue(old.Code, out EntityTypeDefinition? now))
             {
-                AddRemoved("attribute", $" of entity type '{old.Code}'", old.Attributes.Keys, now.Attributes.Keys, problems);
+                DefinitionDiff.AddRemoved("attribute", $" of entity type '{old.Code}'", old.Attributes.Keys, now.Attributes.Keys, problems);
             }
         }
-        Dictionary<string, RelationTypeDefinition> relations = Index(after.RelationTypes, t => t.Code);
+        Dictionary<string, RelationTypeDefinition> relations = DefinitionDiff.Index(after.RelationTypes, t => t.Code);
         foreach (RelationTypeDefinition old in before.RelationTypes)
         {
             if (relations.TryGetValue(old.Code, out RelationTypeDefinition? now))
             {
                 string where = $" of relation type '{old.Code}'";
-                AddRemoved("'from' entity type", where, old.From, now.From, problems);
-                AddRemoved("'to' entity type", where, old.To, now.To, problems);
-                AddRemoved("attribute", where, old.Attributes.Keys, now.Attributes.Keys, problems);
+                DefinitionDiff.AddRemoved("'from' entity type", where, old.From, now.From, problems);
+                DefinitionDiff.AddRemoved("'to' entity type", where, old.To, now.To, problems);
+                DefinitionDiff.AddRemoved("attribute", where, old.Attributes.Keys, now.Attributes.Keys, problems);
             }
         }
     }
@@ -108,18 +107,18 @@ public sealed class CompatibilityRule : IPackageRule
         {
             if (after.Vocabularies.TryGetValue(vocabulary.Key, out List<string>? now))
             {
-                AddRemoved("value", $" of vocabulary '{vocabulary.Key}'", vocabulary.Value, now, problems);
+                DefinitionDiff.AddRemoved("value", $" of vocabulary '{vocabulary.Key}'", vocabulary.Value, now, problems);
             }
         }
-        Dictionary<string, LogicalSpaceDefinition> spaces = Index(after.LogicalSpaces, s => s.Space);
+        Dictionary<string, LogicalSpaceDefinition> spaces = DefinitionDiff.Index(after.LogicalSpaces, s => s.Space);
         foreach (LogicalSpaceDefinition old in before.LogicalSpaces)
         {
             if (spaces.TryGetValue(old.Space, out LogicalSpaceDefinition? now))
             {
-                AddRemoved("value", $" of logical space '{old.Space}'", old.Values, now.Values, problems);
+                DefinitionDiff.AddRemoved("value", $" of logical space '{old.Space}'", old.Values, now.Values, problems);
             }
         }
-        Dictionary<string, MeasureDefinition> measures = Index(after.Measures, m => m.Name);
+        Dictionary<string, MeasureDefinition> measures = DefinitionDiff.Index(after.Measures, m => m.Name);
         foreach (MeasureDefinition old in before.Measures)
         {
             if (measures.TryGetValue(old.Name, out MeasureDefinition? now) && now.Unit != old.Unit)
@@ -129,27 +128,4 @@ public sealed class CompatibilityRule : IPackageRule
         }
     }
 
-    /// <summary>Adds "{what} '{item}'{where} was removed" for every item of <paramref name="before"/> missing from <paramref name="after"/>.</summary>
-    private static void AddRemoved(string what, string where, IEnumerable<string> before, IEnumerable<string> after, List<string> problems)
-    {
-        HashSet<string> kept = new HashSet<string>(after);
-        foreach (string item in before)
-        {
-            if (!kept.Contains(item))
-            {
-                problems.Add($"{what} '{item}'{where} was removed");
-            }
-        }
-    }
-
-    /// <summary>The definitions by their code.</summary>
-    private static Dictionary<string, T> Index<T>(IEnumerable<T> definitions, Func<T, string> codeOf)
-    {
-        Dictionary<string, T> index = new Dictionary<string, T>();
-        foreach (T definition in definitions)
-        {
-            index[codeOf(definition)] = definition;
-        }
-        return index;
-    }
 }

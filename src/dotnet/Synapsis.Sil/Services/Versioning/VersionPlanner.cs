@@ -30,7 +30,7 @@ public sealed class VersionPlanner : IVersionPlanner
     {
         CheckedRecord record = request.Record;
         DateTime knownAt = KnownAtOf(record);
-        StoredVersion? latest = Latest(request.StoredVersions);
+        StoredVersion? latest = VersionHistory.Latest(request.StoredVersions);
         if (latest == null)
         {
             return VersionPlan.New(knownAt, record.Raw);
@@ -39,7 +39,7 @@ public sealed class VersionPlanner : IVersionPlanner
         {
             return VersionPlan.Unchanged();
         }
-        if (knownAt < latest.KnownAt && RepeatsWhatWasKnownThen(request.StoredVersions, knownAt, record.Fingerprint))
+        if (knownAt < latest.KnownAt && VersionHistory.RepeatsWhatWasKnownThen(request.StoredVersions, knownAt, record.Fingerprint))
         {
             return VersionPlan.Unchanged();
         }
@@ -98,58 +98,6 @@ public sealed class VersionPlanner : IVersionPlanner
             throw new InvalidOperationException($"Record {record.Record.Id} reached version planning with an invalid known_at.");
         }
         return knownAt;
-    }
-
-    /// <summary>The version with the highest number, or null when there is none.</summary>
-    private static StoredVersion? Latest(IReadOnlyList<StoredVersion> versions)
-    {
-        StoredVersion? latest = null;
-        foreach (StoredVersion version in versions)
-        {
-            if (latest == null || version.Version > latest.Version)
-            {
-                latest = version;
-            }
-        }
-        return latest;
-    }
-
-    /// <summary>True when the version current at <paramref name="at"/> has this content (rule 3).</summary>
-    private static bool RepeatsWhatWasKnownThen(IReadOnlyList<StoredVersion> versions, DateTime at, string fingerprint)
-    {
-        StoredVersion? then = CurrentAt(versions, at);
-        return then != null && then.Fingerprint == fingerprint;
-    }
-
-    /// <summary>
-    /// The version that was the latest one known at <paramref name="at"/>: the greatest known_at not after it, and of
-    /// those the highest version. Null when nothing was known yet.
-    /// </summary>
-    private static StoredVersion? CurrentAt(IReadOnlyList<StoredVersion> versions, DateTime at)
-    {
-        StoredVersion? best = null;
-        foreach (StoredVersion version in versions)
-        {
-            if (version.KnownAt > at)
-            {
-                continue;
-            }
-            if (best == null || IsLater(version, best))
-            {
-                best = version;
-            }
-        }
-        return best;
-    }
-
-    /// <summary>True when the first version was known later than the second, or at the same time with a higher number.</summary>
-    private static bool IsLater(StoredVersion first, StoredVersion second)
-    {
-        if (first.KnownAt != second.KnownAt)
-        {
-            return first.KnownAt > second.KnownAt;
-        }
-        return first.Version > second.Version;
     }
 
     /// <summary>The record with known_at set to the receive time and known_at_basis set to "ingested" (rule 4).</summary>

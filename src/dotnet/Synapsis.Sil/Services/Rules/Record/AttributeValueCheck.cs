@@ -1,8 +1,5 @@
-using System;
-using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Synapsis.Sil.Models.Vocabulary.Attributes;
 using Synapsis.Sil.Services.Registry;
 namespace Synapsis.Sil.Services.Rules.Record;
@@ -13,9 +10,6 @@ namespace Synapsis.Sil.Services.Rules.Record;
 /// </summary>
 public static class AttributeValueCheck
 {
-    /// <summary>A calendar date written as 2024-01-31.</summary>
-    private static readonly Regex DateFormat = new Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", RegexOptions.Compiled);
-
     /// <summary>What is wrong with the value, or null.</summary>
     public static string? Problem(JsonElement value, AttributeDefinition definition, IRegistry registry)
     {
@@ -26,11 +20,11 @@ public static class AttributeValueCheck
             case AttributeType.StringList:
                 return StringListProblem(value, definition, registry);
             case AttributeType.Integer:
-                return IntegerProblem(value, definition);
+                return AttributeScalarChecks.IntegerProblem(value, definition);
             case AttributeType.Boolean:
-                return BooleanProblem(value);
+                return AttributeScalarChecks.BooleanProblem(value);
             default:
-                return DateProblem(value);
+                return AttributeScalarChecks.DateProblem(value);
         }
     }
 
@@ -87,58 +81,6 @@ public static class AttributeValueCheck
         if (definition.Pattern != null && !registry.Matches(definition.Pattern, text))
         {
             return $"does not match {definition.Pattern}";
-        }
-        return null;
-    }
-
-    /// <summary>A whole number (2024 and 2024.0 both are), within its range and allowed values.</summary>
-    private static string? IntegerProblem(JsonElement value, AttributeDefinition definition)
-    {
-        if (value.ValueKind != JsonValueKind.Number)
-        {
-            return "must be an integer";
-        }
-        double number = value.GetDouble();
-        if (Math.Floor(number) != number)
-        {
-            return "must be an integer";
-        }
-        bool belowMin = definition.Min != null && number < definition.Min;
-        bool aboveMax = definition.Max != null && number > definition.Max;
-        if (belowMin || aboveMax)
-        {
-            return $"must lie in [{definition.Min}, {definition.Max}]";
-        }
-        string asText = number.ToString(CultureInfo.InvariantCulture);
-        if (definition.AllowedValues != null && !definition.AllowedValues.Contains(asText))
-        {
-            return "must be one of " + string.Join(", ", definition.AllowedValues);
-        }
-        return null;
-    }
-
-    /// <summary>true or false.</summary>
-    private static string? BooleanProblem(JsonElement value)
-    {
-        if (value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False)
-        {
-            return null;
-        }
-        return "must be true or false";
-    }
-
-    /// <summary>A real calendar date written as 2024-01-31.</summary>
-    private static string? DateProblem(JsonElement value)
-    {
-        if (value.ValueKind != JsonValueKind.String || !DateFormat.IsMatch(value.GetString()!))
-        {
-            return "must be a date like 2024-01-31";
-        }
-        bool real = DateTime.TryParseExact(value.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out DateTime _);
-        if (!real)
-        {
-            return "is not a real date";
         }
         return null;
     }

@@ -17,7 +17,7 @@ public static class StorageRegistration
     {
         services.AddSingleton(options);
         services.AddSingleton(elastic);
-        services.AddSingleton<IElasticClient, ElasticClient>();
+        services.AddSingleton<IElasticContext, ElasticContext>();
         services.AddSingleton<IIngestLogRepository, IngestLogRepository>();
         services.AddSingleton<IMongoContext, MongoContext>();
         services.AddSingleton<IStorageInitializer, StorageInitializer>();

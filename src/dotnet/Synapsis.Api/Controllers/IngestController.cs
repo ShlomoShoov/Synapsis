@@ -1,3 +1,4 @@
+using Synapsis.Api.Services.Swagger;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +24,7 @@ public sealed class IngestController : ControllerBase
 
     /// <summary>200 with the receipt; or the problem with the whole request.</summary>
     [HttpPost("ingest")]
+    [RawBody("application/json")]
     [ServiceFilter(typeof(ApiKeyFilter))]
     public async Task<IActionResult> Post([FromQuery(Name = "dry_run")] bool dryRun = false)
     {

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using Synapsis.Sil.Models.Records;
 using Synapsis.Sil.Models.Vocabulary.Attributes;
 using Synapsis.Sil.Models.Vocabulary.Ownership;
@@ -10,48 +9,17 @@ namespace Synapsis.Sil.Services.Registry;
 
 /// <summary>
 /// The registry kept in memory as lookup tables (dictionaries and sets), filled once by <see cref="RegistryBuilder"/> and read-only
-/// afterwards. Each question of <see cref="IRegistry"/> is one lookup.
+/// afterwards (<see cref="RegistryTables"/>). Each question of <see cref="IRegistry"/> is one lookup.
 /// </summary>
 public sealed class InMemoryRegistry : IRegistry
 {
-    /// <summary>The closed lists of core, by name: precision, known_at_basis, reliability_basis, method_by, country.</summary>
-    public required IReadOnlyDictionary<string, HashSet<string>> Vocabularies { get; init; }
+    private readonly RegistryTables _tables;
 
-    /// <summary>Every source, by id.</summary>
-    public required IReadOnlyDictionary<string, SourceDefinition> Sources { get; init; }
-
-    /// <summary>The declaring package of every source, by source id.</summary>
-    public required IReadOnlyDictionary<string, string> SourcePackages { get; init; }
-
-    /// <summary>The owning package of every records namespace.</summary>
-    public required IReadOnlyDictionary<string, string> RecordNamespaces { get; init; }
-
-    /// <summary>The owning package of every entity namespace.</summary>
-    public required IReadOnlyDictionary<string, string> EntityNamespaces { get; init; }
-
-    /// <summary>Every shared entity namespace, by name.</summary>
-    public required IReadOnlyDictionary<string, SharedNamespace> SharedNamespaces { get; init; }
-
-    /// <summary>Every entity type, by code.</summary>
-    public required IReadOnlyDictionary<string, EntityTypeDefinition> EntityTypes { get; init; }
-
-    /// <summary>Every event type, by code.</summary>
-    public required IReadOnlyDictionary<string, EventTypeDefinition> EventTypes { get; init; }
-
-    /// <summary>Every relation type, by code.</summary>
-    public required IReadOnlyDictionary<string, RelationTypeDefinition> RelationTypes { get; init; }
-
-    /// <summary>Every conclusion type, by code.</summary>
-    public required IReadOnlyDictionary<string, ConclusionTypeDefinition> ConclusionTypes { get; init; }
-
-    /// <summary>Every measure, by name.</summary>
-    public required IReadOnlyDictionary<string, MeasureDefinition> Measures { get; init; }
-
-    /// <summary>Every logical space, by name.</summary>
-    public required IReadOnlyDictionary<string, LogicalSpaceDefinition> LogicalSpaces { get; init; }
-
-    /// <summary>Every pattern the vocabulary uses, compiled once, by its text.</summary>
-    public required IReadOnlyDictionary<string, Regex> Patterns { get; init; }
+    /// <summary>Creates the registry over tables the builder filled.</summary>
+    public InMemoryRegistry(RegistryTables tables)
+    {
+        _tables = tables;
+    }
 
     /// <inheritdoc/>
     public bool IsPrecision(string precision)
@@ -86,31 +54,31 @@ public sealed class InMemoryRegistry : IRegistry
     /// <inheritdoc/>
     public SourceDefinition? FindSource(string sourceId)
     {
-        return Sources.GetValueOrDefault(sourceId);
+        return _tables.Sources.GetValueOrDefault(sourceId);
     }
 
     /// <inheritdoc/>
     public string? PackageOfSource(string sourceId)
     {
-        return SourcePackages.GetValueOrDefault(sourceId);
+        return _tables.SourcePackages.GetValueOrDefault(sourceId);
     }
 
     /// <inheritdoc/>
     public string? OwnerOfRecordNamespace(string space)
     {
-        return RecordNamespaces.GetValueOrDefault(space);
+        return _tables.RecordNamespaces.GetValueOrDefault(space);
     }
 
     /// <inheritdoc/>
     public string? OwnerOfEntityNamespace(string space)
     {
-        return EntityNamespaces.GetValueOrDefault(space);
+        return _tables.EntityNamespaces.GetValueOrDefault(space);
     }
 
     /// <inheritdoc/>
     public SharedNamespace? FindSharedNamespace(string space)
     {
-        return SharedNamespaces.GetValueOrDefault(space);
+        return _tables.SharedNamespaces.GetValueOrDefault(space);
     }
 
     /// <inheritdoc/>
@@ -119,40 +87,40 @@ public sealed class InMemoryRegistry : IRegistry
         switch (kind)
         {
             case RecordKind.Entity:
-                return EntityTypes.ContainsKey(code);
+                return _tables.EntityTypes.ContainsKey(code);
             case RecordKind.Event:
-                return EventTypes.ContainsKey(code);
+                return _tables.EventTypes.ContainsKey(code);
             case RecordKind.Relation:
-                return RelationTypes.ContainsKey(code);
+                return _tables.RelationTypes.ContainsKey(code);
             default:
-                return ConclusionTypes.ContainsKey(code);
+                return _tables.ConclusionTypes.ContainsKey(code);
         }
     }
 
     /// <inheritdoc/>
     public EventTypeDefinition? FindEventType(string code)
     {
-        return EventTypes.GetValueOrDefault(code);
+        return _tables.EventTypes.GetValueOrDefault(code);
     }
 
     /// <inheritdoc/>
     public RelationTypeDefinition? FindRelationType(string code)
     {
-        return RelationTypes.GetValueOrDefault(code);
+        return _tables.RelationTypes.GetValueOrDefault(code);
     }
 
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, AttributeDefinition> AttributesOf(RecordKind kind, string code)
     {
-        if (kind == RecordKind.Entity && EntityTypes.TryGetValue(code, out EntityTypeDefinition? entityType))
+        if (kind == RecordKind.Entity && _tables.EntityTypes.TryGetValue(code, out EntityTypeDefinition? entityType))
         {
             return entityType.Attributes;
         }
-        if (kind == RecordKind.Event && EventTypes.TryGetValue(code, out EventTypeDefinition? eventType))
+        if (kind == RecordKind.Event && _tables.EventTypes.TryGetValue(code, out EventTypeDefinition? eventType))
         {
             return eventType.Attributes;
         }
-        if (kind == RecordKind.Relation && RelationTypes.TryGetValue(code, out RelationTypeDefinition? relationType))
+        if (kind == RecordKind.Relation && _tables.RelationTypes.TryGetValue(code, out RelationTypeDefinition? relationType))
         {
             return relationType.Attributes;
         }
@@ -162,24 +130,24 @@ public sealed class InMemoryRegistry : IRegistry
     /// <inheritdoc/>
     public MeasureDefinition? FindMeasure(string name)
     {
-        return Measures.GetValueOrDefault(name);
+        return _tables.Measures.GetValueOrDefault(name);
     }
 
     /// <inheritdoc/>
     public LogicalSpaceDefinition? FindLogicalSpace(string space)
     {
-        return LogicalSpaces.GetValueOrDefault(space);
+        return _tables.LogicalSpaces.GetValueOrDefault(space);
     }
 
     /// <inheritdoc/>
     public bool Matches(string pattern, string text)
     {
-        return Patterns[pattern].IsMatch(text);
+        return _tables.Patterns[pattern].IsMatch(text);
     }
 
     /// <summary>True when the value is in the named closed list of core.</summary>
     private bool InVocabulary(string name, string value)
     {
-        return Vocabularies.TryGetValue(name, out HashSet<string>? values) && values.Contains(value);
+        return _tables.Vocabularies.TryGetValue(name, out HashSet<string>? values) && values.Contains(value);
     }
 }

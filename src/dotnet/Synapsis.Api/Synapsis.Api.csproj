@@ -4,4 +4,7 @@
     <ProjectReference Include="../Synapsis.Sil/Synapsis.Sil.csproj" />
     <ProjectReference Include="../Synapsis.Storage/Synapsis.Storage.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+  </ItemGroup>
 </Project>

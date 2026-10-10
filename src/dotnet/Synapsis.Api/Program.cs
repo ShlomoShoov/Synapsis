@@ -1,3 +1,5 @@
+using Microsoft.OpenApi.Models;
+using Synapsis.Api.Services.Swagger;
 using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -28,6 +30,8 @@ WebApplication app = builder.Build();
 app.UseExceptionHandler();
 app.UseRequestDecompression();
 app.UseCors();
+app.UseSwagger();
+app.UseSwaggerUI();
 app.MapControllers();
 app.MapHealthChecks("/health");
 app.Run();
@@ -54,9 +58,26 @@ static void AddHttp(WebApplicationBuilder builder, ApiOptions api)
         .AddJsonOptions(json => ApiJson.Apply(json.JsonSerializerOptions))
         .ConfigureApiBehaviorOptions(behavior => behavior.InvalidModelStateResponseFactory = ErrorMapper.ToParameterResult);
     builder.Services.AddRequestDecompression();
+    AddSwagger(builder.Services);
     builder.Services.AddCors(cors => cors.AddDefaultPolicy(policy => policy.WithOrigins(api.CorsOrigins).AllowAnyHeader().WithMethods("GET")));
     builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
     builder.Services.AddProblemDetails();
+}
+
+// Swagger: the API described at /swagger/v1/swagger.json and testable in the browser at /swagger, in every environment.
+// The key box ("Authorize") sends X-Api-Key for the writes.
+static void AddSwagger(IServiceCollection services)
+{
+    services.AddEndpointsApiExplorer();
+    services.AddSwaggerGen(swagger =>
+    {
+        swagger.SwaggerDoc("v1", new OpenApiInfo { Title = "Synapsis API", Version = "v1" });
+        swagger.OperationFilter<RawBodyOperationFilter>();
+        OpenApiSecurityScheme key = new OpenApiSecurityScheme { Name = "X-Api-Key", In = ParameterLocation.Header, Type = SecuritySchemeType.ApiKey };
+        swagger.AddSecurityDefinition("ApiKey", key);
+        OpenApiSecurityScheme keyReference = new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "ApiKey" } };
+        swagger.AddSecurityRequirement(new OpenApiSecurityRequirement { [keyReference] = new string[0] });
+    });
 }
 
 /// <summary>The program's entry point, named so the HTTP tests can start the server in-process.</summary>

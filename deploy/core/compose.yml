@@ -1,12 +1,14 @@
-# Synapsis core: MongoDB, Elasticsearch, the embedder and the API.
+# Synapsis core: MongoDB, Elasticsearch, the API and the web client.
 #
 #   cp deploy/core/.env.example deploy/core/.env              (first time only)
 #   docker compose -f deploy/core/compose.yml up -d --build --wait
 #   docker compose -f deploy/core/compose.yml down            (add -v to delete the data too)
 #
-# Settings: deploy/core/.env, every name starting with CORE_. The API answers on http://localhost:8080 and, inside the
-# Docker network "synapsis", as http://api:8080. Today the API is the Python stand-in; the C# API (api-next) runs
-# beside it on http://localhost:8088 with its own database, until it takes the stand-in's place and address. Kafka, Neo4j, Redis and MinIO join this file in the stage that first uses them.
+# Settings: deploy/core/.env, every name starting with CORE_.
+# The C# API answers on http://localhost:8080 (Swagger: /swagger) and, for other deployments on the Docker network
+# "synapsis", as http://api:8080. It writes records to MongoDB and the ingestion log to Elasticsearch
+# (index synapsis-ingest-log, read by the UI). The old Python stand-in and its embedder (semantic search) start only
+# with --profile standin (port 8089). Kafka, Neo4j, Redis and MinIO join this file in the stage that first uses them.
 
 name: synapsis-core
 
@@ -40,6 +42,9 @@ services:
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"        # development only: no login, no TLS
+      http.cors.enabled: "true"               # the UI reads the ingestion log from the browser
+      http.cors.allow-origin: "http://localhost:1897"
+      http.cors.allow-headers: "Content-Type"
       ES_JAVA_OPTS: "-Xms${CORE_ES_HEAP:-1g} -Xmx${CORE_ES_HEAP:-1g}"
       cluster.routing.allocation.disk.threshold_enabled: "false"
     ports: ["9200:9200"]
@@ -50,7 +55,8 @@ services:
       timeout: 10s
       retries: 30
 
-  embedder:
+  embedder:                   # text models for the stand-in's semantic search: --profile standin
+    profiles: [standin]
     image: synapsis/embedder:dev
     build: {context: ../.., dockerfile: src/python/synapsis_embedder/Dockerfile}
     restart: unless-stopped
@@ -68,7 +74,29 @@ services:
       timeout: 5s
       retries: 60
 
-  api-dev:                    # the Python stand-in for the C# API: schemas, ingest, records, semantic search
+  api:                        # the C# API: schemas, ingest, records; Swagger at http://localhost:8080/swagger.
+                              # Other deployments (the feeders) reach it as http://api:8080.
+    image: synapsis/api:dev
+    build: {context: ../.., dockerfile: src/dotnet/Synapsis.Api/Dockerfile}
+    restart: unless-stopped
+    environment:
+      Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
+      Mongo__Database: synapsis_next
+      Api__Key: ${CORE_API_KEY:-}
+      Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log)
+      Api__CorsOrigins__0: http://localhost:1897   # the UI may read the API from the browser
+    ports: ["8080:8080"]
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      mongo: {condition: service_healthy}
+      elasticsearch: {condition: service_healthy}
+
+  api-dev:                    # the old Python stand-in (semantic search); off unless asked: --profile standin
+    profiles: [standin]
     image: synapsis/api-dev:dev
     build: {context: ../.., dockerfile: src/python/synapsis_reference/Dockerfile}
     restart: unless-stopped
@@ -78,10 +106,7 @@ services:
       ES_URL: http://elasticsearch:9200
       EMBEDDER_URL: http://embedder:8090
       SYNAPSIS_API_KEY: ${CORE_API_KEY:-}
-    ports: ["8080:8080"]
-    networks:
-      default:
-        aliases: [api]        # the stable address other deployments use: http://api:8080
+    ports: ["8089:8080"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=3)"]
       interval: 10s
@@ -92,22 +117,13 @@ services:
       elasticsearch: {condition: service_healthy}
       embedder: {condition: service_healthy}
 
-  api-next:                   # the C# ingestion server, beside the stand-in: its own port and database
-    image: synapsis/api-next:dev
-    build: {context: ../.., dockerfile: src/dotnet/Synapsis.Api/Dockerfile}
+  ui:                         # the web client (React, served by nginx): http://localhost:1897 redirects to /home
+    image: synapsis/ui:dev
+    build: {context: ../../src/ui}
     restart: unless-stopped
-    environment:
-      Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Mongo__Database: synapsis_next
-      Api__Key: ${CORE_API_KEY:-}
-      Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log)
-      Api__CorsOrigins__0: http://localhost:1897   # the UI may read the API from the browser
-    ports: ["8088:8080"]
+    ports: ["1897:1897"]      # 1897: the year the word "synapse" was coined, from the Greek "synapsis"
     healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:1897/home"]
       interval: 10s
-      timeout: 5s
-      retries: 30
-    depends_on:
-      mongo: {condition: service_healthy}
-      elasticsearch: {condition: service_healthy}
+      timeout: 3s
+      retries: 10

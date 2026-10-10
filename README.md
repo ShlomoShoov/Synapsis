@@ -5,14 +5,14 @@ later with Compose v2, and at least 8 GB of memory for Docker.
 
 ## Run
 
-1. The core: MongoDB, Elasticsearch, the embedder and the API on `http://localhost:8080`; the new C# API runs
-   beside it on `http://localhost:8088`.
+1. The core: MongoDB, Elasticsearch, the C# API on `http://localhost:8080` (Swagger: `http://localhost:8080/swagger`)
+   and the web client on `http://localhost:1897`. The old Python API with semantic search starts only with
+   `--profile standin` (port 8089).
 
    ```bash
    cp deploy/core/.env.example deploy/core/.env        # first time only
    docker compose -f deploy/core/compose.yml up -d --build --wait
    curl -s localhost:8080/health
-   curl -s localhost:8088/health
    ```
 
 2. The feeders: demo data from 21 public sources. Fill in the keys in `deploy/feeders/.env` first.
