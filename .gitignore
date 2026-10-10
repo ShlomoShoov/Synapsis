@@ -23,3 +23,6 @@ dist/
 CLAUDE.md
 .claude/
 docs/
+
+# C# tests: kept local, they verify the server (tests/dotnet/Synapsis.Tests.sln)
+tests/dotnet/
