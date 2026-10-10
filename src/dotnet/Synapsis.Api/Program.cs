@@ -17,15 +17,17 @@ using Synapsis.Storage.Models;
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 ApiOptions api = builder.Configuration.GetSection("Api").Get<ApiOptions>() ?? new ApiOptions();
 MongoOptions mongo = builder.Configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
+ElasticOptions elastic = builder.Configuration.GetSection("Elastic").Get<ElasticOptions>() ?? new ElasticOptions();
 
 builder.Services.AddSynapsisSil();
-builder.Services.AddSynapsisStorage(mongo);
+builder.Services.AddSynapsisStorage(mongo, elastic);
 AddProcesses(builder.Services);
 AddHttp(builder, api);
 
 WebApplication app = builder.Build();
 app.UseExceptionHandler();
 app.UseRequestDecompression();
+app.UseCors();
 app.MapControllers();
 app.MapHealthChecks("/health");
 app.Run();
@@ -41,7 +43,8 @@ static void AddProcesses(IServiceCollection services)
     services.AddHostedService<StartupInitializer>();
 }
 
-// HTTP: controllers with snake_case JSON, the key filter, gzip bodies, the body limit, errors as {code, message, details}.
+// HTTP: controllers with snake_case JSON, the key filter, gzip bodies, the body limit, browser reads from the UI (CORS),
+// errors as {code, message, details}.
 static void AddHttp(WebApplicationBuilder builder, ApiOptions api)
 {
     builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = api.MaxBodyMb * 1024L * 1024L);
@@ -51,6 +54,7 @@ static void AddHttp(WebApplicationBuilder builder, ApiOptions api)
         .AddJsonOptions(json => ApiJson.Apply(json.JsonSerializerOptions))
         .ConfigureApiBehaviorOptions(behavior => behavior.InvalidModelStateResponseFactory = ErrorMapper.ToParameterResult);
     builder.Services.AddRequestDecompression();
+    builder.Services.AddCors(cors => cors.AddDefaultPolicy(policy => policy.WithOrigins(api.CorsOrigins).AllowAnyHeader().WithMethods("GET")));
     builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
     builder.Services.AddProblemDetails();
 }

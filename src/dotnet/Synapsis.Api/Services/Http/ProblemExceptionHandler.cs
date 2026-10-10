@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System;
 using System.IO;
 using System.Threading;
@@ -15,7 +16,7 @@ namespace Synapsis.Api.Services.Http;
 /// <summary>
 /// Turns the failures the framework and the database raise as exceptions into the contract's answers:
 /// a body sent as gzip that is not gzip → E-BUNDLE (400); a body over the size limit → E-TOO-LARGE (413);
-/// MongoDB not answering → E-UNAVAILABLE (503). Any other exception is a bug and is left to the framework (500).
+/// MongoDB or Elasticsearch not answering → E-UNAVAILABLE (503). Any other exception is a bug and is left to the framework (500).
 /// </summary>
 public sealed class ProblemExceptionHandler : IExceptionHandler
 {
@@ -55,6 +56,10 @@ public sealed class ProblemExceptionHandler : IExceptionHandler
         if (exception is MongoException || exception is TimeoutException)
         {
             return new Problem(ErrorCodes.Unavailable, string.Empty, "the database did not answer; send again");
+        }
+        if (exception is HttpRequestException)
+        {
+            return new Problem(ErrorCodes.Unavailable, string.Empty, "Elasticsearch did not answer; ask again");
         }
         return null;
     }

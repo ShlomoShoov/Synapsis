@@ -5,5 +5,5 @@ namespace Synapsis.Api.Services.Ingestion;
 public interface IReceiptBuilder
 {
     /// <summary>The receipt of the batch.</summary>
-    Receipt Build(ReceiptRequest request);
+    Receipt Build(BatchOutcome outcome);
 }

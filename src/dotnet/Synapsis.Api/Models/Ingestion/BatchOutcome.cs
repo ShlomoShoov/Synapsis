@@ -5,11 +5,11 @@ using Synapsis.Sil.Models.Records;
 using Synapsis.Sil.Models.Validation;
 namespace Synapsis.Api.Models.Ingestion;
 
-/// <summary>What a receipt summarises: the batch, its validation, the plans of its accepted records.</summary>
-public sealed class ReceiptRequest
+/// <summary>What happened to one batch: the batch, its validation, the plans of its accepted records. The receipt and the ingestion log are both built from it.</summary>
+public sealed class BatchOutcome
 {
-    /// <summary>Creates a request.</summary>
-    public ReceiptRequest(IngestBundle bundle, BatchValidationResult validation, IReadOnlyList<PlannedRecord> planned, DateTime receivedAt, bool dryRun)
+    /// <summary>Creates the outcome of one batch.</summary>
+    public BatchOutcome(IngestBundle bundle, BatchValidationResult validation, IReadOnlyList<PlannedRecord> planned, DateTime receivedAt, bool dryRun)
     {
         Bundle = bundle;
         Validation = validation;

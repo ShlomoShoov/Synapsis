@@ -9,28 +9,28 @@ namespace Synapsis.Api.Services.Ingestion;
 public sealed class ReceiptBuilder : IReceiptBuilder
 {
     /// <inheritdoc/>
-    public Receipt Build(ReceiptRequest request)
+    public Receipt Build(BatchOutcome outcome)
     {
-        ReceiptCounts counts = Count(request);
+        ReceiptCounts counts = Count(outcome);
         return new Receipt
         {
-            BatchId = request.Bundle.BatchId,
+            BatchId = outcome.Bundle.BatchId,
             Status = StatusOf(counts),
-            Producer = request.Bundle.Producer,
-            ReceivedAt = request.ReceivedAt,
+            Producer = outcome.Bundle.Producer,
+            ReceivedAt = outcome.ReceivedAt,
             Counts = counts,
-            Rejected = request.Validation.Rejected,
-            DryRun = request.DryRun,
+            Rejected = outcome.Validation.Rejected,
+            DryRun = outcome.DryRun,
         };
     }
 
     /// <summary>The counts of the batch.</summary>
-    private static ReceiptCounts Count(ReceiptRequest request)
+    private static ReceiptCounts Count(BatchOutcome outcome)
     {
         int created = 0;
         int versioned = 0;
         int unchanged = 0;
-        foreach (PlannedRecord planned in request.Planned)
+        foreach (PlannedRecord planned in outcome.Planned)
         {
             if (planned.Plan.Outcome == VersionOutcome.New)
             {
@@ -47,12 +47,12 @@ public sealed class ReceiptBuilder : IReceiptBuilder
         }
         return new ReceiptCounts
         {
-            Received = request.Bundle.Records.Count,
+            Received = outcome.Bundle.Records.Count,
             New = created,
             Versioned = versioned,
             Unchanged = unchanged,
-            Duplicates = request.Validation.Duplicates,
-            Rejected = request.Validation.Rejected.Count,
+            Duplicates = outcome.Validation.Duplicates,
+            Rejected = outcome.Validation.Rejected.Count,
         };
     }
 

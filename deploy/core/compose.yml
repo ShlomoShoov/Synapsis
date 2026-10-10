@@ -100,6 +100,8 @@ services:
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
       Mongo__Database: synapsis_next
       Api__Key: ${CORE_API_KEY:-}
+      Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log)
+      Api__CorsOrigins__0: http://localhost:1897   # the UI may read the API from the browser
     ports: ["8088:8080"]
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8080/health"]
@@ -108,3 +110,4 @@ services:
       retries: 30
     depends_on:
       mongo: {condition: service_healthy}
+      elasticsearch: {condition: service_healthy}
