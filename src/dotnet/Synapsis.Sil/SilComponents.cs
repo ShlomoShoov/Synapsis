@@ -1,21 +1,13 @@
 using System.Collections.Generic;
-using Synapsis.Sil.Fingerprinting.Abstractions;
-using Synapsis.Sil.Fingerprinting.Services.Domain;
-using Synapsis.Sil.PackageValidation.Abstractions;
-using Synapsis.Sil.PackageValidation.Services.Orchestrators;
-using Synapsis.Sil.PackageValidation.Services.PackageRules;
-using Synapsis.Sil.Reading.Abstractions;
-using Synapsis.Sil.Reading.Services.Readers;
-using Synapsis.Sil.Registry.Abstractions;
-using Synapsis.Sil.Registry.Services.Domain;
-using Synapsis.Sil.Validation.Abstractions;
-using Synapsis.Sil.Validation.Services.BatchRules;
-using Synapsis.Sil.Validation.Services.EnvelopeRules;
-using Synapsis.Sil.Validation.Services.Orchestrators;
-using Synapsis.Sil.Validation.Services.RecordRules;
-using Synapsis.Sil.Versioning.Abstractions;
-using Synapsis.Sil.Versioning.Services.Domain;
-
+using Synapsis.Sil.Services.Fingerprinting;
+using Synapsis.Sil.Orchestrators;
+using Synapsis.Sil.Services.Rules.Package;
+using Synapsis.Sil.Services.Reading;
+using Synapsis.Sil.Services.Registry;
+using Synapsis.Sil.Services.Rules.Batch;
+using Synapsis.Sil.Services.Rules.Envelope;
+using Synapsis.Sil.Services.Rules.Record;
+using Synapsis.Sil.Services.Versioning;
 namespace Synapsis.Sil;
 
 /// <summary>

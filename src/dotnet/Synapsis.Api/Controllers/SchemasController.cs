@@ -1,11 +1,10 @@
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Synapsis.Api.Http.Services.Filters;
-using Synapsis.Api.Http.Services.Mappers;
-using Synapsis.Api.Registration.Abstractions;
-using Synapsis.Api.Registration.Models.Requests;
-using Synapsis.Api.Registration.Models.Results;
+using Synapsis.Api.Services.Http;
+using Synapsis.Api.Services.Http.Mappers;
+using Synapsis.Api.Orchestrators;
+using Synapsis.Api.Models.Registration;
 using Synapsis.Sil.Models.Results;
 
 namespace Synapsis.Api.Controllers;

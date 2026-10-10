@@ -1,5 +1,3 @@
-using Synapsis.Sil.Models.Descriptions;
-
 namespace Synapsis.Sil.Models.Results;
 
 /// <summary>
