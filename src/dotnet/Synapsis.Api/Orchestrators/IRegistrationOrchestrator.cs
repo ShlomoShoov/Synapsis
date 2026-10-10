@@ -14,5 +14,5 @@ public interface IRegistrationOrchestrator
     /// Created, updated or unchanged, with the version; or the first problem: E-SCHEMA-PACKAGE, E-SCHEMA-BREAKING,
     /// E-SCHEMA-REF, E-SCHEMA-OWNERSHIP, E-SCHEMA-VERSION. A refused package leaves the vocabulary as it was.
     /// </summary>
-    Task<Result<RegistrationResult>> RegisterAsync(RegistrationRequest request);
+    Task<Result<RegistrationResult>> RegisterAsync(string name, string text);
 }

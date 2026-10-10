@@ -28,7 +28,7 @@ public sealed class SchemasController : ControllerBase
     {
         using StreamReader body = new StreamReader(Request.Body);
         string text = await body.ReadToEndAsync();
-        Result<RegistrationResult> result = await _registration.RegisterAsync(new RegistrationRequest(package, text));
+        Result<RegistrationResult> result = await _registration.RegisterAsync(package, text);
         if (!result.Succeeded)
         {
             return ErrorMapper.ToResult(result.Problem!);

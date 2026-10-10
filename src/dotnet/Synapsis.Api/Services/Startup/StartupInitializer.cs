@@ -68,7 +68,7 @@ public sealed class StartupInitializer : IHostedService
     private async Task SeedCoreAsync()
     {
         string text = DescriptionFiles.ReadText(DescriptionFiles.CorePackage);
-        Result<RegistrationResult> seeded = await _registration.RegisterAsync(new RegistrationRequest(CoreName, text));
+        Result<RegistrationResult> seeded = await _registration.RegisterAsync(CoreName, text);
         if (!seeded.Succeeded)
         {
             throw new InvalidOperationException($"The core package could not be registered: {seeded.Problem!.Code} {seeded.Problem.Message}");

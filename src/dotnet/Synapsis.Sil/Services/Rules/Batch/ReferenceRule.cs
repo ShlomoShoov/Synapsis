@@ -28,16 +28,16 @@ public sealed class ReferenceRule : IBatchRule
     }
 
     /// <summary>The records whose references all resolve pass; the others are refused at the first broken reference.</summary>
-    public async Task<BatchRuleResult> CheckAsync(BatchRuleRequest request)
+    public async Task<BatchRuleResult> CheckAsync(IReadOnlyList<CheckedRecord> records, IRegistry registry)
     {
-        KnownRecords known = await LoadStoredAsync(request.Records);
-        List<CheckedRecord> ordered = new List<CheckedRecord>(request.Records);
+        KnownRecords known = await LoadStoredAsync(records);
+        List<CheckedRecord> ordered = new List<CheckedRecord>(records);
         ordered.Sort(CompareByDependency);
         List<CheckedRecord> passed = new List<CheckedRecord>();
         List<Rejection> rejected = new List<Rejection>();
         foreach (CheckedRecord candidate in ordered)
         {
-            Result result = CheckRecord(candidate.Record, request.Registry, known);
+            Result result = CheckRecord(candidate.Record, registry, known);
             if (!result.Succeeded)
             {
                 rejected.Add(new Rejection(candidate.Index, candidate.Record.Id, result.Problem!));

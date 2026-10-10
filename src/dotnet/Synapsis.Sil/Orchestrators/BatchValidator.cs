@@ -34,7 +34,7 @@ public sealed class BatchValidator : IBatchValidator
         int duplicates = 0;
         foreach (IBatchRule rule in _batchRules)
         {
-            BatchRuleResult result = await rule.CheckAsync(new BatchRuleRequest(running, request.Registry));
+            BatchRuleResult result = await rule.CheckAsync(running, request.Registry);
             rejected.AddRange(result.Rejected);
             duplicates += result.Dropped;
             running = result.Passed;

@@ -14,5 +14,5 @@ public interface IIngestionOrchestrator
     /// The receipt; or E-BUNDLE / E-TOO-LARGE when the body is not a batch, E-UNAVAILABLE when another writer stored
     /// one of the versions first (send again).
     /// </summary>
-    Task<Result<Receipt>> IngestAsync(IngestionRequest request);
+    Task<Result<Receipt>> IngestAsync(string body, bool dryRun);
 }

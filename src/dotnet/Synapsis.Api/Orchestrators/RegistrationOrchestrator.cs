@@ -39,12 +39,12 @@ public sealed class RegistrationOrchestrator : IRegistrationOrchestrator
     }
 
     /// <inheritdoc/>
-    public async Task<Result<RegistrationResult>> RegisterAsync(RegistrationRequest request)
+    public async Task<Result<RegistrationResult>> RegisterAsync(string name, string text)
     {
         await _oneAtATime.WaitAsync();
         try
         {
-            return await RegisterOneAsync(request);
+            return await RegisterOneAsync(name, text);
         }
         finally
         {
@@ -53,21 +53,21 @@ public sealed class RegistrationOrchestrator : IRegistrationOrchestrator
     }
 
     /// <summary>The steps of one registration.</summary>
-    private async Task<Result<RegistrationResult>> RegisterOneAsync(RegistrationRequest request)
+    private async Task<Result<RegistrationResult>> RegisterOneAsync(string name, string text)
     {
-        Result<SchemaPackage> read = _reader.Read(request.Text);
+        Result<SchemaPackage> read = _reader.Read(text);
         if (!read.Succeeded)
         {
             return Result<RegistrationResult>.Failure(read.Problem!);
         }
         IReadOnlyList<StoredPackage> stored = await _packages.AllAsync();
-        StoredPackage? current = Find(stored, request.Name);
+        StoredPackage? current = Find(stored, name);
         string fingerprint = _fingerprinter.OfPackage(read.Value!);
         if (current != null && current.Fingerprint == fingerprint)
         {
-            return Result<RegistrationResult>.Success(new RegistrationResult(RegistrationStatus.Unchanged, request.Name, current.Version));
+            return Result<RegistrationResult>.Success(new RegistrationResult(RegistrationStatus.Unchanged, name, current.Version));
         }
-        PackageValidationRequest validation = new PackageValidationRequest(request.Text, request.Name, read.Value!, current?.Package, Others(stored, request.Name));
+        PackageValidationRequest validation = new PackageValidationRequest(text, name, read.Value!, current?.Package, Others(stored, name));
         Result<IRegistry> vocabulary = _validator.Validate(validation);
         if (!vocabulary.Succeeded)
         {
@@ -75,10 +75,10 @@ public sealed class RegistrationOrchestrator : IRegistrationOrchestrator
         }
         StoredPackage next = new StoredPackage
         {
-            Name = request.Name,
+            Name = name,
             Version = current == null ? 1 : current.Version + 1,
             Fingerprint = fingerprint,
-            Text = request.Text,
+            Text = text,
             Package = read.Value!,
         };
         Result saved = await _packages.SaveAsync(next);
@@ -88,7 +88,7 @@ public sealed class RegistrationOrchestrator : IRegistrationOrchestrator
         }
         _vocabulary.Replace(vocabulary.Value!);
         RegistrationStatus status = current == null ? RegistrationStatus.Created : RegistrationStatus.Updated;
-        return Result<RegistrationResult>.Success(new RegistrationResult(status, request.Name, next.Version));
+        return Result<RegistrationResult>.Success(new RegistrationResult(status, name, next.Version));
     }
 
     /// <summary>The stored package with this name, or null.</summary>

@@ -1,3 +1,5 @@
+using Synapsis.Sil.Services.Registry;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Synapsis.Sil.Models.Validation;
 namespace Synapsis.Sil.Services.Rules.Batch;
@@ -9,5 +11,5 @@ namespace Synapsis.Sil.Services.Rules.Batch;
 public interface IBatchRule
 {
     /// <summary>The records that pass, the ones refused, and how many were dropped as identical copies.</summary>
-    Task<BatchRuleResult> CheckAsync(BatchRuleRequest request);
+    Task<BatchRuleResult> CheckAsync(IReadOnlyList<CheckedRecord> records, IRegistry registry);
 }

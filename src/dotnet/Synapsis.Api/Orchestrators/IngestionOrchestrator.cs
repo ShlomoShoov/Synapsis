@@ -43,9 +43,9 @@ public sealed class IngestionOrchestrator : IIngestionOrchestrator
     }
 
     /// <inheritdoc/>
-    public async Task<Result<Receipt>> IngestAsync(IngestionRequest request)
+    public async Task<Result<Receipt>> IngestAsync(string body, bool dryRun)
     {
-        Result<IngestBundle> read = _reader.Read(request.Body);
+        Result<IngestBundle> read = _reader.Read(body);
         if (!read.Succeeded)
         {
             return Result<Receipt>.Failure(read.Problem!);
@@ -55,8 +55,8 @@ public sealed class IngestionOrchestrator : IIngestionOrchestrator
         BatchValidationResult validation = await _validator.ValidateAsync(new BatchValidationRequest(bundle.Records, _vocabulary.Current, receivedAt));
         IReadOnlyDictionary<StatementKey, IReadOnlyList<StoredVersion>> stored = await _records.StoredVersionsAsync(_planner.StatementsOf(validation.Accepted));
         IReadOnlyList<PlannedRecord> planned = _planner.PlanBatch(validation.Accepted, stored, receivedAt);
-        Receipt receipt = _receipts.Build(new ReceiptRequest(bundle, validation, planned, receivedAt, request.DryRun));
-        if (request.DryRun)
+        Receipt receipt = _receipts.Build(new ReceiptRequest(bundle, validation, planned, receivedAt, dryRun));
+        if (dryRun)
         {
             return Result<Receipt>.Success(receipt);
         }

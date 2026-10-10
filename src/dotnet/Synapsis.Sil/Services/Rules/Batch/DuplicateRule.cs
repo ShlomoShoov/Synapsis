@@ -1,3 +1,4 @@
+using Synapsis.Sil.Services.Registry;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Synapsis.Sil.Models.Results;
@@ -12,13 +13,13 @@ namespace Synapsis.Sil.Services.Rules.Batch;
 public sealed class DuplicateRule : IBatchRule
 {
     /// <summary>The first copy of each record passes; identical later copies are dropped; conflicting ones are refused.</summary>
-    public Task<BatchRuleResult> CheckAsync(BatchRuleRequest request)
+    public Task<BatchRuleResult> CheckAsync(IReadOnlyList<CheckedRecord> records, IRegistry registry)
     {
         Dictionary<string, CheckedRecord> firstCopies = new Dictionary<string, CheckedRecord>();
         List<CheckedRecord> passed = new List<CheckedRecord>();
         List<Rejection> rejected = new List<Rejection>();
         int dropped = 0;
-        foreach (CheckedRecord candidate in request.Records)
+        foreach (CheckedRecord candidate in records)
         {
             string key = candidate.Record.Id + "|" + candidate.Record.Source;
             if (!firstCopies.TryGetValue(key, out CheckedRecord? first))

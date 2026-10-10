@@ -28,7 +28,7 @@ public sealed class IngestController : ControllerBase
     {
         using StreamReader body = new StreamReader(Request.Body);
         string text = await body.ReadToEndAsync();
-        Result<Receipt> result = await _ingestion.IngestAsync(new IngestionRequest(text, dryRun));
+        Result<Receipt> result = await _ingestion.IngestAsync(text, dryRun);
         if (!result.Succeeded)
         {
             return ErrorMapper.ToResult(result.Problem!);
