@@ -19,11 +19,11 @@ public sealed class RecordValidator : IRecordValidator
     private readonly IReadOnlyList<IRecordRule> _recordRules;
 
     /// <summary>Creates the validator from its parts, the rules in the order they must run.</summary>
-    public RecordValidator(IReadOnlyList<IEnvelopeRule> envelopeRules, IRecordReader reader, IReadOnlyList<IRecordRule> recordRules)
+    public RecordValidator(IEnumerable<IEnvelopeRule> envelopeRules, IRecordReader reader, IEnumerable<IRecordRule> recordRules)
     {
-        _envelopeRules = envelopeRules;
+        _envelopeRules = new List<IEnvelopeRule>(envelopeRules);
         _reader = reader;
-        _recordRules = recordRules;
+        _recordRules = new List<IRecordRule>(recordRules);
     }
 
     /// <inheritdoc/>

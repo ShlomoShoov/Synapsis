@@ -11,12 +11,6 @@ using Synapsis.Api.Services.Ingestion;
 using Synapsis.Api.Services.Startup;
 using Synapsis.Api.Services.Vocabulary;
 using Synapsis.Sil;
-using Synapsis.Sil.Services.Fingerprinting;
-using Synapsis.Sil.Orchestrators;
-using Synapsis.Sil.Services.Reading;
-using Synapsis.Sil.Services.Registry;
-using Synapsis.Sil.Services.Rules.Batch;
-using Synapsis.Sil.Services.Versioning;
 using Synapsis.Storage;
 using Synapsis.Storage.Models;
 // The composition root: every component of the server is registered here, in three groups, then the HTTP pipeline.
@@ -24,7 +18,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 ApiOptions api = builder.Configuration.GetSection("Api").Get<ApiOptions>() ?? new ApiOptions();
 MongoOptions mongo = builder.Configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
 
-AddRecordLanguage(builder.Services);
+builder.Services.AddSynapsisSil();
 builder.Services.AddSynapsisStorage(mongo);
 AddProcesses(builder.Services);
 AddHttp(builder, api);
@@ -35,18 +29,6 @@ app.UseRequestDecompression();
 app.MapControllers();
 app.MapHealthChecks("/health");
 app.Run();
-
-// Synapsis.Sil: the record language, built by its own composition (SilComponents), which holds the rule order.
-static void AddRecordLanguage(IServiceCollection services)
-{
-    services.AddSingleton<IBundleReader>(SilComponents.CreateBundleReader());
-    services.AddSingleton<IPackageReader>(SilComponents.CreatePackageReader());
-    services.AddSingleton<IFingerprinter>(SilComponents.CreateFingerprinter());
-    services.AddSingleton<IRegistryBuilder>(SilComponents.CreateRegistryBuilder());
-    services.AddSingleton<IPackageValidator>(SilComponents.CreatePackageValidator());
-    services.AddSingleton<IVersionPlanner>(SilComponents.CreateVersionPlanner());
-    services.AddSingleton<IBatchValidator>(provider => SilComponents.CreateBatchValidator(provider.GetRequiredService<IReferenceResolver>()));
-}
 
 // The processes: the vocabulary in force, registration, ingestion, and the work done once at start-up.
 static void AddProcesses(IServiceCollection services)

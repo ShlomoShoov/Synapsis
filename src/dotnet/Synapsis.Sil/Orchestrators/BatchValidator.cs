@@ -19,11 +19,11 @@ public sealed class BatchValidator : IBatchValidator
     private readonly IReadOnlyList<IBatchRule> _batchRules;
 
     /// <summary>Creates the validator from its parts, the batch rules in the order they must run.</summary>
-    public BatchValidator(IRecordValidator recordValidator, IFingerprinter fingerprinter, IReadOnlyList<IBatchRule> batchRules)
+    public BatchValidator(IRecordValidator recordValidator, IFingerprinter fingerprinter, IEnumerable<IBatchRule> batchRules)
     {
         _recordValidator = recordValidator;
         _fingerprinter = fingerprinter;
-        _batchRules = batchRules;
+        _batchRules = new List<IBatchRule>(batchRules);
     }
 
     /// <inheritdoc/>

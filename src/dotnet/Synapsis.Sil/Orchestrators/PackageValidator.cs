@@ -16,9 +16,9 @@ public sealed class PackageValidator : IPackageValidator
     private readonly IRegistryBuilder _registryBuilder;
 
     /// <summary>Creates the validator from its parts, the rules in the order they must run.</summary>
-    public PackageValidator(IReadOnlyList<IPackageRule> rules, IRegistryBuilder registryBuilder)
+    public PackageValidator(IEnumerable<IPackageRule> rules, IRegistryBuilder registryBuilder)
     {
-        _rules = rules;
+        _rules = new List<IPackageRule>(rules);
         _registryBuilder = registryBuilder;
     }
 

@@ -3,6 +3,7 @@
   <ItemGroup>
     <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
   </ItemGroup>
   <ItemGroup>
     <!-- Description files, copied into the DLL at build time from the repository's one copy in schemas/.
