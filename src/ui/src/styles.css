@@ -1,0 +1,64 @@
+/*
+ * Global styles: the design tokens (every colour, font and space the client uses) and the base rules.
+ * Pages and components use these names, never raw values, so the look is changed here.
+ */
+:root {
+  --paper: #f4f0e7; /* the page */
+  --paper-deep: #e9e3d6; /* a recessed surface */
+  --ink: #1f1c17; /* text */
+  --ink-muted: #6b6457; /* secondary text (readable on paper) */
+  --line: rgb(31 28 23 / 0.12); /* hairlines */
+
+  --font-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+
+  --margin: clamp(24px, 5vw, 88px); /* page side margin */
+  --header-height: 72px;
+  --radius: 20px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgb(31 28 23 / 0.12);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -23,6 +23,8 @@ dist/
 CLAUDE.md
 .claude/
 docs/
+# UI films: large; re-made from their sources with src/ui/scripts/prepare-film.sh (see src/ui/CLAUDE.md)
+src/ui/assets/media/**/*.mp4
 
 # C# tests: kept local, they verify the server (tests/dotnet/Synapsis.Tests.sln)
 tests/dotnet/

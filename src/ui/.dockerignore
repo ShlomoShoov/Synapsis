@@ -1,0 +1,7 @@
+# Keep the image build small and free of local files: dependencies are installed inside the image.
+node_modules
+dist
+coverage
+# Local documentation and Claude files never enter an image.
+CLAUDE.md
+docs

@@ -1,0 +1,36 @@
+/**
+ * How the client is built, served while developing, and tested: Vite builds and serves it, Vitest runs its tests.
+ * One file for both, so the tests resolve imports exactly as the app does.
+ */
+import { fileURLToPath, URL } from 'node:url';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  plugins: [react()],
+
+  // The local assets folder: everything in assets/ is served as it is, at the site root.
+  // assets/media/home/winter-flock.av1.mp4 is the address /media/home/winter-flock.av1.mp4.
+  publicDir: 'assets',
+
+  // `@/` means `src/`, so imports read the same from any folder: `import { films } from '@/media/films'`.
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
+
+  // The development server (npm run dev). The deployed client is served by nginx on port 1897 instead.
+  server: { port: 5173, strictPort: true },
+
+  build: {
+    // The built code goes to dist/app/ with content hashes in its names, so the server can cache it for a year.
+    // The name differs from assets/ on purpose: assets/ holds what people add, app/ holds what the build makes.
+    assetsDir: 'app',
+    target: 'es2023',
+  },
+
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'],
+    restoreMocks: true,
+  },
+});
