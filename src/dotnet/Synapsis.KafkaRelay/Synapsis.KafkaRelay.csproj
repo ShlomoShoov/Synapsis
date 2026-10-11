@@ -5,6 +5,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Synapsis.KafkaRelay.Tests\**" />
+    <EmbeddedResource Remove="Synapsis.KafkaRelay.Tests\**" />
+    <None Remove="Synapsis.KafkaRelay.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Synapsis.Storage\Synapsis.Storage.csproj" />
   </ItemGroup>
 
