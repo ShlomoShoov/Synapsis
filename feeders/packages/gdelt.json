@@ -1,0 +1,311 @@
+{
+  "note": "GDELT 1.0 daily event exports: events coded automatically from news, with the number of articles about each.",
+  "package": "gdelt",
+  "title": "GDELT 1.0 news-coded events",
+  "description": "One event per GDELT event record from the daily export: what the news describes (a CAMEO code), where it happened, and how much coverage it got (articles, mentions, sources) with its tone. Coding is automatic and noisy (reliability 40), which is why GDELT is a fast signal next to slower coded sources such as UCDP. By default the feeder keeps material-conflict events (QuadClass 4) located at city level in the countries it is configured for.",
+  "maintainer": "synapsis-feeders",
+  "namespaces": {
+    "records": [
+      "gdelt"
+    ]
+  },
+  "sources": [
+    {
+      "id": "src:gdelt:events",
+      "title": "GDELT 1.0 daily event export",
+      "publisher": "The GDELT Project",
+      "url": "https://www.gdeltproject.org/data.html",
+      "license": "Free for any use with attribution to the GDELT Project",
+      "reliability": 40,
+      "reliability_basis": "D3",
+      "publication_lag_days": 1,
+      "known_at_rule": "DATEADDED plus one day; each daily file is published the morning after (basis proxy_publication_lag)."
+    }
+  ],
+  "event_types": [
+    {
+      "code": "SEC.NEWS.CONFLICT",
+      "title": "Material conflict reported in the news (CAMEO QuadClass 4)",
+      "place": [
+        "point",
+        "admin"
+      ],
+      "measures": [
+        "articles",
+        "mentions",
+        "news_sources",
+        "goldstein",
+        "tone"
+      ],
+      "attributes": {
+        "cameo_code": {
+          "type": "string",
+          "pattern": "^[0-9]{2,4}$"
+        },
+        "cameo_root": {
+          "type": "string",
+          "pattern": "^[0-9]{2}$"
+        },
+        "quad_class": {
+          "type": "integer",
+          "min": 1,
+          "max": 4
+        },
+        "is_root_event": {
+          "type": "boolean"
+        },
+        "actor1_code": {
+          "type": "string",
+          "max_length": 60
+        },
+        "actor1_name": {
+          "type": "string",
+          "max_length": 300
+        },
+        "actor2_code": {
+          "type": "string",
+          "max_length": 60
+        },
+        "actor2_name": {
+          "type": "string",
+          "max_length": 300
+        },
+        "geo_type": {
+          "type": "integer",
+          "min": 1,
+          "max": 5
+        },
+        "place_name": {
+          "type": "string",
+          "max_length": 500
+        },
+        "fips_country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        }
+      }
+    },
+    {
+      "code": "SEC.NEWS.VERBAL_CONFLICT",
+      "title": "Verbal conflict reported in the news (CAMEO QuadClass 3)",
+      "place": [
+        "point",
+        "admin"
+      ],
+      "measures": [
+        "articles",
+        "mentions",
+        "news_sources",
+        "goldstein",
+        "tone"
+      ],
+      "attributes": {
+        "cameo_code": {
+          "type": "string",
+          "pattern": "^[0-9]{2,4}$"
+        },
+        "cameo_root": {
+          "type": "string",
+          "pattern": "^[0-9]{2}$"
+        },
+        "quad_class": {
+          "type": "integer",
+          "min": 1,
+          "max": 4
+        },
+        "is_root_event": {
+          "type": "boolean"
+        },
+        "actor1_code": {
+          "type": "string",
+          "max_length": 60
+        },
+        "actor1_name": {
+          "type": "string",
+          "max_length": 300
+        },
+        "actor2_code": {
+          "type": "string",
+          "max_length": 60
+        },
+        "actor2_name": {
+          "type": "string",
+          "max_length": 300
+        },
+        "geo_type": {
+          "type": "integer",
+          "min": 1,
+          "max": 5
+        },
+        "place_name": {
+          "type": "string",
+          "max_length": 500
+        },
+        "fips_country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        }
+      }
+    },
+    {
+      "code": "SEC.NEWS.MATERIAL_COOP",
+      "title": "Material cooperation reported in the news (CAMEO QuadClass 2)",
+      "place": [
+        "point",
+        "admin"
+      ],
+      "measures": [
+        "articles",
+        "mentions",
+        "news_sources",
+        "goldstein",
+        "tone"
+      ],
+      "attributes": {
+        "cameo_code": {
+          "type": "string",
+          "pattern": "^[0-9]{2,4}$"
+        },
+        "cameo_root": {
+          "type": "string",
+          "pattern": "^[0-9]{2}$"
+        },
+        "quad_class": {
+          "type": "integer",
+          "min": 1,
+          "max": 4
+        },
+        "is_root_event": {
+          "type": "boolean"
+        },
+        "actor1_code": {
+          "type": "string",
+          "max_length": 60
+        },
+        "actor1_name": {
+          "type": "string",
+          "max_length": 300
+        },
+        "actor2_code": {
+          "type": "string",
+          "max_length": 60
+        },
+        "actor2_name": {
+          "type": "string",
+          "max_length": 300
+        },
+        "geo_type": {
+          "type": "integer",
+          "min": 1,
+          "max": 5
+        },
+        "place_name": {
+          "type": "string",
+          "max_length": 500
+        },
+        "fips_country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        }
+      }
+    },
+    {
+      "code": "SEC.NEWS.VERBAL_COOP",
+      "title": "Verbal cooperation reported in the news (CAMEO QuadClass 1)",
+      "place": [
+        "point",
+        "admin"
+      ],
+      "measures": [
+        "articles",
+        "mentions",
+        "news_sources",
+        "goldstein",
+        "tone"
+      ],
+      "attributes": {
+        "cameo_code": {
+          "type": "string",
+          "pattern": "^[0-9]{2,4}$"
+        },
+        "cameo_root": {
+          "type": "string",
+          "pattern": "^[0-9]{2}$"
+        },
+        "quad_class": {
+          "type": "integer",
+          "min": 1,
+          "max": 4
+        },
+        "is_root_event": {
+          "type": "boolean"
+        },
+        "actor1_code": {
+          "type": "string",
+          "max_length": 60
+        },
+        "actor1_name": {
+          "type": "string",
+          "max_length": 300
+        },
+        "actor2_code": {
+          "type": "string",
+          "max_length": 60
+        },
+        "actor2_name": {
+          "type": "string",
+          "max_length": 300
+        },
+        "geo_type": {
+          "type": "integer",
+          "min": 1,
+          "max": 5
+        },
+        "place_name": {
+          "type": "string",
+          "max_length": 500
+        },
+        "fips_country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        }
+      }
+    }
+  ],
+  "measures": [
+    {
+      "name": "articles",
+      "title": "Source articles that mention the event",
+      "unit": "count",
+      "min": 0
+    },
+    {
+      "name": "mentions",
+      "title": "Mentions of the event in the day's news",
+      "unit": "count",
+      "min": 0
+    },
+    {
+      "name": "news_sources",
+      "title": "Distinct news sources that mention the event",
+      "unit": "count",
+      "min": 0
+    },
+    {
+      "name": "goldstein",
+      "title": "Goldstein scale of the event type",
+      "unit": "index",
+      "signed": true,
+      "min": -10,
+      "max": 10
+    },
+    {
+      "name": "tone",
+      "title": "Average tone of the articles",
+      "unit": "index",
+      "signed": true,
+      "min": -100,
+      "max": 100
+    }
+  ]
+}

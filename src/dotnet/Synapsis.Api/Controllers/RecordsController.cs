@@ -1,40 +1,77 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Synapsis.Api.Services.Http.Mappers;
-using Synapsis.Api.Services.Http;
-using Synapsis.Sil.Models.Results;
-using Synapsis.Storage.Repositories;
+using MongoDB.Bson.IO;
+using MongoDB.Bson;
+using Synapsis.Api.Models;
 using Synapsis.Storage.Models;
+using Synapsis.Storage.Repositories;
+
 namespace Synapsis.Api.Controllers;
 
-/// <summary>GET /records/{id}?as_of=&amp;source=: a record as each source stated it, as known at a date.</summary>
+/// <summary>GET /records/{id}: a record as each source stated it, as known at a date.</summary>
 [ApiController]
 public sealed class RecordsController : ControllerBase
 {
-    private readonly IRecordRepository _records;
+    private readonly RecordRepository _recordRepository;
 
-    /// <summary>Creates the controller over the record store (a plain read needs no process).</summary>
-    public RecordsController(IRecordRepository records)
+    /// <summary>Creates the controller over the record store.</summary>
+    public RecordsController(RecordRepository recordRepository)
     {
-        _records = records;
+        _recordRepository = recordRepository;
     }
 
-    /// <summary>200 with each source's latest version known by as_of; 404 when there is none; 400 for a bad as_of.</summary>
+    /// <summary>
+    /// 200 with each source's latest state known at as_of; 404 when there is none; 400 for an as_of that is not a date.
+    /// as_of: a date ("2024-05-01" = the start of that day, UTC) or a date-time ("2024-05-01T12:00:00Z"); none = now.
+    /// </summary>
     [HttpGet("records/{**id}")]
     public async Task<IActionResult> Get(string id, [FromQuery(Name = "as_of")] string? asOf, [FromQuery(Name = "source")] string? source)
     {
-        Result<DateTime?> moment = AsOfReader.Read(asOf);
-        if (!moment.Succeeded)
+        // 1. Read as_of (a date alone is midnight UTC, the start of that day).
+        DateTime? moment = null;
+        if (!string.IsNullOrEmpty(asOf))
         {
-            return ErrorMapper.ToResult(moment.Problem!);
+            DateTimeStyles utc = DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
+            if (!DateTime.TryParse(asOf, CultureInfo.InvariantCulture, utc, out DateTime parsed))
+            {
+                return Problem(statusCode: 400, detail: "as_of must be a date (2024-05-01) or a date-time (2024-05-01T12:00:00Z)");
+            }
+            moment = parsed;
         }
-        IReadOnlyList<StoredStatement> statements = await _records.AsOfAsync(new StatementsAsOfRequest(id, moment.Value, source));
-        if (statements.Count == 0)
+
+        // 2. Find each source's latest state known at that moment.
+        List<StoredRecord> found = await _recordRepository.AsOfAsync(id, moment, source);
+        if (found.Count == 0)
         {
-            return ErrorMapper.ToResult(new Problem(ErrorCodes.NotFound, string.Empty, $"no record '{id}' known by {asOf ?? "now"}"));
+            return Problem(statusCode: 404, detail: "no record '" + id + "' known at " + (asOf ?? "now"));
         }
-        return Ok(StatementsMapper.ToDto(id, asOf, statements));
+
+        // 3. Answer them as JSON.
+        List<RecordAnswer> answers = new List<RecordAnswer>();
+        foreach (StoredRecord stored in found)
+        {
+            answers.Add(ToAnswer(stored));
+        }
+        return Ok(answers);
+    }
+
+    /// <summary>The stored record as an answer: its record turned from BSON back into plain JSON.</summary>
+    private static RecordAnswer ToAnswer(StoredRecord stored)
+    {
+        string json = stored.Record.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.RelaxedExtendedJson });
+        using JsonDocument document = JsonDocument.Parse(json);
+        RecordAnswer answer = new RecordAnswer();
+        answer.Source = stored.Source;
+        answer.State = stored.State;
+        answer.KnownAt = stored.KnownAt;
+        answer.ReceivedAt = stored.ReceivedAt;
+        answer.BatchId = stored.BatchId;
+        answer.Producer = stored.Producer;
+        answer.Record = document.RootElement.Clone();
+        return answer;
     }
 }

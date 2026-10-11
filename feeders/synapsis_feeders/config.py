@@ -51,8 +51,8 @@ class Settings:
         )
 
     def package_file(self, package: str) -> Path:
-        """The YAML file of one schema package, for example feeders/packages/kev.yaml."""
-        return self.packages_dir / f"{package}.yaml"
+        """The JSON file of one schema package, for example feeders/packages/kev.json."""
+        return self.packages_dir / f"{package}.json"
 
     def key(self, name: str) -> str | None:
         """A source credential from the environment. Values are never logged."""

@@ -1,0 +1,81 @@
+{
+  "note": "Shared health vocabulary: used by every source that reports daily public-health signals.",
+  "package": "health",
+  "title": "Shared health vocabulary",
+  "description": "The event type and measures every daily public-health signal uses, so that hospital admissions from Delphi and case counts from Johns Hopkins land on the same type and can be compared. Sources live in their own packages.",
+  "maintainer": "synapsis-feeders",
+  "event_types": [
+    {
+      "code": "HLT.SIGNAL.DAILY",
+      "title": "One day's value of a public-health signal for one place",
+      "place": [
+        "admin",
+        "logical"
+      ],
+      "measures": [
+        "admissions",
+        "cases",
+        "cli_share",
+        "symptom_search",
+        "wcli_share"
+      ],
+      "attributes": {
+        "issue": {
+          "type": "date",
+          "title": "Date of the version stored (Delphi)"
+        },
+        "lag_days": {
+          "type": "integer",
+          "min": 0,
+          "title": "Days between the value's date and that version"
+        }
+      }
+    }
+  ],
+  "measures": [
+    {
+      "name": "admissions",
+      "title": "New hospital admissions with confirmed COVID-19",
+      "unit": "count",
+      "min": 0
+    },
+    {
+      "name": "cases",
+      "title": "New confirmed cases",
+      "unit": "count",
+      "min": 0
+    },
+    {
+      "name": "cli_share",
+      "title": "Share of outpatient visits with COVID-like illness",
+      "unit": "percent",
+      "min": 0,
+      "max": 100
+    },
+    {
+      "name": "symptom_search",
+      "title": "Normalised search volume for smell and taste loss",
+      "unit": "index",
+      "min": 0
+    },
+    {
+      "name": "wcli_share",
+      "title": "Weighted share of survey respondents with COVID-like illness",
+      "unit": "percent",
+      "min": 0,
+      "max": 100
+    }
+  ],
+  "logical_spaces": [
+    {
+      "space": "health.signal",
+      "title": "Data source then signal name",
+      "max_depth": 2
+    },
+    {
+      "space": "health.region",
+      "title": "Country then province as the source names them",
+      "max_depth": 2
+    }
+  ]
+}

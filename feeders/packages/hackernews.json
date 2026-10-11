@@ -1,0 +1,25 @@
+{
+  "note": "Hacker News stories matching security terms, from the Algolia HN Search API.",
+  "package": "hackernews",
+  "title": "Hacker News security stories (Algolia)",
+  "description": "Stories whose title or link matches security terms (CVE, vulnerability, ransomware, exploit, zero-day, breach). A CVE id written in the title or link becomes a 'mentions' participant, so a discussion can be joined to the catalog entry for the same CVE without guessing.",
+  "maintainer": "synapsis-feeders",
+  "namespaces": {
+    "records": [
+      "hackernews"
+    ]
+  },
+  "sources": [
+    {
+      "id": "src:hn:algolia",
+      "title": "Hacker News stories via the Algolia HN Search API",
+      "publisher": "Y Combinator (Hacker News) via Algolia",
+      "url": "https://hn.algolia.com/api",
+      "license": "Hacker News content under its terms; public API",
+      "reliability": 50,
+      "reliability_basis": "D3",
+      "publication_lag_days": 0,
+      "known_at_rule": "The story's creation time; points and comments are known when they were fetched."
+    }
+  ]
+}

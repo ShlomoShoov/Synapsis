@@ -5,10 +5,10 @@ using Synapsis.Storage.Models;
 namespace Synapsis.Storage.Dal;
 
 /// <summary>
-/// Creates the official Elasticsearch client from the settings. A short request timeout keeps a slow Elasticsearch
-/// from holding up ingestion for long.
+/// The official Elasticsearch client, made once per process. A short timeout keeps a slow Elasticsearch from holding
+/// up ingestion. No address in the settings: no client, and the ingestion log is skipped.
 /// </summary>
-public sealed class ElasticContext : IElasticContext
+public sealed class ElasticContext
 {
     /// <summary>Creates the client for the address in the options, or none when the address is empty.</summary>
     public ElasticContext(ElasticOptions options)
@@ -22,6 +22,6 @@ public sealed class ElasticContext : IElasticContext
         Client = new ElasticsearchClient(settings);
     }
 
-    /// <inheritdoc/>
+    /// <summary>The client, or null when no address is set.</summary>
     public ElasticsearchClient? Client { get; }
 }

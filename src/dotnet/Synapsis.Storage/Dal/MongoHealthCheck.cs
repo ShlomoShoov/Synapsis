@@ -2,25 +2,26 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+
 namespace Synapsis.Storage.Dal;
 
-/// <summary>The health check behind GET /health: healthy when MongoDB answers a ping.</summary>
+/// <summary>The check behind GET /health: healthy when MongoDB answers a ping.</summary>
 public sealed class MongoHealthCheck : IHealthCheck
 {
-    private readonly IMongoContext _context;
+    private readonly MongoContext _mongoContext;
 
     /// <summary>Creates the check over the database connection.</summary>
-    public MongoHealthCheck(IMongoContext context)
+    public MongoHealthCheck(MongoContext mongoContext)
     {
-        _context = context;
+        _mongoContext = mongoContext;
     }
 
-    /// <inheritdoc/>
+    /// <summary>Healthy when MongoDB answers, unhealthy otherwise.</summary>
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         try
         {
-            await _context.PingAsync();
+            await _mongoContext.PingAsync();
             return HealthCheckResult.Healthy("MongoDB answers");
         }
         catch (Exception problem)

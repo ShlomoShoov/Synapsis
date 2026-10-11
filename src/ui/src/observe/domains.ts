@@ -2,9 +2,8 @@
  * The domains: the families the sources belong to (cyber, conflict and security, ...). Observe groups and colours every
  * source by its domain: one sector of the 3D ring, one colour in every chart.
  *
- * A source belongs to the domain of the schema package that declares it. Packages are listed by name below, in the
- * same groups as deploy/feeders/compose.yml. A package that is not listed is placed by the prefix of its event types
- * (CYB.* is cyber); one with neither lands in "other".
+ * A source belongs to a domain by the publisher in its id (cisa in src:cisa:kev), listed below in the same groups as
+ * deploy/feeders/compose.yml; a source with an unlisted publisher lands in "other".
  *
  * The colours are a validated set: in this order (the last one wrapping round to the first, as on the ring), every
  * neighbour pair stays apart for colour-blind readers (OKLab delta E >= 11 under simulated protanopia and
@@ -25,11 +24,7 @@ export interface Domain {
   short: string;
   /** The colour of its marks on the night surfaces. */
   color: string;
-  /** The schema packages whose sources belong here. */
-  packages: readonly string[];
-  /** Event type prefixes that place an unlisted package here (CYB in CYB.VULN.PUBLISHED). */
-  eventPrefixes: readonly string[];
-  /** The middle segment of source ids that place an unknown source here (cisa in src:cisa:kev). */
+  /** The middle segment of source ids that place a source here (cisa in src:cisa:kev). */
   publishers: readonly string[];
 }
 
@@ -40,8 +35,6 @@ export const domains: readonly Domain[] = [
     name: 'Cyber',
     short: 'Cyber',
     color: '#5197db',
-    packages: ['kev', 'kev-classes', 'nvd', 'epss', 'ransomware-live', 'xz-git'],
-    eventPrefixes: ['CYB', 'CODE'],
     publishers: ['cisa', 'nist', 'first', 'ransomware-live', 'tukaani'],
   },
   {
@@ -49,8 +42,6 @@ export const domains: readonly Domain[] = [
     name: 'Conflict & security',
     short: 'Conflict',
     color: '#c0571e',
-    packages: ['ucdp', 'gdelt', 'gtd', 'opensanctions', 'gfw'],
-    eventPrefixes: ['SEC', 'MAR', 'RISK'],
     publishers: ['ucdp', 'gdelt', 'start', 'opensanctions', 'gfw'],
   },
   {
@@ -58,8 +49,6 @@ export const domains: readonly Domain[] = [
     name: 'Elections & social',
     short: 'Society',
     color: '#9881d9',
-    packages: ['wikipedia-elections', 'reddit', 'hackernews', 'social'],
-    eventPrefixes: ['POL', 'TXT'],
     publishers: ['wikipedia', 'reddit', 'hn'],
   },
   {
@@ -67,8 +56,6 @@ export const domains: readonly Domain[] = [
     name: 'Environment',
     short: 'Environment',
     color: '#3a8f42',
-    packages: ['firms', 'usgs'],
-    eventPrefixes: ['ENV', 'GEO'],
     publishers: ['nasa', 'usgs'],
   },
   {
@@ -76,8 +63,6 @@ export const domains: readonly Domain[] = [
     name: 'Health',
     short: 'Health',
     color: '#d76797',
-    packages: ['delphi', 'jhu-covid', 'health'],
-    eventPrefixes: ['HLT'],
     publishers: ['delphi', 'jhu'],
   },
   {
@@ -85,8 +70,6 @@ export const domains: readonly Domain[] = [
     name: 'Finance & markets',
     short: 'Finance',
     color: '#a17000',
-    packages: ['fdic', 'fred', 'polymarket'],
-    eventPrefixes: ['FIN', 'MKT'],
     publishers: ['fdic', 'fred', 'polymarket'],
   },
   {
@@ -94,8 +77,6 @@ export const domains: readonly Domain[] = [
     name: 'Synapsis',
     short: 'Synapsis',
     color: '#d9d1c0',
-    packages: ['core'],
-    eventPrefixes: [],
     publishers: [],
   },
   {
@@ -103,8 +84,6 @@ export const domains: readonly Domain[] = [
     name: 'Other',
     short: 'Other',
     color: '#8f8778',
-    packages: [],
-    eventPrefixes: [],
     publishers: [],
   },
 ];
@@ -122,29 +101,7 @@ export function domainById(id: DomainId): Domain {
 }
 
 /**
- * The domain of a schema package: its listed domain, else the domain of its event types' prefix, else "other".
- * `eventTypeCodes` are the codes of the package's event types, such as "CYB.VULN.PUBLISHED".
- */
-export function domainOfPackage(name: string, eventTypeCodes: readonly string[] = []): DomainId {
-  for (const domain of domains) {
-    if (domain.packages.includes(name)) {
-      return domain.id;
-    }
-  }
-  for (const code of eventTypeCodes) {
-    const prefix = code.split('.')[0] ?? '';
-    for (const domain of domains) {
-      if (domain.eventPrefixes.includes(prefix)) {
-        return domain.id;
-      }
-    }
-  }
-  return 'other';
-}
-
-/**
- * The domain of a source id when no schema package is at hand (the schemas have not loaded, or the source is not
- * declared): read from the publisher segment, src:<publisher>:<name>.
+ * The domain of a source id, read from the publisher segment, src:<publisher>:<name>.
  */
 export function guessDomainOfSource(sourceId: string): DomainId {
   if (sourceId === 'src:synapsis:engine') {

@@ -1,0 +1,68 @@
+{
+  "note": "Polymarket: prices of prediction-market outcomes, read as probabilities.",
+  "package": "polymarket",
+  "title": "Polymarket outcome prices",
+  "description": "The price of each outcome's \"Yes\" share in chosen Polymarket events, read as the market's probability of that outcome, at hourly resolution by default. Round 3 compared the 2024 state-by-state presidential markets with polls corrected by their own history; those markets are the default selection.",
+  "maintainer": "synapsis-feeders",
+  "namespaces": {
+    "records": [
+      "polymarket"
+    ]
+  },
+  "sources": [
+    {
+      "id": "src:polymarket:prices",
+      "title": "Polymarket Gamma and CLOB price-history APIs",
+      "publisher": "Polymarket",
+      "url": "https://docs.polymarket.com/",
+      "license": "Public API; Polymarket terms of use",
+      "reliability": 60,
+      "reliability_basis": "C3",
+      "publication_lag_days": 0,
+      "known_at_rule": "The price's own timestamp (observed live)."
+    }
+  ],
+  "event_types": [
+    {
+      "code": "MKT.PREDICTION.PRICE",
+      "title": "The price of a market outcome at one time, read as a probability",
+      "place": [
+        "logical",
+        "admin"
+      ],
+      "measures": [
+        "probability"
+      ],
+      "attributes": {
+        "question": {
+          "type": "string",
+          "max_length": 500
+        },
+        "outcome": {
+          "type": "string",
+          "max_length": 200
+        },
+        "market_id": {
+          "type": "string",
+          "max_length": 100
+        }
+      }
+    }
+  ],
+  "measures": [
+    {
+      "name": "probability",
+      "title": "Probability implied by the price",
+      "unit": "probability",
+      "min": 0,
+      "max": 1
+    }
+  ],
+  "logical_spaces": [
+    {
+      "space": "market.polymarket",
+      "title": "Event then outcome",
+      "max_depth": 2
+    }
+  ]
+}

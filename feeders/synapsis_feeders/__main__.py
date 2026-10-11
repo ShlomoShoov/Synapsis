@@ -1,12 +1,11 @@
 """Synapsis feeders.
 
   python -m synapsis_feeders list
-  python -m synapsis_feeders schema <feeder>                  register the feeder's schema packages and exit
   python -m synapsis_feeders run <feeder> [options]           one run: fetch, send, checkpoint, exit
   python -m synapsis_feeders serve <feeder> [--every 6h]      the long-running service Docker Compose starts
   python -m synapsis_feeders run-all [--only a,b] [options]   every feeder once, in turn
 
-serve registers the schema packages at start-up, runs, then waits for the next trigger and runs again: the timer
+serve runs, then waits for the next trigger and runs again: the timer
 (--every) or a manual trigger (the signal SIGUSR1: docker kill --signal SIGUSR1 <container>).
 
 Options for run, serve and run-all:
@@ -32,10 +31,10 @@ from datetime import date
 from pathlib import Path
 
 from . import sources  # noqa: F401  (registers every feeder)
-from .api import ApiRefused, SynapsisApi
+from .api import ApiRefused
 from .base import FEEDERS, MissingKey
 from .config import Settings
-from .runner import register_packages, run_all, run_once, serve
+from .runner import run_all, run_once, serve
 
 log = logging.getLogger("feeder")
 
@@ -46,13 +45,11 @@ def _date(text: str) -> date:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """The command-line grammar: list, schema, run, serve and run-all, with their options."""
+    """The command-line grammar: list, run, serve and run-all, with their options."""
     parser = argparse.ArgumentParser(prog="synapsis_feeders", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("list")
-    schema = commands.add_parser("schema")
-    schema.add_argument("feeder", choices=sorted(FEEDERS))
     run = commands.add_parser("run")
     run.add_argument("feeder", choices=sorted(FEEDERS))
     _add_run_options(run, dry_run=True)
@@ -98,13 +95,6 @@ def _list() -> int:
     return 0
 
 
-def _schema(name: str, settings: Settings) -> int:
-    """Register the feeder's schema packages (shared ones first) and print its own package's version."""
-    version = register_packages(name, settings, SynapsisApi(settings))
-    print(json.dumps({"feeder": name, "package": FEEDERS[name].package, "version": version}, indent=1))
-    return 0
-
-
 def _run(name: str, settings: Settings, run_options: dict) -> int:
     """One run of one feeder. Exit code 2 when a key is missing, 3 when the API refused the request."""
     try:
@@ -142,8 +132,6 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "list":
         return _list()
     settings = Settings.from_env()
-    if args.command == "schema":
-        return _schema(args.feeder, settings)
     if args.command == "run":
         return _run(args.feeder, settings, _run_options(args))
     if args.command == "serve":

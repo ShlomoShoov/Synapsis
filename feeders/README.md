@@ -1,12 +1,14 @@
 # Synapsis feeders
 
-One Python package with one feeder per source. A feeder registers its schema package with the API, fetches from the
-live source, maps each row to a SIL record, sends batches of up to 5,000 records to `SYNAPSIS_API_URL`, and saves a
+One Python package with one feeder per source. A feeder fetches from the live source, maps each row to a SIL record, sends batches of up to 5,000 records to `SYNAPSIS_API_URL`, and saves a
 cursor so the next run continues where this one stopped. Any feeder can run once, for any date range (`run`), or keep
 running as a service (`serve`).
 
-Each feeder owns its schema package, in `packages/<package>.yaml`. The API seeds only the core vocabulary; a feeder
-registers its own package (and the shared `health` or `social` it uses) when it starts.
+Each feeder owns its schema package, in `packages/<package>.json` (with the shared `core`, `health` and `social`).
+The API does not read packages: the feeder uses its package locally, for its sources' reliability and `known_at`
+rules and for the one check made before sending (`checks.py`): every measure value is a number, not negative unless
+the measure is `signed`, and within its `min`/`max`. A record that fails is written to `rejections.jsonl` and not
+sent.
 
 ## Running
 
@@ -33,7 +35,7 @@ python -m synapsis_feeders serve usgs --every 1h                  # keep running
 | Option | Meaning |
 | --- | --- |
 | `--since`, `--until` | A backfill range (dates). Default: continue from the cursor, or the source's own start |
-| `serve <feeder>` | The service: register the schema packages, run, then wait for a trigger and run again until stopped |
+| `serve <feeder>` | The service: run, then wait for a trigger and run again until stopped |
 | `serve ... --every 6h` | The timer trigger: run again on this interval. Without it, a service waits only for a manual trigger (SIGUSR1). A failed run is retried after 1, 2, 4... minutes |
 | `--limit N` | Stop after N records (smoke tests) |
 | `--dry-run DIR` | Write the batches to DIR instead of sending them; leaves no state behind (`run` and `run-all` only) |
@@ -63,8 +65,8 @@ $FEEDER_STATE_DIR/<feeder>/
   cursor.json        where the next run starts; saved only after the API acknowledged the records before it
   memo/              what else the feeder must remember (cleared by --reset)
   observed/          the feeder's own observations the source cannot give again (kept by --reset; back it up)
-  runs.jsonl         one line per run: counts (new, versioned, unchanged, rejected), codes, duration, outcome
-  rejections.jsonl   every rejected record: batch, index, id, code, path, message
+  runs.jsonl         one line per run: counts (new, changed, unchanged, duplicates, rejected), codes, duration, outcome
+  rejections.jsonl   every refused record: batch ("not-sent" when the feeder's own check refused it), id, code, reason
 ```
 
 A lost state folder costs time, never correctness: a re-run sends the same ids and the API answers `unchanged`.
@@ -97,18 +99,18 @@ A lost state folder costs time, never correctness: a re-run sends the same ids a
 
 ## Adding a source
 
-1. Write `packages/<package>.yaml`: the source with its reliability, basis and `known_at` rule, then the types,
+1. Write `packages/<package>.json`: the source with its reliability, basis and `known_at` rule, then the types,
    roles, measures, attributes and spaces it needs. Copy the closest existing package.
 2. Copy `synapsis_feeders/sources/_template.py` to `sources/<name>.py`, follow its checklist, decorate the class with
    `@register` and import the module in `sources/__init__.py`.
 3. `python -m synapsis_feeders run <name> --dry-run /tmp/<name> --limit 500` and read the batches.
 4. `python -m synapsis_feeders run <name> --limit 500` against the API; every rejection in `rejections.jsonl` names its
-   rule and path. Fix the mapping or the package and run again; records already accepted come back `unchanged`.
+   code and reason. Fix the mapping or the package and run again; records already accepted come back `unchanged`.
 5. Add the service to `deploy/feeders/compose.yml` (`<<: *feeder`, a `serve` command with `--every`, and its key
    if it needs one, mapped from `FEEDERS_<KEY>`; put `FEEDERS_<KEY>=` in `deploy/feeders/.env.example`).
 
 An AI coding assistant can draft steps 1 and 2 from one real sample of the source, the template and a similar
-package; the API's rejections make its mistakes visible.
+package; the rejections make its mistakes visible.
 
 ## Tests
 

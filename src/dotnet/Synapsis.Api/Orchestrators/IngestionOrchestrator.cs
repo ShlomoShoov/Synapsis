@@ -1,82 +1,52 @@
-using Synapsis.Api.Services.Observe;
-using Synapsis.Storage.Repositories;
-using Synapsis.Sil.Services.Time;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Synapsis.Api.Services.Ingestion;
-using Synapsis.Api.Models.Ingestion;
-using Synapsis.Api.Services.Vocabulary;
-using Synapsis.Sil.Models.Records;
-using Synapsis.Sil.Models.Results;
-using Synapsis.Sil.Services.Reading;
-using Synapsis.Sil.Orchestrators;
-using Synapsis.Sil.Models.Validation;
-using Synapsis.Sil.Services.Versioning;
-using Synapsis.Sil.Models.Versioning;
+using Synapsis.Api.Models;
+using Synapsis.Api.Services;
+using Synapsis.Storage.Models;
+using Synapsis.Storage.Repositories;
+
 namespace Synapsis.Api.Orchestrators;
 
 /// <summary>
-/// The ingestion process: read the batch → validate it against the vocabulary in force → ask the store for the
-/// accepted statements' versions (one query) → plan each record's version → build the receipt → keep the new versions
-/// in one write and add the batch to the ingestion log (neither on a dry run).
+/// The ingestion process, POST /ingest: the steps in order. Each step is one call; the work is in the services and
+/// repositories it calls.
 /// </summary>
-public sealed class IngestionOrchestrator : IIngestionOrchestrator
+public sealed class IngestionOrchestrator
 {
-    private readonly IBundleReader _reader;
-    private readonly IVocabularyProvider _vocabulary;
-    private readonly IBatchValidator _validator;
-    private readonly IRecordRepository _records;
-    private readonly IVersionPlanner _planner;
-    private readonly IReceiptBuilder _receipts;
-    private readonly IIngestLogRepository _log;
-    private readonly TimeProvider _clock;
+    private readonly RecordRepository _recordRepository;
+    private readonly CatalogRepository _catalogRepository;
+    private readonly IngestLogRepository _ingestLogRepository;
 
-    /// <summary>Creates the orchestrator from the services it coordinates.</summary>
-    public IngestionOrchestrator(IBundleReader reader, IVocabularyProvider vocabulary, IBatchValidator validator, IRecordRepository records, IVersionPlanner planner, IReceiptBuilder receipts, IIngestLogRepository log, TimeProvider clock)
+    /// <summary>Creates the process over the three repositories it writes to.</summary>
+    public IngestionOrchestrator(RecordRepository recordRepository, CatalogRepository catalogRepository, IngestLogRepository ingestLogRepository)
     {
-        _reader = reader;
-        _vocabulary = vocabulary;
-        _validator = validator;
-        _records = records;
-        _planner = planner;
-        _receipts = receipts;
-        _log = log;
-        _clock = clock;
+        _recordRepository = recordRepository;
+        _catalogRepository = catalogRepository;
+        _ingestLogRepository = ingestLogRepository;
     }
 
-    /// <inheritdoc/>
-    public async Task<Result<Receipt>> IngestAsync(string body, bool dryRun)
+    /// <summary>Validates, stores and logs one batch; answers its summary.</summary>
+    public async Task<IngestSummary> IngestAsync(IngestBatch batch)
     {
-        Result<IngestBundle> read = _reader.Read(body);
-        if (!read.Succeeded)
-        {
-            return Result<Receipt>.Failure(read.Problem!);
-        }
-        IngestBundle bundle = read.Value!;
-        DateTime receivedAt = Instant.ToMilliseconds(_clock.GetUtcNow().UtcDateTime);
-        BatchValidationResult validation = await _validator.ValidateAsync(new BatchValidationRequest(bundle.Records, _vocabulary.Current, receivedAt));
-        IReadOnlyDictionary<StatementKey, IReadOnlyList<StoredVersion>> stored = await _records.StoredVersionsAsync(_planner.StatementsOf(validation.Accepted));
-        IReadOnlyList<PlannedRecord> planned = _planner.PlanBatch(validation.Accepted, stored, receivedAt);
-        BatchOutcome outcome = new BatchOutcome(bundle, validation, planned, receivedAt, dryRun);
-        Receipt receipt = _receipts.Build(outcome);
-        if (dryRun)
-        {
-            return Result<Receipt>.Success(receipt);
-        }
-        Result added = await _records.AddAsync(RecordVersionMapper.ToRecordVersions(planned, bundle, receivedAt));
-        if (!added.Succeeded)
-        {
-            return Result<Receipt>.Failure(added.Problem!);
-        }
-        await _log.AddAsync(IngestLogMapper.ToEntries(outcome, MillisecondsSince(receivedAt)));
-        return Result<Receipt>.Success(receipt);
-    }
+        DateTime receivedAt = DateTime.UtcNow;
 
-    /// <summary>How many milliseconds have passed since the given moment.</summary>
-    private long MillisecondsSince(DateTime start)
-    {
-        return (long)(_clock.GetUtcNow().UtcDateTime - start).TotalMilliseconds;
-    }
+        // 1. Validate: read each record as its kind, check its required fields, drop copies inside the batch.
+        ValidationResult validation = RecordValidator.Validate(batch.Records);
 
+        // 2. Enrich: the content hash and where each valid record came from.
+        List<StoredRecord> candidates = RecordEnricher.Enrich(validation.Valid, batch, receivedAt);
+
+        // 3. Find changes: compare each record with its latest stored state (same id, same source).
+        Dictionary<string, StoredRecord> latestStates = await _recordRepository.LatestStatesAsync(candidates);
+        ChangeResult changes = ChangeDetector.Detect(candidates, latestStates);
+
+        // 4. Save to MongoDB: the new and changed records, then their sources and types in the catalog.
+        await _recordRepository.AddAsync(changes.ToSave);
+        await _catalogRepository.AddAsync(changes.ToSave);
+
+        // 5. Summarize: one document per source in the ingestion log (Elasticsearch), one summary for the producer.
+        await _ingestLogRepository.AddAsync(SummaryBuilder.ForEachSource(batch, receivedAt, validation, changes));
+        return SummaryBuilder.ForBatch(batch, receivedAt, validation, changes);
+    }
 }

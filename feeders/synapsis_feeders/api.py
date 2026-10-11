@@ -1,7 +1,7 @@
-"""SynapsisApi: the feeders' only connection to Synapsis. Two calls: register a schema package, send a batch.
+"""SynapsisApi: the feeders' only connection to Synapsis: send a batch (and ask whether a record exists).
 
-Both are idempotent, so every failure that is not the feeder's fault is retried: the same batch id with the same
-content returns the receipt the API already stored."""
+Sending is idempotent, so every failure that is not the feeder's fault is retried: the same records sent again come
+back as "unchanged"."""
 from __future__ import annotations
 
 import gzip
@@ -18,12 +18,12 @@ log = logging.getLogger("feeder.api")
 
 
 class ApiRefused(RuntimeError):
-    """The API refused the request for a reason retrying cannot fix (a bad package, a malformed batch, auth)."""
+    """The API refused the request for a reason retrying cannot fix (a malformed batch)."""
 
     def __init__(self, status: int, body: dict | str):
         self.status, self.body = status, body
-        code = body.get("code") if isinstance(body, dict) else ""
-        super().__init__(f"HTTP {status} {code}: {json.dumps(body)[:1500] if isinstance(body, dict) else body[:500]}")
+        detail = body.get("title") if isinstance(body, dict) else ""
+        super().__init__(f"HTTP {status} {detail}: {json.dumps(body)[:1500] if isinstance(body, dict) else body[:500]}")
 
 
 class SynapsisApi:
@@ -62,14 +62,8 @@ class SynapsisApi:
             raise ApiRefused(r.status_code, _body(r))
         return True
 
-    def register_schema(self, package: str, body: bytes) -> dict:
-        r = self._call("PUT", f"/schemas/{package}", content=body, headers={"Content-Type": "application/yaml"})
-        if r.status_code not in (200, 201):
-            raise ApiRefused(r.status_code, _body(r))
-        return r.json()
-
     def ingest(self, bundle: dict) -> dict:
-        """POST one batch (gzip). Returns the receipt. Raises ApiRefused on 4xx: the batch itself is wrong."""
+        """POST one batch (gzip). Returns the batch summary. Raises ApiRefused on 4xx: the batch itself is wrong."""
         payload = gzip.compress(json.dumps(bundle, separators=(",", ":"), ensure_ascii=False).encode("utf-8"), 6)
         r = self._call("POST", "/ingest", content=payload,
                        headers={"Content-Type": "application/json", "Content-Encoding": "gzip"})

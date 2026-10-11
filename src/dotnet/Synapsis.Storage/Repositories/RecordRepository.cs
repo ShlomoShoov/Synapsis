@@ -1,146 +1,90 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MongoDB.Driver;
-using Synapsis.Sil.Models.Results;
-using Synapsis.Sil.Models.Versioning;
 using Synapsis.Storage.Dal;
 using Synapsis.Storage.Models;
-using Synapsis.Storage.Entities;
-using Synapsis.Storage.Repositories.Mappers;
+
 namespace Synapsis.Storage.Repositories;
 
-/// <summary>
-/// The record versions in MongoDB's "records" collection. Lists of ids are asked in chunks, so one batch's questions
-/// stay a few round trips however many ids it names.
-/// </summary>
-public sealed class RecordRepository : IRecordRepository
+/// <summary>The record states in MongoDB's "records" collection: find the latest ones, add new ones, read as of a date.</summary>
+public sealed class RecordRepository
 {
-    /// <summary>The kind of the documents that hold entities.</summary>
-    private const string EntityKind = "entity";
-
-    private readonly IMongoCollection<RecordDocument> _records;
+    private readonly IMongoCollection<StoredRecord> _recordCollection;
 
     /// <summary>Creates the repository over the database connection.</summary>
-    public RecordRepository(IMongoContext context)
+    public RecordRepository(MongoContext mongoContext)
     {
-        _records = context.Collection<RecordDocument>(CollectionNames.Records);
+        _recordCollection = mongoContext.Records;
     }
 
-    /// <inheritdoc/>
-    public async Task<IReadOnlyDictionary<StatementKey, IReadOnlyList<StoredVersion>>> StoredVersionsAsync(IReadOnlyCollection<StatementKey> keys)
+    /// <summary>
+    /// The latest stored state of each record (same id and source) among the given ones, by key "{id}|{source}".
+    /// A record never stored is missing from the answer. The record bodies are not loaded, only the fields around them.
+    /// </summary>
+    public async Task<Dictionary<string, StoredRecord>> LatestStatesAsync(IReadOnlyList<StoredRecord> records)
     {
-        HashSet<StatementKey> wanted = new HashSet<StatementKey>(keys);
-        Dictionary<StatementKey, List<StoredVersion>> found = new Dictionary<StatementKey, List<StoredVersion>>();
-        ProjectionDefinition<RecordDocument> withoutRecord = Builders<RecordDocument>.Projection.Exclude(document => document.Record);
-        foreach (List<string> chunk in IdChunks.Chunks(IdChunks.IdsOf(keys)))
+        // 1. One query: every stored state of the records' ids, without the record bodies.
+        HashSet<string> recordIds = new HashSet<string>();
+        foreach (StoredRecord record in records)
         {
-            List<RecordDocument> documents = await _records.Find(Builders<RecordDocument>.Filter.In(document => document.Id, chunk))
-                .Project<RecordDocument>(withoutRecord)
-                .ToListAsync();
-            RecordAnswers.AddWanted(documents, wanted, found);
+            recordIds.Add(record.RecordId);
         }
-        return RecordAnswers.ReadOnly(found);
-    }
+        FilterDefinition<StoredRecord> filter = Builders<StoredRecord>.Filter.In(stored => stored.RecordId, recordIds);
+        ProjectionDefinition<StoredRecord> withoutBody = Builders<StoredRecord>.Projection.Exclude(stored => stored.Record);
+        List<StoredRecord> storedStates = await _recordCollection.Find(filter).Project<StoredRecord>(withoutBody).ToListAsync();
 
-    /// <inheritdoc/>
-    public async Task<Result> AddAsync(IReadOnlyList<RecordVersion> versions)
-    {
-        if (versions.Count == 0)
+        // 2. Keep the highest state of each (id, source).
+        Dictionary<string, StoredRecord> latestStates = new Dictionary<string, StoredRecord>();
+        foreach (StoredRecord stored in storedStates)
         {
-            return Result.Success();
-        }
-        List<RecordDocument> documents = new List<RecordDocument>();
-        foreach (RecordVersion version in versions)
-        {
-            documents.Add(RecordDocumentMapper.ToDocument(version));
-        }
-        try
-        {
-            await _records.InsertManyAsync(documents, new InsertManyOptions { IsOrdered = false });
-            return Result.Success();
-        }
-        catch (MongoBulkWriteException<RecordDocument> problem) when (OnlyDuplicates(problem))
-        {
-            return Result.Failure(ErrorCodes.Unavailable, string.Empty, "another writer stored some of these versions first; send the batch again");
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyList<StoredStatement>> AsOfAsync(StatementsAsOfRequest request)
-    {
-        List<RecordDocument> documents = await _records.Find(AsOfFilter(request))
-            .Sort(Builders<RecordDocument>.Sort.Ascending(document => document.Source).Descending(document => document.Version))
-            .ToListAsync();
-        List<StoredStatement> latest = new List<StoredStatement>();
-        string? previousSource = null;
-        foreach (RecordDocument document in documents)
-        {
-            if (document.Source != previousSource)
+            string key = StoredRecord.KeyOf(stored.RecordId, stored.Source);
+            if (!latestStates.TryGetValue(key, out StoredRecord? latest) || stored.State > latest.State)
             {
-                latest.Add(RecordDocumentMapper.ToStoredStatement(document));
-                previousSource = document.Source;
+                latestStates[key] = stored;
             }
         }
-        return latest;
+        return latestStates;
     }
 
-    /// <inheritdoc/>
-    public async Task<Dictionary<string, HashSet<string>>> EntityTypesAsync(IReadOnlyCollection<string> entityIds)
+    /// <summary>Stores the given record states in one call. Nothing to store: nothing is sent.</summary>
+    public async Task AddAsync(IReadOnlyList<StoredRecord> records)
     {
-        Dictionary<string, HashSet<string>> types = new Dictionary<string, HashSet<string>>();
-        ProjectionDefinition<RecordDocument> idAndType = Builders<RecordDocument>.Projection.Include(document => document.Id).Include("record.type");
-        foreach (List<string> chunk in IdChunks.Chunks(entityIds))
+        if (records.Count == 0)
         {
-            FilterDefinition<RecordDocument> filter = Builders<RecordDocument>.Filter.In(document => document.Id, chunk)
-                & Builders<RecordDocument>.Filter.Eq(document => document.Kind, EntityKind);
-            List<RecordDocument> documents = await _records.Find(filter).Project<RecordDocument>(idAndType).ToListAsync();
-            foreach (RecordDocument document in documents)
+            return;
+        }
+        await _recordCollection.InsertManyAsync(records, new InsertManyOptions { IsOrdered = false });
+    }
+
+    /// <summary>
+    /// For each source, the latest state of the record that was known at the given moment (known_at not after it).
+    /// No moment: the latest state. A source name keeps that source only.
+    /// </summary>
+    public async Task<List<StoredRecord>> AsOfAsync(string recordId, DateTime? asOf, string? source)
+    {
+        // 1. Every state of the record known at the moment, newest state first within each source.
+        FilterDefinition<StoredRecord> filter = Builders<StoredRecord>.Filter.Eq(stored => stored.RecordId, recordId);
+        if (asOf != null)
+        {
+            filter = filter & Builders<StoredRecord>.Filter.Lte(stored => stored.KnownAt, asOf.Value);
+        }
+        if (source != null)
+        {
+            filter = filter & Builders<StoredRecord>.Filter.Eq(stored => stored.Source, source);
+        }
+        SortDefinition<StoredRecord> order = Builders<StoredRecord>.Sort.Ascending(stored => stored.Source).Descending(stored => stored.State);
+        List<StoredRecord> states = await _recordCollection.Find(filter).Sort(order).ToListAsync();
+
+        // 2. Keep the first (the newest) of each source.
+        List<StoredRecord> latestPerSource = new List<StoredRecord>();
+        foreach (StoredRecord state in states)
+        {
+            if (latestPerSource.Count == 0 || latestPerSource[latestPerSource.Count - 1].Source != state.Source)
             {
-                RecordAnswers.AddType(types, document.Id, document.Record["type"].AsString);
+                latestPerSource.Add(state);
             }
         }
-        return types;
+        return latestPerSource;
     }
-
-    /// <inheritdoc/>
-    public async Task<HashSet<string>> ExistingAsync(IReadOnlyCollection<string> recordIds)
-    {
-        HashSet<string> existing = new HashSet<string>();
-        foreach (List<string> chunk in IdChunks.Chunks(recordIds))
-        {
-            FilterDefinition<RecordDocument> filter = Builders<RecordDocument>.Filter.In(document => document.Id, chunk);
-            List<string> found = await (await _records.DistinctAsync(document => document.Id, filter)).ToListAsync();
-            existing.UnionWith(found);
-        }
-        return existing;
-    }
-
-    /// <summary>The documents of one id, known by the date asked and from the source asked, when they are given.</summary>
-    private static FilterDefinition<RecordDocument> AsOfFilter(StatementsAsOfRequest request)
-    {
-        FilterDefinition<RecordDocument> filter = Builders<RecordDocument>.Filter.Eq(document => document.Id, request.Id);
-        if (request.AsOf != null)
-        {
-            filter &= Builders<RecordDocument>.Filter.Lte(document => document.KnownAt, request.AsOf.Value);
-        }
-        if (request.Source != null)
-        {
-            filter &= Builders<RecordDocument>.Filter.Eq(document => document.Source, request.Source);
-        }
-        return filter;
-    }
-
-    /// <summary>True when every failed write was a duplicate key: another writer stored that version first.</summary>
-    private static bool OnlyDuplicates(MongoBulkWriteException<RecordDocument> problem)
-    {
-        foreach (BulkWriteError error in problem.WriteErrors)
-        {
-            if (error.Category != ServerErrorCategory.DuplicateKey)
-            {
-                return false;
-            }
-        }
-        return problem.WriteConcernError == null;
-    }
-
 }

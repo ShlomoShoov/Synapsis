@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-  <!-- Synapsis.Api: the ingestion server. HTTP (controllers, DTOs, filters), the processes (orchestrators), the vocabulary in force. -->
+  <!-- Synapsis.Api: the ingestion server. HTTP (controllers), the records it reads (models), the steps (services)
+       and the process that runs them in order (the orchestrator). -->
   <ItemGroup>
-    <ProjectReference Include="../Synapsis.Sil/Synapsis.Sil.csproj" />
     <ProjectReference Include="../Synapsis.Storage/Synapsis.Storage.csproj" />
   </ItemGroup>
   <ItemGroup>

@@ -1,0 +1,138 @@
+{
+  "note": "US presidential elections: statewide polls and state results as tabulated on Wikipedia (2016, 2020, 2024).",
+  "package": "wikipedia-elections",
+  "title": "US presidential state polls and results (Wikipedia)",
+  "description": "Every statewide poll that pits the two main candidates against each other, as tabulated on Wikipedia, and every state's result. The margin is Republican minus Democratic share in points, so it is signed. Pollsters are entities; each poll and result is about a state (ISO 3166-2 subdivision).",
+  "maintainer": "synapsis-feeders",
+  "namespaces": {
+    "records": [
+      "wikipedia-elections"
+    ],
+    "entities": [
+      "pollster"
+    ]
+  },
+  "sources": [
+    {
+      "id": "src:wikipedia:polls",
+      "title": "Statewide opinion polling tables on English Wikipedia",
+      "publisher": "Wikipedia contributors (tabulating the pollsters' releases)",
+      "url": "https://en.wikipedia.org/wiki/Statewide_opinion_polling_for_the_2024_United_States_presidential_election",
+      "license": "CC BY-SA 4.0",
+      "reliability": 80,
+      "reliability_basis": "B2",
+      "publication_lag_days": 2,
+      "known_at_rule": "Last field day of the poll plus 2 days (basis proxy_publication_lag)."
+    },
+    {
+      "id": "src:wikipedia:results",
+      "title": "State results tables on English Wikipedia",
+      "publisher": "Wikipedia contributors (tabulating certified results)",
+      "url": "https://en.wikipedia.org/wiki/2024_United_States_presidential_election",
+      "license": "CC BY-SA 4.0",
+      "reliability": 95,
+      "reliability_basis": "A1",
+      "publication_lag_days": 1,
+      "known_at_rule": "Election day plus one day (basis proxy_publication_lag)."
+    }
+  ],
+  "entity_types": [
+    {
+      "code": "Pollster",
+      "title": "An organisation that publishes opinion polls"
+    }
+  ],
+  "event_types": [
+    {
+      "code": "POL.POLL.STATE",
+      "title": "A statewide presidential poll (last field day)",
+      "place": [
+        "admin"
+      ],
+      "roles": {
+        "publisher": [
+          "Pollster"
+        ],
+        "about": [
+          "Subdivision"
+        ]
+      },
+      "measures": [
+        "margin",
+        "share_r",
+        "share_d"
+      ],
+      "attributes": {
+        "election_year": {
+          "type": "integer",
+          "min": 1900,
+          "max": 2100
+        },
+        "republican": {
+          "type": "string",
+          "max_length": 100
+        },
+        "democrat": {
+          "type": "string",
+          "max_length": 100
+        }
+      }
+    },
+    {
+      "code": "POL.ELECTION.RESULT",
+      "title": "A state's presidential election result",
+      "place": [
+        "admin"
+      ],
+      "roles": {
+        "about": [
+          "Subdivision"
+        ]
+      },
+      "measures": [
+        "margin",
+        "share_r",
+        "share_d"
+      ],
+      "attributes": {
+        "election_year": {
+          "type": "integer",
+          "min": 1900,
+          "max": 2100
+        },
+        "republican": {
+          "type": "string",
+          "max_length": 100
+        },
+        "democrat": {
+          "type": "string",
+          "max_length": 100
+        }
+      }
+    }
+  ],
+  "measures": [
+    {
+      "name": "margin",
+      "title": "Republican minus Democratic share",
+      "unit": "points",
+      "signed": true,
+      "min": -100,
+      "max": 100
+    },
+    {
+      "name": "share_r",
+      "title": "Republican candidate share",
+      "unit": "percent",
+      "min": 0,
+      "max": 100
+    },
+    {
+      "name": "share_d",
+      "title": "Democratic candidate share",
+      "unit": "percent",
+      "min": 0,
+      "max": 100
+    }
+  ]
+}

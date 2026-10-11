@@ -7,8 +7,8 @@
 # Settings: deploy/core/.env, every name starting with CORE_.
 # The C# API answers on http://localhost:8080 (Swagger: /swagger) and, for other deployments on the Docker network
 # "synapsis", as http://api:8080. It writes records to MongoDB and the ingestion log to Elasticsearch
-# (index synapsis-ingest-log, read by the UI). The old Python stand-in and its embedder (semantic search) start only
-# with --profile standin (port 8089). Kafka, Neo4j, Redis and MinIO join this file in the stage that first uses them.
+# (index synapsis-ingest-log, read by the UI). The embedder (text models for the later search) starts only with
+# --profile embedder. Kafka, Neo4j, Redis and MinIO join this file in the stage that first uses them.
 
 name: synapsis-core
 
@@ -55,8 +55,8 @@ services:
       timeout: 10s
       retries: 30
 
-  embedder:                   # text models for the stand-in's semantic search: --profile standin
-    profiles: [standin]
+  embedder:                   # text models for the later semantic search: --profile embedder
+    profiles: [embedder]
     image: synapsis/embedder:dev
     build: {context: ../.., dockerfile: src/python/synapsis_embedder/Dockerfile}
     restart: unless-stopped
@@ -74,14 +74,14 @@ services:
       timeout: 5s
       retries: 60
 
-  api:                        # the C# API: schemas, ingest, records; Swagger at http://localhost:8080/swagger.
+  api:                        # the C# API: ingest, records, catalog; Swagger at http://localhost:8080/swagger.
                               # Other deployments (the feeders) reach it as http://api:8080.
     image: synapsis/api:dev
     build: {context: ../.., dockerfile: src/dotnet/Synapsis.Api/Dockerfile}
     restart: unless-stopped
     environment:
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Mongo__Database: synapsis_next
+      Mongo__Database: synapsis_v2
       Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log)
       Api__CorsOrigins__0: http://localhost:1897   # the UI may read the API from the browser
     ports: ["8080:8080"]
@@ -93,27 +93,6 @@ services:
     depends_on:
       mongo: {condition: service_healthy}
       elasticsearch: {condition: service_healthy}
-
-  api-dev:                    # the old Python stand-in (semantic search); off unless asked: --profile standin
-    profiles: [standin]
-    image: synapsis/api-dev:dev
-    build: {context: ../.., dockerfile: src/python/synapsis_reference/Dockerfile}
-    restart: unless-stopped
-    environment:
-      MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
-      MONGO_DB: synapsis
-      ES_URL: http://elasticsearch:9200
-      EMBEDDER_URL: http://embedder:8090
-    ports: ["8089:8080"]
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=3)"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-    depends_on:
-      mongo: {condition: service_healthy}
-      elasticsearch: {condition: service_healthy}
-      embedder: {condition: service_healthy}
 
   ui:                         # the web client (React, served by nginx): http://localhost:1897 redirects to /home
     image: synapsis/ui:dev

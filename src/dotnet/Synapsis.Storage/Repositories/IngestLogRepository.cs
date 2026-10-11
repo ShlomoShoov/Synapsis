@@ -10,32 +10,32 @@ using Synapsis.Storage.Models;
 namespace Synapsis.Storage.Repositories;
 
 /// <summary>
-/// Keeps the ingestion log in Elasticsearch with the official client. The index is created with an explicit mapping
-/// the first time an entry is written, so every field has the type the UI's queries expect.
+/// The ingestion log in Elasticsearch (index "synapsis-ingest-log"), written with the official client. Best effort:
+/// when Elasticsearch fails, a warning is logged and ingestion goes on (the records are already stored).
 /// </summary>
-public sealed class IngestLogRepository : IIngestLogRepository
+public sealed class IngestLogRepository
 {
     /// <summary>The index name.</summary>
     public const string IndexName = "synapsis-ingest-log";
 
-    private readonly IElasticContext _elastic;
+    private readonly ElasticContext _elasticContext;
     private readonly ILogger<IngestLogRepository> _logger;
 
     /// <summary>True once the index is known to exist, so it is checked only once per process.</summary>
     private bool _indexReady;
 
     /// <summary>Creates the repository over the Elasticsearch connection; warnings go to the given logger.</summary>
-    public IngestLogRepository(IElasticContext elastic, ILogger<IngestLogRepository> logger)
+    public IngestLogRepository(ElasticContext elasticContext, ILogger<IngestLogRepository> logger)
     {
-        _elastic = elastic;
+        _elasticContext = elasticContext;
         _logger = logger;
     }
 
-    /// <inheritdoc/>
-    public async Task AddAsync(IReadOnlyList<IngestLogEntry> entries)
+    /// <summary>Writes the summaries, one document each. No Elasticsearch address: nothing is written.</summary>
+    public async Task AddAsync(IReadOnlyList<IngestSummary> summaries)
     {
-        ElasticsearchClient? client = _elastic.Client;
-        if (client == null || entries.Count == 0)
+        ElasticsearchClient? client = _elasticContext.Client;
+        if (client == null || summaries.Count == 0)
         {
             return;
         }
@@ -43,14 +43,14 @@ public sealed class IngestLogRepository : IIngestLogRepository
         {
             return;
         }
-        BulkResponse response = await client.IndexManyAsync(entries, IndexName);
+        BulkResponse response = await client.IndexManyAsync(summaries, IndexName);
         if (!response.IsValidResponse)
         {
             _logger.LogWarning("The ingestion log could not be written (the records are stored): {Reason}", response.DebugInformation);
         }
     }
 
-    /// <summary>Creates the index with its mapping when it does not exist yet; false (and a warning) when Elasticsearch fails.</summary>
+    /// <summary>Creates the index with its field types when it does not exist yet; false (and a warning) when Elasticsearch fails.</summary>
     private async Task<bool> EnsureIndexAsync(ElasticsearchClient client)
     {
         if (_indexReady)
@@ -72,15 +72,14 @@ public sealed class IngestLogRepository : IIngestLogRepository
     }
 
     /// <summary>
-    /// The fields of a log document and their types. Names and sources are keywords (exact values, for filters and
-    /// totals); rejection_counts is "nested" so each code keeps its own count; the detailed rejections are stored but
-    /// not searchable.
+    /// The field types of a log document. Names and sources are keywords (exact values, for filters and totals);
+    /// rejection_counts is "nested" so each code keeps its own count; the listed rejections are stored, not searchable.
     /// </summary>
     private static TypeMapping Mapping()
     {
-        Properties counts = new Properties();
-        counts.Add("code", new KeywordProperty());
-        counts.Add("count", new LongNumberProperty());
+        Properties codeCount = new Properties();
+        codeCount.Add("code", new KeywordProperty());
+        codeCount.Add("count", new LongNumberProperty());
         Properties fields = new Properties();
         fields.Add("timestamp", new DateProperty());
         fields.Add("batch_id", new KeywordProperty());
@@ -93,7 +92,7 @@ public sealed class IngestLogRepository : IIngestLogRepository
         fields.Add("duplicates", new LongNumberProperty());
         fields.Add("rejected", new LongNumberProperty());
         fields.Add("duration_ms", new LongNumberProperty());
-        fields.Add("rejection_counts", new NestedProperty { Properties = counts });
+        fields.Add("rejection_counts", new NestedProperty { Properties = codeCount });
         fields.Add("rejections", new ObjectProperty { Enabled = false });
         return new TypeMapping { Properties = fields };
     }

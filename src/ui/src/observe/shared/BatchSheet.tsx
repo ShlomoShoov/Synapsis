@@ -144,7 +144,7 @@ export function BatchSheet({ entry, onClose }: { entry: LogEntry | null; onClose
                     <th scope="col">#</th>
                     <th scope="col">Record</th>
                     <th scope="col">Code</th>
-                    <th scope="col">Where</th>
+                    <th scope="col">Reason</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -153,7 +153,7 @@ export function BatchSheet({ entry, onClose }: { entry: LogEntry | null; onClose
                       <td>{item.index}</td>
                       <td>{item.id ?? <span className={styles.none}>no readable id</span>}</td>
                       <td>{item.code}</td>
-                      <td>{item.path || '—'}</td>
+                      <td>{item.reason || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

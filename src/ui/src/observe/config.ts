@@ -3,7 +3,7 @@
  *
  * - Elasticsearch, for the ingestion log (index synapsis-ingest-log). The browser reads it directly; Elasticsearch
  *   allows the deployed client's origin (http://localhost:1897).
- * - The C# API, for the schema packages (GET /schemas) and its health (GET /health).
+ * - The C# API, for its health (GET /health).
  *
  * While developing (npm run dev), the Vite server forwards /es and /api to the two services (vite.config.ts), so the
  * browser never needs cross-origin access. The built client calls the services by their own addresses. Either can be

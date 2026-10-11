@@ -1,9 +1,8 @@
-# The C# ingestion server. Build context: the repository root (the build embeds schemas/ into Synapsis.Sil).
+# The C# ingestion server. Build context: the repository root.
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 COPY deploy/certs/ /usr/local/share/ca-certificates/extra/
 RUN update-ca-certificates
 WORKDIR /repo
-COPY schemas/ schemas/
 COPY src/dotnet/ src/dotnet/
 RUN dotnet publish src/dotnet/Synapsis.Api/Synapsis.Api.csproj -c Release -o /app
 

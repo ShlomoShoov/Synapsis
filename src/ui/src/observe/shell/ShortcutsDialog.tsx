@@ -12,7 +12,7 @@ const groups: { title: string; items: { keys: string[]; text: string }[] }[] = [
   {
     title: 'Anywhere',
     items: [
-      { keys: ['1', '2', '3'], text: 'Go to the live flow, the metrics or the schema map' },
+      { keys: ['1', '2'], text: 'Go to the live flow or the metrics' },
       { keys: ['['], text: 'Fold or unfold the sidebar' },
       { keys: ['?'], text: 'Show this list' },
     ],
@@ -23,13 +23,6 @@ const groups: { title: string; items: { keys: string[]; text: string }[] }[] = [
       { keys: ['Space'], text: 'Play or pause the replay' },
       { keys: ['←', '→'], text: 'Step back or forward in time' },
       { keys: ['L'], text: 'Return to live' },
-    ],
-  },
-  {
-    title: 'Schema map',
-    items: [
-      { keys: ['/'], text: 'Search the packages' },
-      { keys: ['0'], text: 'Fit the map to the screen' },
     ],
   },
 ];

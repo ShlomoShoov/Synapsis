@@ -1,7 +1,7 @@
 """The feeder contract.
 
 A feeder is a class with a name, the schema package it speaks, and one generator, records(), that yields SIL records
-and Checkpoint markers. Everything else (the schema call, batching, receipts, retries, the cursor, the schedule) is
+and Checkpoint markers. Everything else (the measure check, batching, summaries, retries, the cursor, the schedule) is
 the runner's job, so a feeder file holds only what is specific to its source: where to fetch, how to map."""
 from __future__ import annotations
 
@@ -114,7 +114,7 @@ class Feeder:
     package: ClassVar[str]
     title: ClassVar[str]
     keys: ClassVar[tuple[str, ...]] = ()
-    requires: ClassVar[tuple[str, ...]] = ()     # shared vocabulary packages registered before this feeder's own
+    requires: ClassVar[tuple[str, ...]] = ()     # shared packages whose measures this feeder also uses
     min_interval: ClassVar[float] = 0.0          # seconds between requests to the source
 
     def __init__(self, ctx: Context):

@@ -1,38 +1,27 @@
-using Synapsis.Api.Services.Swagger;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Synapsis.Api.Services.Http.Mappers;
+using Synapsis.Api.Models;
 using Synapsis.Api.Orchestrators;
-using Synapsis.Api.Models.Ingestion;
-using Synapsis.Sil.Models.Results;
+using Synapsis.Storage.Models;
 
 namespace Synapsis.Api.Controllers;
 
-/// <summary>POST /ingest: one batch of records (JSON, gzip allowed). With ?dry_run=true nothing is stored.</summary>
+/// <summary>POST /ingest: one batch of records (JSON, gzip allowed).</summary>
 [ApiController]
 public sealed class IngestController : ControllerBase
 {
-    private readonly IIngestionOrchestrator _ingestion;
+    private readonly IngestionOrchestrator _ingestionOrchestrator;
 
     /// <summary>Creates the controller over the ingestion process.</summary>
-    public IngestController(IIngestionOrchestrator ingestion)
+    public IngestController(IngestionOrchestrator ingestionOrchestrator)
     {
-        _ingestion = ingestion;
+        _ingestionOrchestrator = ingestionOrchestrator;
     }
 
-    /// <summary>200 with the receipt; or the problem with the whole request.</summary>
+    /// <summary>200 with the batch summary. A body that is not a batch: 400, answered by ASP.NET before this runs.</summary>
     [HttpPost("ingest")]
-    [RawBody("application/json")]
-    public async Task<IActionResult> Post([FromQuery(Name = "dry_run")] bool dryRun = false)
+    public async Task<IngestSummary> Post([FromBody] IngestBatch batch)
     {
-        using StreamReader body = new StreamReader(Request.Body);
-        string text = await body.ReadToEndAsync();
-        Result<Receipt> result = await _ingestion.IngestAsync(text, dryRun);
-        if (!result.Succeeded)
-        {
-            return ErrorMapper.ToResult(result.Problem!);
-        }
-        return Ok(ReceiptMapper.ToDto(result.Value!));
+        return await _ingestionOrchestrator.IngestAsync(batch);
     }
 }

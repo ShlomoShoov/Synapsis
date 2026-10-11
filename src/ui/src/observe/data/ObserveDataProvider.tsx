@@ -8,11 +8,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { healthCheckMs } from '../config';
 import { readStored, writeStored } from '../lib/storage';
-import { ApiSchemaRegistry } from './api/ApiSchemaRegistry';
-import { buildCatalog, emptyCatalog } from './catalog';
+import { ApiClient } from './api/ApiClient';
+import { emptyCatalog } from './catalog';
 import { ElasticIngestLog } from './elastic/ElasticIngestLog';
 import { isAbort } from './http';
-import type { IngestLog, Ping, SchemaRegistry } from './model';
+import type { ApiService, IngestLog, Ping } from './model';
 import {
   ObserveDataContext,
   type DataMode,
@@ -20,14 +20,13 @@ import {
   type ObserveDataValue,
 } from './observeContext';
 import { SimulatedIngestLog } from './simulation/SimulatedIngestLog';
-import { SimulatedSchemaRegistry } from './simulation/SimulatedSchemaRegistry';
+import { SimulatedApi } from './simulation/SimulatedApi';
 import { LogSimulator } from './simulation/simulator';
-import { useResource } from './useResource';
 
 /** The two services of a mode. */
 interface Services {
   log: IngestLog;
-  registry: SchemaRegistry;
+  api: ApiService;
 }
 
 /** The mode asked for in the address (?data=simulated or ?data=live), else the remembered one, else live. */
@@ -44,10 +43,10 @@ function servicesOf(mode: DataMode, epoch: number): Services {
   if (mode === 'simulated') {
     return {
       log: new SimulatedIngestLog(new LogSimulator({ epoch })),
-      registry: new SimulatedSchemaRegistry(),
+      api: new SimulatedApi(),
     };
   }
-  return { log: new ElasticIngestLog(), registry: new ApiSchemaRegistry() };
+  return { log: new ElasticIngestLog(), api: new ApiClient() };
 }
 
 /** Provides the data of Observe to everything inside it. */
@@ -66,14 +65,6 @@ export function ObserveDataProvider({ children }: { children: ReactNode }) {
     at: number;
   } | null>(null);
 
-  const schemas = useResource(`schemas:${mode}`, (signal) => services.registry.all(signal), {
-    refreshMs: 60_000,
-  });
-  const catalog = useMemo(
-    () => (schemas.data ? buildCatalog(schemas.data) : emptyCatalog),
-    [schemas.data],
-  );
-
   // Checks both services now and then; the sidebar shows the answers.
   useEffect(() => {
     const controller = new AbortController();
@@ -81,7 +72,7 @@ export function ObserveDataProvider({ children }: { children: ReactNode }) {
       try {
         const [log, api] = await Promise.all([
           services.log.ping(controller.signal),
-          services.registry.ping(controller.signal),
+          services.api.ping(controller.signal),
         ]);
         setChecked({ services, log, api, at: Date.now() });
       } catch (error) {
@@ -113,9 +104,8 @@ export function ObserveDataProvider({ children }: { children: ReactNode }) {
       setChoice({ mode: next, since: Date.now() });
     },
     log: services.log,
-    registry: services.registry,
-    schemas,
-    catalog,
+    api: services.api,
+    catalog: emptyCatalog,
     health,
   };
 

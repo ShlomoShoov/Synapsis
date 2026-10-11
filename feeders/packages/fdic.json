@@ -1,0 +1,317 @@
+{
+  "note": "FDIC: every insured bank's quarterly financials (call reports, as published by FDIC BankFind) and every failure.",
+  "package": "fdic",
+  "title": "FDIC bank financials and failures",
+  "description": "One event per bank per quarter with the figures the bank reported (amounts in thousands of US dollars, ratios in percent), and one event per failure or assistance transaction since 1934 with its acquirer. Figures are sent as reported; ratios such as uninsured deposits over deposits are derived by the engine. A figure a bank did not report is absent, never zero (rule M-NULL). Four amounts that are never negative in principle are declared signed because FDIC publishes a few negative reports (206 of about 545,000 since 2006); they are stored as published so that the other figures of those reports are kept, and the engine treats a negative stock as missing when it derives ratios.",
+  "maintainer": "synapsis-feeders",
+  "namespaces": {
+    "records": [
+      "fdic"
+    ],
+    "entities": [
+      "fdic",
+      "fdic-bidder"
+    ]
+  },
+  "sources": [
+    {
+      "id": "src:fdic:financials",
+      "title": "FDIC BankFind financials (call report data)",
+      "publisher": "Federal Deposit Insurance Corporation",
+      "url": "https://api.fdic.gov/banks/docs/",
+      "license": "US government work; public",
+      "reliability": 98,
+      "reliability_basis": "A1",
+      "publication_lag_days": 45,
+      "known_at_rule": "Quarter end plus 45 days, the usual delay before FDIC publishes a quarter (basis proxy_publication_lag)."
+    },
+    {
+      "id": "src:fdic:failures",
+      "title": "FDIC failures and assistance transactions",
+      "publisher": "Federal Deposit Insurance Corporation",
+      "url": "https://api.fdic.gov/banks/docs/",
+      "license": "US government work; public",
+      "reliability": 98,
+      "reliability_basis": "A1",
+      "publication_lag_days": 1,
+      "known_at_rule": "Failure date plus one day; FDIC announces a failure on the day it happens."
+    }
+  ],
+  "entity_types": [
+    {
+      "code": "Bank",
+      "title": "An FDIC-insured institution, identified by its FDIC certificate number",
+      "attributes": {
+        "state": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "charter_class": {
+          "type": "string",
+          "max_length": 10
+        }
+      }
+    }
+  ],
+  "event_types": [
+    {
+      "code": "FIN.BANK.QUARTER_REPORT",
+      "title": "A bank's quarterly financial figures",
+      "place": [
+        "logical",
+        "admin"
+      ],
+      "roles": {
+        "subject": [
+          "Bank"
+        ]
+      },
+      "measures": [
+        "assets",
+        "deposits",
+        "deposits_uninsured",
+        "deposits_brokered",
+        "deposits_core",
+        "equity",
+        "roa",
+        "net_chargeoffs_ratio",
+        "noncurrent_loans_ratio",
+        "securities",
+        "afs_amortized_cost",
+        "afs_fair_value",
+        "htm_amortized_cost",
+        "htm_fair_value",
+        "net_loans",
+        "leverage_ratio",
+        "interest_expense_ratio",
+        "net_interest_margin"
+      ]
+    },
+    {
+      "code": "FIN.BANK.FAILURE",
+      "title": "A bank fails and is closed",
+      "place": [
+        "logical",
+        "admin"
+      ],
+      "roles": {
+        "subject": [
+          "Bank"
+        ]
+      },
+      "measures": [
+        "assets_at_failure",
+        "deposits_at_failure",
+        "estimated_cost"
+      ],
+      "attributes": {
+        "resolution": {
+          "type": "string",
+          "max_length": 20
+        },
+        "insurance_fund": {
+          "type": "string",
+          "max_length": 20
+        },
+        "charter_class": {
+          "type": "string",
+          "max_length": 10
+        },
+        "cost_as_of": {
+          "type": "date"
+        },
+        "acquirer": {
+          "type": "string",
+          "max_length": 300
+        }
+      }
+    },
+    {
+      "code": "FIN.BANK.ASSISTANCE",
+      "title": "FDIC assistance to an open bank",
+      "place": [
+        "logical",
+        "admin"
+      ],
+      "roles": {
+        "subject": [
+          "Bank"
+        ]
+      },
+      "measures": [
+        "assets_at_failure",
+        "deposits_at_failure",
+        "estimated_cost"
+      ],
+      "attributes": {
+        "resolution": {
+          "type": "string",
+          "max_length": 20
+        },
+        "insurance_fund": {
+          "type": "string",
+          "max_length": 20
+        },
+        "charter_class": {
+          "type": "string",
+          "max_length": 10
+        },
+        "cost_as_of": {
+          "type": "date"
+        },
+        "acquirer": {
+          "type": "string",
+          "max_length": 300
+        }
+      }
+    }
+  ],
+  "relation_types": [
+    {
+      "code": "ACQUIRED",
+      "title": "An institution took over a failed bank's business",
+      "from": [
+        "Organization",
+        "Bank"
+      ],
+      "to": [
+        "Bank"
+      ]
+    }
+  ],
+  "measures": [
+    {
+      "name": "assets",
+      "title": "Total assets",
+      "unit": "usd_k",
+      "min": 0
+    },
+    {
+      "name": "deposits",
+      "title": "Total deposits",
+      "unit": "usd_k",
+      "min": 0
+    },
+    {
+      "name": "deposits_uninsured",
+      "title": "Estimated uninsured deposits (as reported; a few reports are negative)",
+      "unit": "usd_k",
+      "signed": true
+    },
+    {
+      "name": "deposits_brokered",
+      "title": "Brokered deposits",
+      "unit": "usd_k",
+      "min": 0
+    },
+    {
+      "name": "deposits_core",
+      "title": "Core deposits (as reported; a few reports are negative)",
+      "unit": "usd_k",
+      "signed": true
+    },
+    {
+      "name": "equity",
+      "title": "Total equity capital (can be negative)",
+      "unit": "usd_k",
+      "signed": true
+    },
+    {
+      "name": "roa",
+      "title": "Return on assets",
+      "unit": "percent",
+      "signed": true
+    },
+    {
+      "name": "net_chargeoffs_ratio",
+      "title": "Net charge-offs to loans (negative when recoveries exceed charge-offs)",
+      "unit": "percent",
+      "signed": true
+    },
+    {
+      "name": "noncurrent_loans_ratio",
+      "title": "Noncurrent loans to loans",
+      "unit": "percent",
+      "min": 0
+    },
+    {
+      "name": "securities",
+      "title": "Total securities (as reported; a few reports are negative)",
+      "unit": "usd_k",
+      "signed": true
+    },
+    {
+      "name": "afs_amortized_cost",
+      "title": "Available-for-sale securities at amortized cost",
+      "unit": "usd_k",
+      "min": 0
+    },
+    {
+      "name": "afs_fair_value",
+      "title": "Available-for-sale securities at fair value",
+      "unit": "usd_k",
+      "min": 0
+    },
+    {
+      "name": "htm_amortized_cost",
+      "title": "Held-to-maturity securities at amortized cost (as reported; negative in 168 reports of 2006-2011)",
+      "unit": "usd_k",
+      "signed": true
+    },
+    {
+      "name": "htm_fair_value",
+      "title": "Held-to-maturity securities at fair value",
+      "unit": "usd_k",
+      "min": 0
+    },
+    {
+      "name": "net_loans",
+      "title": "Net loans and leases",
+      "unit": "usd_k",
+      "signed": true
+    },
+    {
+      "name": "leverage_ratio",
+      "title": "Tier 1 leverage ratio",
+      "unit": "percent",
+      "signed": true
+    },
+    {
+      "name": "interest_expense_ratio",
+      "title": "Interest expense to earning assets",
+      "unit": "percent",
+      "signed": true
+    },
+    {
+      "name": "net_interest_margin",
+      "title": "Net interest margin",
+      "unit": "percent",
+      "signed": true
+    },
+    {
+      "name": "assets_at_failure",
+      "title": "Total assets at failure",
+      "unit": "usd_k",
+      "min": 0
+    },
+    {
+      "name": "deposits_at_failure",
+      "title": "Total deposits at failure",
+      "unit": "usd_k",
+      "min": 0
+    },
+    {
+      "name": "estimated_cost",
+      "title": "Estimated cost to the insurance fund (latest estimate)",
+      "unit": "usd_k",
+      "signed": true
+    }
+  ],
+  "logical_spaces": [
+    {
+      "space": "finance.bank",
+      "title": "Country then FDIC certificate number",
+      "max_depth": 2
+    }
+  ]
+}

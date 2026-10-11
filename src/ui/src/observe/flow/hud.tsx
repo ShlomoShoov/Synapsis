@@ -143,7 +143,6 @@ export function SourceCard({
   now: number;
   focused: boolean;
 }) {
-  const definition = source.definition;
   return (
     <div className={styles.card} role="tooltip">
       <div className={styles.cardHead}>
@@ -154,14 +153,6 @@ export function SourceCard({
         <span className={styles.cardDomain}>{domainById(source.domain).name}</span>
       </div>
       {source.title ? <p className={styles.cardTitle}>{source.title}</p> : null}
-      {definition ? (
-        <p className={styles.cardMeta}>
-          {definition.publisher}
-          <br />
-          package {source.packageName} · reliability {definition.reliability} (
-          {definition.reliability_basis})
-        </p>
-      ) : null}
       <dl className={styles.cardStats}>
         <div>
           <dt>Last 24 h</dt>
