@@ -1,0 +1,26 @@
+/* The Observe page: the sidebar on the left, the sections in the main column. */
+
+.page {
+  min-height: 100vh;
+  background: var(--surface-0);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.main {
+  margin-left: var(--sidebar-width);
+  min-width: 0;
+  transition: margin-left var(--dur-slow) var(--ease-out);
+}
+
+.page[data-sidebar='collapsed'] .main {
+  margin-left: var(--sidebar-collapsed);
+}
+
+/* Sections land below the top edge with a little air when the sidebar jumps to them. */
+.main [data-nav-section],
+.main [data-nav-anchor] {
+  scroll-margin-top: 24px;
+}

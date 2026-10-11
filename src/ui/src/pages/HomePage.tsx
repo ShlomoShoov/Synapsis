@@ -3,22 +3,35 @@
  * Synapsis that are on their way. A first, basic version, to be refined with Shlomo's feedback.
  */
 import { useEffect, useRef } from 'react';
+import { Link } from 'react-router';
 import styles from './HomePage.module.css';
 
-/** One area of the product the client will open onto. Each becomes its own page later. */
+/** One area of the product the client opens onto. */
 interface Area {
   /** The name shown in the navigation and on its card. */
   name: string;
-  /** One sentence on what the area will do. */
+  /** The anchor of its card on this page. */
+  slug: string;
+  /** One sentence on what the area does. */
   text: string;
+  /** Its page, once it exists; until then its card says it is on its way. */
+  page?: string;
 }
 
-/** The planned areas, in navigation order. Names are proposals. */
+/** The areas, in navigation order. */
 const areas: Area[] = [
-  { name: 'Atlas', text: 'Every record on one map and one timeline.' },
-  { name: 'Signals', text: 'What is unusual right now, as it is found.' },
-  { name: 'Patterns', text: 'Routines, similar pasts and expected futures.' },
-  { name: 'Ask', text: 'Questions answered from the record, with sources.' },
+  {
+    name: 'Getting started',
+    slug: 'getting-started',
+    text: 'How Synapsis works, and how a new source joins it.',
+  },
+  {
+    name: 'Observe',
+    slug: 'observe',
+    text: 'What the system receives, live and in the past: its flow, its numbers, its schemas.',
+    page: '/observe',
+  },
+  { name: 'Analyze', slug: 'analyze', text: 'Questions answered from the record, with sources.' },
 ];
 
 /** The home film: H.264, played by every browser (see assets/media/home/). */
@@ -66,11 +79,17 @@ export function HomePage() {
           Synapsis
         </a>
         <nav aria-label="Main" className={styles.nav}>
-          {areas.map((area) => (
-            <a key={area.name} href={`#${area.name.toLowerCase()}`}>
-              {area.name}
-            </a>
-          ))}
+          {areas.map((area) =>
+            area.page ? (
+              <Link key={area.slug} to={area.page}>
+                {area.name}
+              </Link>
+            ) : (
+              <a key={area.slug} href={`#${area.slug}`}>
+                {area.name}
+              </a>
+            ),
+          )}
         </nav>
       </header>
 
@@ -102,10 +121,16 @@ export function HomePage() {
           </p>
           <ul className={styles.areas}>
             {areas.map((area) => (
-              <li key={area.name} id={area.name.toLowerCase()} className={styles.area}>
+              <li key={area.slug} id={area.slug} className={styles.area}>
                 <h3>{area.name}</h3>
                 <p>{area.text}</p>
-                <span className={styles.soon}>Coming soon</span>
+                {area.page ? (
+                  <Link className={styles.open} to={area.page}>
+                    Open {area.name}
+                  </Link>
+                ) : (
+                  <span className={styles.soon}>Coming soon</span>
+                )}
               </li>
             ))}
           </ul>

@@ -1,0 +1,401 @@
+/* The time-travel bar under the live flow. */
+
+.timeline {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 22px;
+  row-gap: 10px;
+  align-items: center;
+  padding: 18px var(--gutter) 18px;
+  font-family: var(--font-sans);
+}
+
+/* ---------- Transport ---------- */
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.play {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--text-1);
+  color: var(--surface-0);
+  cursor: pointer;
+  box-shadow: 0 0 0 6px rgb(244 240 231 / 0.06);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur);
+}
+
+.play:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 8px rgb(244 240 231 / 0.09);
+}
+
+.play:active {
+  transform: scale(0.97);
+}
+
+.speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-2);
+  font: 400 12px/1 var(--font-mono);
+  cursor: pointer;
+}
+
+.speed:hover {
+  color: var(--text-1);
+  border-color: var(--rule-3);
+}
+
+.menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 230px;
+}
+
+.menuItem {
+  display: grid;
+  grid-template-columns: 64px 1fr 16px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-1);
+  font: 500 13px/1 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: var(--surface-3);
+}
+
+.menuNote {
+  color: var(--text-3);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+/* ---------- Track ---------- */
+
+.track {
+  position: relative;
+  height: 64px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  touch-action: none;
+}
+
+/* The range input under the bar: invisible, but it takes the keyboard (arrows, Home, End) and speaks to screen
+   readers. The pointer works on the bar itself. */
+.range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.track:has(.range:focus-visible) {
+  outline: 2px solid var(--text-1);
+  outline-offset: 6px;
+}
+
+.bars {
+  position: absolute;
+  inset: 0 0 18px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--rule-3);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 32px, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 32px, #000 100%);
+  transition: opacity var(--dur);
+}
+
+.bars[data-loading] {
+  opacity: 0.4;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.played {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+}
+
+.svg {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+}
+
+.bar {
+  fill: rgb(244 240 231 / 0.16);
+}
+
+.svg[data-bright] .bar {
+  fill: rgb(244 240 231 / 0.58);
+}
+
+.barRefused {
+  fill: var(--status-critical);
+  opacity: 0.55;
+}
+
+.svg[data-bright] .barRefused {
+  opacity: 1;
+}
+
+.ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18px;
+  overflow: hidden;
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  padding-top: 5px;
+  transform: translateX(-50%);
+  color: var(--text-3);
+  font: 400 10px/1 var(--font-mono);
+  white-space: nowrap;
+}
+
+.head {
+  position: absolute;
+  top: -4px;
+  bottom: 14px;
+  left: 0;
+  width: 0;
+  pointer-events: none;
+}
+
+.head::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--text-1);
+  box-shadow: 0 0 14px rgb(244 240 231 / 0.6);
+}
+
+.headKnob {
+  position: absolute;
+  top: -5px;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-1);
+  box-shadow: 0 0 0 4px rgb(13 12 10 / 0.9);
+}
+
+.timeline[data-mode='replay'] .head::before,
+.timeline[data-mode='replay'] .headKnob {
+  background: var(--status-warning);
+}
+
+.timeline[data-mode='replay'] .head::before {
+  box-shadow: 0 0 14px rgb(240 180 60 / 0.55);
+}
+
+.hoverLine,
+.dragLine {
+  position: absolute;
+  top: -2px;
+  bottom: 18px;
+  left: 0;
+  width: 0;
+  border-left: 1px solid var(--rule-4);
+  pointer-events: none;
+}
+
+.dragLine {
+  border-left-color: var(--status-warning);
+}
+
+.hoverLabel,
+.dragLabel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 9px;
+  border-radius: var(--radius-s);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-pop);
+  color: var(--text-1);
+  font: 400 11.5px/1.2 var(--font-mono);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.hoverCounts {
+  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+.hoverCounts em {
+  font-style: normal;
+  color: var(--status-critical);
+}
+
+/* ---------- Now ---------- */
+
+.now {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 170px;
+}
+
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: rgb(95 181 106 / 0.12);
+  color: #9be0a4;
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.liveDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--status-good);
+  animation: live 1.8s ease-out infinite;
+}
+
+@keyframes live {
+  0% {
+    box-shadow: 0 0 0 0 rgb(95 181 106 / 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 9px rgb(95 181 106 / 0);
+  }
+}
+
+.goLive {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgb(240 180 60 / 0.45);
+  border-radius: 15px;
+  background: rgb(240 180 60 / 0.1);
+  color: #f6cf7d;
+  font: 500 12.5px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+
+.goLive:hover {
+  background: rgb(240 180 60 / 0.18);
+}
+
+.clock {
+  color: var(--text-1);
+  font: 400 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- Second row ---------- */
+
+.windowRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  grid-column: 1;
+}
+
+.footer {
+  grid-column: 2;
+  min-width: 0;
+}
+
+.zone {
+  grid-column: 3;
+  justify-self: end;
+  color: var(--text-3);
+  font: 400 10.5px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.jump {
+  display: grid;
+  gap: 12px;
+  width: 280px;
+  padding: 10px;
+}
+
+.jumpLabel {
+  composes: label from '../theme/type.module.css';
+  display: grid;
+  gap: 8px;
+}
+
+.jumpInput {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--rule-3);
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+  color: var(--text-1);
+  font: 400 13px/1 var(--font-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color-scheme: dark;
+}
+
+.jumpNote {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.4;
+}

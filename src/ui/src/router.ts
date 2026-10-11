@@ -3,6 +3,7 @@
  * (the deployed server also redirects "/" itself, see nginx.conf).
  */
 import { createBrowserRouter, redirect } from 'react-router';
+import { ObserveLoading } from './observe/ObserveLoading';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
@@ -10,5 +11,11 @@ import { NotFoundPage } from './pages/NotFoundPage';
 export const router = createBrowserRouter([
   { path: '/', loader: () => redirect('/home') },
   { path: '/home', Component: HomePage },
+  // Observe carries the 3D engine and the charts: its code loads only when it is opened.
+  {
+    path: '/observe',
+    HydrateFallback: ObserveLoading,
+    lazy: async () => ({ Component: (await import('./observe/ObservePage')).ObservePage }),
+  },
   { path: '*', Component: NotFoundPage },
 ]);

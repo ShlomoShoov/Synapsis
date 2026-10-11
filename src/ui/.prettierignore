@@ -2,3 +2,4 @@ dist
 node_modules
 assets/media
 package-lock.json
+src/observe/data/simulation/demo-packages.json

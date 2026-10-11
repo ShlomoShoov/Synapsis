@@ -1,0 +1,44 @@
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.text {
+  min-width: 0;
+}
+
+.eyebrow {
+  composes: label from '../theme/type.module.css';
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.rule {
+  width: 28px;
+  height: 1px;
+  background: var(--rule-3);
+}
+
+.title {
+  composes: display from '../theme/type.module.css';
+  margin: 0;
+  color: var(--text-1);
+}
+
+.summary {
+  margin: 14px 0 0;
+  max-width: 46em;
+  color: var(--text-2);
+  font: 400 15px/1.5 var(--font-sans);
+}
+
+.aside {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}

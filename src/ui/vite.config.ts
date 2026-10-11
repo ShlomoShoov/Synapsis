@@ -19,7 +19,9 @@ export default defineConfig({
   },
 
   // The development server (npm run dev). The deployed client is served by nginx on port 1897 instead.
-  server: { port: 5173, strictPort: true },
+  // /es and /api reach the core's Elasticsearch and API, so Observe needs no cross-origin access while developing
+  // (src/observe/config.ts).
+  server: { port: 5173, strictPort: true, proxy: coreProxy() },
 
   build: {
     // The built code goes to dist/app/ with content hashes in its names, so the server can cache it for a year.
@@ -34,3 +36,20 @@ export default defineConfig({
     restoreMocks: true,
   },
 });
+
+/**
+ * The development server's forwarding to the core (deploy/core/compose.yml): /es to Elasticsearch on port 9200,
+ * /api to the C# API on port 8080, each without its prefix.
+ */
+function coreProxy() {
+  return {
+    '/es': {
+      target: 'http://localhost:9200',
+      rewrite: (path: string) => path.replace(/^\/es/, ''),
+    },
+    '/api': {
+      target: 'http://localhost:8080',
+      rewrite: (path: string) => path.replace(/^\/api/, ''),
+    },
+  };
+}

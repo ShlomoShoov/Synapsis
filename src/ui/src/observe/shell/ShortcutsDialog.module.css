@@ -1,0 +1,90 @@
+.dialog {
+  width: min(520px, calc(100vw - 48px));
+  padding: 28px 32px 30px;
+  border: 0;
+  border-radius: var(--radius-l);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-pop);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+}
+
+.dialog[open] {
+  animation: rise var(--dur-slow) var(--ease-out);
+}
+
+.dialog::backdrop {
+  background: rgb(8 7 5 / 0.62);
+  backdrop-filter: blur(3px);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.title {
+  composes: heading from '../theme/type.module.css';
+  margin: 0;
+  font-size: 26px;
+  font-weight: 300;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--text-1);
+  background: var(--surface-3);
+}
+
+.group + .group {
+  margin-top: 20px;
+}
+
+.groupTitle {
+  composes: label from '../theme/type.module.css';
+  margin: 0 0 8px;
+}
+
+.list {
+  margin: 0;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 7px 0;
+  border-top: 1px solid var(--rule-1);
+}
+
+.keys {
+  display: flex;
+  gap: 4px;
+}
+
+.text {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 13.5px;
+}

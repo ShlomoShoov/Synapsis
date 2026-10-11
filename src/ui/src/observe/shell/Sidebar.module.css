@@ -1,0 +1,442 @@
+/* The sidebar. Uses the night tokens (theme/night.css). */
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 30;
+  width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px 16px;
+  background: var(--surface-1);
+  border-right: 1px solid var(--rule-1);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.sidebar[data-collapsed] {
+  width: var(--sidebar-collapsed);
+  padding: 0 10px 16px;
+}
+
+/* ---------- Brand ---------- */
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+  flex: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--text-1);
+}
+
+.monogram {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--text-1);
+  color: var(--surface-0);
+  font: 400 19px/1 var(--font-serif);
+  letter-spacing: -0.02em;
+}
+
+.wordmark {
+  font: 400 21px/1 var(--font-serif);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: opacity var(--dur);
+}
+
+.fold {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.fold:hover {
+  color: var(--text-1);
+  background: var(--surface-3);
+}
+
+.sidebar[data-collapsed] .brandRow {
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  height: auto;
+  padding: 20px 0 8px;
+}
+
+.sidebar[data-collapsed] .wordmark,
+.sidebar[data-collapsed] .areaName,
+.sidebar[data-collapsed] .soon,
+.sidebar[data-collapsed] .sectionTitle,
+.sidebar[data-collapsed] .key {
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  overflow: hidden;
+}
+
+.sidebar[data-collapsed] .brand {
+  gap: 0;
+}
+
+/* ---------- Sections ---------- */
+
+.areaLabel {
+  composes: label from '../theme/type.module.css';
+  margin: 12px 10px 10px;
+  white-space: nowrap;
+}
+
+.sidebar[data-collapsed] .areaLabel {
+  margin: 12px 0 10px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.sections {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sections > li {
+  position: relative;
+}
+
+/* The light marker that slides to the current place. */
+.marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--text-1);
+  box-shadow: 0 0 12px rgb(244 240 231 / 0.45);
+  transition:
+    transform 420ms var(--ease-out),
+    height 420ms var(--ease-out);
+  pointer-events: none;
+}
+
+.sectionLink {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  height: 38px;
+  padding: 0 10px 0 14px;
+  border-radius: var(--radius-s);
+  color: var(--text-2);
+  text-decoration: none;
+  line-height: 38px;
+  transition:
+    color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.sectionLink:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.sectionLink[data-active] {
+  color: var(--text-1);
+}
+
+.number {
+  flex: none;
+  width: 18px;
+  font: 400 11px/38px var(--font-mono);
+  color: var(--text-4);
+  letter-spacing: 0.04em;
+  transition: color var(--dur-fast);
+}
+
+.sectionLink[data-active] .number {
+  color: var(--text-2);
+}
+
+.sectionTitle {
+  flex: 1;
+  font-size: 14.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: opacity var(--dur);
+}
+
+.key {
+  font: 400 10.5px/1 var(--font-mono);
+  color: var(--text-4);
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+
+.sectionLink:hover .key {
+  opacity: 1;
+}
+
+.sidebar[data-collapsed] .sectionLink {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+
+.sidebar[data-collapsed] .number {
+  width: auto;
+  font-size: 12px;
+}
+
+/* The current section's anchors, opening below it. */
+.anchorsWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease-out);
+}
+
+.anchorsWrap[data-open] {
+  grid-template-rows: 1fr;
+}
+
+.anchors {
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0 0 0 44px;
+  list-style: none;
+}
+
+.anchors li:first-child {
+  padding-top: 2px;
+}
+
+.anchors li:last-child {
+  padding-bottom: 6px;
+}
+
+.anchorLink {
+  display: block;
+  padding: 5px 8px;
+  border-radius: var(--radius-s);
+  color: var(--text-3);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.anchorLink:hover {
+  color: var(--text-1);
+}
+
+.anchorLink[aria-current] {
+  color: var(--text-1);
+}
+
+.spacer {
+  flex: 1;
+  min-height: 24px;
+}
+
+/* ---------- Other areas ---------- */
+
+.areas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 14px;
+}
+
+.areas > span {
+  display: flex;
+}
+
+.areaLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px 0 14px;
+  border-radius: var(--radius-s);
+  color: var(--text-3);
+  font-size: 13.5px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+a.areaLink:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.areaLink[aria-disabled] {
+  color: var(--text-4);
+  cursor: default;
+}
+
+.areaName {
+  flex: 1;
+}
+
+.soon {
+  composes: label from '../theme/type.module.css';
+  font-size: 9.5px;
+  color: var(--text-4);
+}
+
+.sidebar[data-collapsed] .areaLink {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+
+/* ---------- Instruments ---------- */
+
+.instruments {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 10px 4px;
+  border-top: 1px solid var(--rule-1);
+}
+
+.sidebar[data-collapsed] .instruments {
+  align-items: center;
+  padding: 16px 0 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rowLabel {
+  composes: label from '../theme/type.module.css';
+}
+
+.services {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.serviceName {
+  flex: 1;
+}
+
+.serviceState {
+  font: 400 11px/1 var(--font-mono);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.serviceState[data-failed] {
+  color: var(--status-critical);
+}
+
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+
+.dot[data-state='good'] {
+  background: var(--status-good);
+  box-shadow: 0 0 0 3px rgb(95 181 106 / 0.16);
+}
+
+.dot[data-state='critical'] {
+  background: var(--status-critical);
+  box-shadow: 0 0 0 3px rgb(239 91 71 / 0.18);
+}
+
+.dot[data-state='pending'] {
+  animation: breathe 1.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.collapsedStatus {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+}
+
+.shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px -6px 0;
+  padding: 6px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-3);
+  font: 500 12.5px/1 var(--font-sans);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast),
+    background var(--dur-fast);
+}
+
+.shortcuts:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.shortcuts .key {
+  margin-left: auto;
+  opacity: 1;
+}

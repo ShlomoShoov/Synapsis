@@ -1,0 +1,79 @@
+/*
+ * The night theme: the instrument room of Observe.
+ *
+ * The home page is ink on paper. Observe keeps the same two colours and inverts them: the ink becomes the room and
+ * the paper becomes the light. The shared names from src/styles.css (--paper, --ink, --ink-muted, --line) are
+ * redefined here, so every global rule (the page background, text, focus rings) follows without a change.
+ *
+ * Colour is kept for data. The data colours (domains, outcomes, status) are not here: they are set from
+ * src/observe/theme/palette.ts on the Observe root, so the 3D scene and the charts read the same values.
+ *
+ * ObservePage puts data-theme="night" on <html> while it is shown, and takes it off when it leaves.
+ */
+html[data-theme='night'] {
+  color-scheme: dark;
+  background: #0d0c0a;
+
+  /* The shared names, inverted: "paper" is the ground, "ink" is what is drawn on it. */
+  --paper: #0d0c0a;
+  --paper-deep: #13120f;
+  --ink: #f4f0e7;
+  --ink-muted: #b8af9e;
+  --line: rgb(244 240 231 / 0.1);
+
+  /* Surfaces, from the room to the most raised. */
+  --surface-0: #0d0c0a; /* the room: the page and the 3D scene */
+  --surface-1: #13120f; /* the sidebar and quiet panels */
+  --surface-2: #1a1814; /* raised: menus, popovers, the inspector */
+  --surface-3: #221f1a; /* hover and pressed */
+  --surface-4: #2b2721; /* the strongest fill: selected controls */
+
+  /* Light: text and marks without a data meaning. All four are checked against --surface-0..2. */
+  --text-1: #f4f0e7; /* primary, 16:1 */
+  --text-2: #b8af9e; /* secondary, 8.5:1 */
+  --text-3: #8f8778; /* labels and muted text, 5.2:1 (AA) */
+  --text-4: #6b6457; /* decoration and disabled only, 3.1:1 */
+
+  /* Hairlines, from a whisper to a frame. */
+  --rule-1: rgb(244 240 231 / 0.06);
+  --rule-2: rgb(244 240 231 / 0.1);
+  --rule-3: rgb(244 240 231 / 0.18);
+  --rule-4: rgb(244 240 231 / 0.32);
+
+  /* Type. The serif is the brand's voice (titles); the sans carries the interface and every number; the mono
+     carries codes, ids, times and labels. */
+  --font-sans: 'Instrument Sans Variable', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Fragment Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Shape and depth. */
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --shadow-pop: 0 24px 60px -16px rgb(0 0 0 / 0.7), 0 0 0 1px var(--rule-2);
+
+  /* Layout. */
+  --sidebar-width: 244px;
+  --sidebar-collapsed: 64px;
+  --gutter: clamp(24px, 2.6vw, 44px);
+
+  /* Motion: --ease-out comes from src/styles.css. */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 520ms;
+}
+
+html[data-theme='night'] ::selection {
+  background: rgb(244 240 231 / 0.22);
+}
+
+html[data-theme='night'] body {
+  background: var(--surface-0);
+  color: var(--text-1);
+}
+
+/* Thin, quiet scrollbars that belong to the room. */
+html[data-theme='night'] {
+  scrollbar-color: rgb(244 240 231 / 0.18) transparent;
+  scrollbar-width: thin;
+}
