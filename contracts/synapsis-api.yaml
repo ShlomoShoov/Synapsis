@@ -1,18 +1,19 @@
 openapi: 3.1.0
 info:
-  title: Synapsis API (Phase 1, the C# ingestion server) and the ingestion log
-  version: "1.0"
+  title: Synapsis API (the C# ingestion server) and the ingestion log
+  version: "2.0"
   description: |
     The routes the C# API answers today (http://localhost:8080; Swagger UI at /swagger), and the ingestion log it writes
     to Elasticsearch, which the UI reads directly (see x-elasticsearch at the end of this file).
 
-    - JSON field names are snake_case. Times are UTC instants such as "2026-10-10T08:15:00Z".
-    - Every error has the same body: Error. Its code decides the HTTP status (E-BUNDLE/E-PARAM 400, E-NOT-FOUND 404,
-      E-SCHEMA-* 409/422, E-TOO-LARGE 413, E-UNAVAILABLE 503).
-    - No authentication for now: every route is open. Browsers may read from the origins in Api:CorsOrigins (the UI:
-      http://localhost:1897).
-    - The record format itself (SIL 1.2) is defined in schemas/sil/; the schema package format in
-      schemas/sil/schema-package.schema.json.
+    - JSON field names are snake_case. Times are UTC, such as "2026-10-10T08:15:00Z".
+    - The API checks only what every record shares; it does not know schema packages. A refused record is not an
+      error: it is listed in the summary with a code (E-JSON, E-MISSING, E-DUPLICATE-ID) and a reason.
+    - A request that is wrong as a whole gets ASP.NET's standard problem answer (application/problem+json:
+      type, title, status, detail): 400 for a body that is not a batch, 404, 413 for an uncompressed body over the
+      size limit, 500 when MongoDB fails (and, for now, for a gzip body that unpacks past the limit).
+    - No authentication for now. Browsers may read from the origins in Api:CorsOrigins (the UI: http://localhost:1897).
+    - The record format (SIL 1.2) is described in schemas/sil/.
 servers:
   - url: http://localhost:8080
 
@@ -24,205 +25,125 @@ paths:
         "200": {description: 'Plain text "Healthy".', content: {text/plain: {schema: {type: string}}}}
         "503": {description: 'Plain text "Unhealthy": MongoDB does not answer.'}
 
-  /schemas:
-    get:
-      summary: Every current schema package (read-only list).
-      responses:
-        "200":
-          description: The packages.
-          content: {application/json: {schema: {type: array, items: {$ref: "#/components/schemas/SchemaSummary"}}}}
-
-  /schemas/{package}:
-    parameters:
-      - {name: package, in: path, required: true, schema: {type: string}, example: kev}
-    get:
-      summary: One package's current version, its content as JSON.
-      responses:
-        "200": {description: The package., content: {application/json: {schema: {$ref: "#/components/schemas/Schema"}}}}
-        "404": {$ref: "#/components/responses/Error"}
-    put:
-      summary: Registers a package (feeders only). Adding or widening makes a new version; removing or narrowing is refused.
-      requestBody:
-        required: true
-        content: {application/yaml: {schema: {type: string}}, application/json: {schema: {type: object}}}
-      responses:
-        "201": {description: Created (version 1)., content: {application/json: {schema: {$ref: "#/components/schemas/Registration"}}}}
-        "200": {description: Updated or unchanged., content: {application/json: {schema: {$ref: "#/components/schemas/Registration"}}}}
-        "409": {$ref: "#/components/responses/Error"}
-        "422": {$ref: "#/components/responses/Error"}
-
   /ingest:
     post:
-      summary: Ingests a batch of SIL records (feeders only). The body may be gzip-compressed (Content-Encoding gzip).
-      parameters:
-        - {name: dry_run, in: query, schema: {type: boolean, default: false}, description: Validate and answer without storing or logging.}
+      summary: Ingests a batch of SIL records (feeders). The body may be gzip-compressed (Content-Encoding gzip).
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [sil, batch_id, producer, records]
+              required: [batch_id, producer, records]
               properties:
-                sil: {const: "1.2"}
                 batch_id: {type: string}
                 producer: {type: string, example: "feeder:kev"}
-                records: {type: array, maxItems: 5000, items: {type: object, description: A SIL record (schemas/sil/).}}
+                records: {type: array, maxItems: 5000, items: {description: A SIL record (schemas/sil/).}}
       responses:
-        "200": {description: The receipt., content: {application/json: {schema: {$ref: "#/components/schemas/Receipt"}}}}
-        "400": {$ref: "#/components/responses/Error"}
-        "413": {$ref: "#/components/responses/Error"}
-        "503": {$ref: "#/components/responses/Error"}
+        "200": {description: The batch summary., content: {application/json: {schema: {$ref: "#/components/schemas/IngestSummary"}}}}
+        "400": {$ref: "#/components/responses/Problem"}
+        "413": {$ref: "#/components/responses/Problem"}
 
   /records/{id}:
     get:
-      summary: A record as each source stated it, as known at a date.
+      summary: A record as each source stated it, in its latest state known at a date.
       parameters:
         - {name: id, in: path, required: true, schema: {type: string}, example: "evt:kev:CVE-2021-44228"}
-        - {name: as_of, in: query, schema: {type: string}, description: 'A date ("2024-05-01" = end of that day) or a UTC instant; none = now.'}
+        - {name: as_of, in: query, schema: {type: string}, description: 'A date ("2024-05-01" = the start of that day, UTC) or a date-time; none = now.'}
         - {name: source, in: query, schema: {type: string}, description: Keep one source only.}
       responses:
-        "200": {description: The statements., content: {application/json: {schema: {$ref: "#/components/schemas/Statements"}}}}
-        "400": {$ref: "#/components/responses/Error"}
-        "404": {$ref: "#/components/responses/Error"}
+        "200":
+          description: One answer per source.
+          content: {application/json: {schema: {type: array, items: {$ref: "#/components/schemas/RecordAnswer"}}}}
+        "400": {$ref: "#/components/responses/Problem"}
+        "404": {$ref: "#/components/responses/Problem"}
+
+  /catalog:
+    get:
+      summary: Every source and type that has entered the system, for lists and filters.
+      responses:
+        "200":
+          description: The entries, sorted by field, then value.
+          content: {application/json: {schema: {type: array, items: {$ref: "#/components/schemas/CatalogEntry"}}}}
 
 components:
   responses:
-    Error:
-      description: The request was refused; the code says why.
-      content: {application/json: {schema: {$ref: "#/components/schemas/Error"}}}
+    Problem:
+      description: The request was refused (ASP.NET's standard problem answer).
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties: {type: {type: string}, title: {type: string}, status: {type: integer}, detail: {type: string}}
 
   schemas:
-    Error:
-      type: object
-      required: [code, message]
-      properties:
-        code: {type: string, example: E-NOT-FOUND}
-        message: {type: string}
-        details:
-          type: array
-          items: {type: object, required: [path, message], properties: {path: {type: string}, message: {type: string}}}
-
-    SchemaSummary:
-      type: object
-      required: [name, version, fingerprint]
-      properties:
-        name: {type: string, example: kev}
-        version: {type: integer, example: 3}
-        fingerprint: {type: string, description: Changes whenever the package changes.}
-
-    Schema:
-      allOf:
-        - $ref: "#/components/schemas/SchemaSummary"
-        - type: object
-          required: [package]
-          properties:
-            package: {type: object, description: "The package (format: schemas/sil/schema-package.schema.json)."}
-
-    Registration:
-      type: object
-      required: [status, package, version]
-      properties:
-        status: {enum: [created, updated, unchanged]}
-        package: {type: string}
-        version: {type: integer}
-
-    Receipt:
-      type: object
-      required: [batch_id, status, producer, received_at, counts, rejected, dry_run]
-      properties:
-        batch_id: {type: string}
-        status: {enum: [accepted, partial, rejected, unchanged]}
-        producer: {type: string}
-        received_at: {type: string, format: date-time}
-        counts:
-          type: object
-          required: [received, new, versioned, unchanged, duplicates, rejected]
-          properties:
-            received: {type: integer}
-            new: {type: integer}
-            versioned: {type: integer}
-            unchanged: {type: integer}
-            duplicates: {type: integer}
-            rejected: {type: integer}
-        rejected:
-          type: array
-          items:
-            type: object
-            required: [index, code, path, message]
-            properties:
-              index: {type: integer}
-              id: {type: [string, "null"]}
-              code: {type: string, example: E-UNIT}
-              path: {type: string, example: "measures[2].unit"}
-              message: {type: string}
-        dry_run: {type: boolean}
-
-    Statements:
-      type: object
-      required: [id, statements]
-      properties:
-        id: {type: string}
-        as_of: {type: [string, "null"]}
-        statements:
-          type: array
-          description: One per source, its latest version known at as_of. Each is the SIL record plus "version" and "_ingest".
-          items:
-            type: object
-            properties:
-              version: {type: integer}
-              _ingest:
-                type: object
-                properties:
-                  batch_id: {type: string}
-                  producer: {type: string}
-                  received_at: {type: string, format: date-time}
-
-    IngestLogEntry:
+    IngestSummary:
       type: object
       description: |
-        One document of the Elasticsearch index "synapsis-ingest-log": what one batch brought from one source. A batch
-        whose records name two sources gives two documents. received = new + changed + unchanged + duplicates + rejected.
-        Dry runs are not logged. The Elasticsearch type of each field is in x-elasticsearch.mapping.
-      required: [timestamp, batch_id, producer, source, received, new, changed, unchanged, duplicates, rejected, rejection_counts, rejections, duration_ms]
+        What one batch brought. The answer to POST /ingest covers the whole batch (no source); the same shape, with a
+        source, is one document of the Elasticsearch index "synapsis-ingest-log" per source of the batch.
+        received = new + changed + unchanged + duplicates + rejected.
+      required: [timestamp, batch_id, producer, received, new, changed, unchanged, duplicates, rejected, duration_ms, rejection_counts, rejections]
       properties:
         timestamp: {type: string, format: date-time, description: When the API received the batch.}
         batch_id: {type: string}
         producer: {type: string, example: "feeder:kev"}
-        source: {type: string, example: "src:cisa:kev", description: '"unknown" when a refused record had no readable source.'}
+        source: {type: string, example: "src:cisa:kev", description: 'Log documents only; "unknown" when a refused record had no readable source.'}
         received: {type: integer}
-        new: {type: integer, description: Stored for the first time.}
-        changed: {type: integer, description: Stored as a new version.}
-        unchanged: {type: integer, description: Already stored as it is.}
-        duplicates: {type: integer, description: Exact copies inside the batch, dropped.}
+        new: {type: integer, description: Stored for the first time (state 1).}
+        changed: {type: integer, description: Stored as the next state (the content changed).}
+        unchanged: {type: integer, description: The latest stored state has the same content; nothing written.}
+        duplicates: {type: integer, description: Exact copies of an earlier record in the same batch, dropped.}
         rejected: {type: integer}
+        duration_ms: {type: integer, description: Time the API took for the batch.}
         rejection_counts:
           type: array
           items: {$ref: "#/components/schemas/RejectionCount"}
         rejections:
           type: array
-          maxItems: 50
-          items:
-            type: object
-            required: [index, code, path]
-            properties:
-              index: {type: integer, description: Position in the batch, from 0.}
-              id: {type: [string, "null"]}
-              code: {type: string}
-              path: {type: string}
-        duration_ms: {type: integer, description: Time the API took for the whole batch.}
+          description: Every refused record in the answer; the first 50 in a log document.
+          items: {$ref: "#/components/schemas/RejectedRecord"}
+
+    RejectedRecord:
+      type: object
+      required: [index, source, code, reason]
+      properties:
+        index: {type: integer, description: Position in the batch, from 0.}
+        id: {type: [string, "null"]}
+        source: {type: string}
+        code: {enum: [E-JSON, E-MISSING, E-DUPLICATE-ID], description: 'E-JSON: cannot be read (not an object, unknown kind, a field of the wrong type). E-MISSING: a required field is missing or empty. E-DUPLICATE-ID: the same id and source earlier in the batch with other content.'}
+        reason: {type: string, example: "known_at is missing"}
 
     RejectionCount:
       type: object
       required: [code, count]
       properties:
-        code: {type: string, example: E-UNIT}
+        code: {type: string, example: E-MISSING}
         count: {type: integer}
+
+    RecordAnswer:
+      type: object
+      properties:
+        source: {type: string}
+        state: {type: integer, description: 'How many times this record (same id, same source) was stored with new content: 1, 2, 3...'}
+        known_at: {type: string, format: date-time}
+        received_at: {type: string, format: date-time}
+        batch_id: {type: string}
+        producer: {type: string}
+        record: {type: object, description: The record exactly as it arrived.}
+
+    CatalogEntry:
+      type: object
+      properties:
+        field: {enum: [source, entity_type, event_type, relation_type, conclusion_type]}
+        value: {type: string, example: "src:cisa:kev"}
+        count: {type: integer, description: Record states stored with this value.}
+        last_seen: {type: string, format: date-time}
 
 x-elasticsearch:
   description: |
     The ingestion log, for the UI to query directly. Elasticsearch: http://localhost:9200 (browser access allowed from
-    http://localhost:1897; no login in development). One document per (batch, source), shape: IngestLogEntry above.
+    http://localhost:1897; no login in development). One document per (batch, source), shape: IngestSummary above (with source).
     The index is created by the API on the first stored batch; before that, searches answer 404 index_not_found
     (add ?ignore_unavailable=true to get an empty answer instead).
   index: synapsis-ingest-log
@@ -239,7 +160,7 @@ x-elasticsearch:
     rejected: {type: long, meaning: Refused with an error code.}
     duration_ms: {type: long, meaning: Time the API took for the whole batch.}
     rejection_counts: {type: nested, fields: {code: keyword, count: long}, meaning: Refused records per error code. Aggregate with a nested aggregation.}
-    rejections: {type: object, enabled: false, meaning: 'The first 50 refused records ({index, id, code, path}): returned in _source, not searchable.'}
+    rejections: {type: object, enabled: false, meaning: 'The first 50 refused records ({index, id, source, code, reason}): returned in _source, not searchable.'}
   queries:
     live_flow:
       description: The newest documents; poll every few seconds with gt = the newest timestamp already shown.
