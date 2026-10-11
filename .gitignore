@@ -19,6 +19,11 @@ dist/
 # Editors
 .idea/
 .vscode/
+.vs/
+*.user
+*.userosscache
+*.suo
+
 # Local documentation and Claude files: kept on each developer's machine, never committed
 CLAUDE.md
 .claude/
