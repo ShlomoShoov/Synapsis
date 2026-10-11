@@ -165,6 +165,8 @@ export interface SourceHistory {
   last: number;
   batches: number;
   entries: number;
+  /** The start of every hour in which it sent at least one batch, oldest first (its runs, for its cadence). */
+  activeHours: number[];
 }
 
 /** The answer of a connection check. */

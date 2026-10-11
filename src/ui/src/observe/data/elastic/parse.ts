@@ -264,5 +264,6 @@ export function parseSourceHistory(response: SearchResponse): SourceHistory[] {
     last: metric(bucket, 'last'),
     batches: metric(bucket, 'batches'),
     entries: num(bucket.doc_count),
+    activeHours: bucketsOf(bucket, 'hours').map((hour) => num(hour.key)),
   }));
 }

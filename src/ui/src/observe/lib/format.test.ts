@@ -6,6 +6,7 @@ import {
   formatDuration,
   formatPercent,
   formatRate,
+  formatSpanWords,
   timeFormats,
 } from './format';
 
@@ -43,5 +44,12 @@ describe('format', () => {
     const formats = timeFormats(true);
     expect(formats.clock(Date.UTC(2026, 9, 11, 4, 5, 6))).toBe('04:05:06');
     expect(formats.dateMinute(Date.UTC(2026, 9, 11, 4, 5, 6))).toBe('11 Oct 04:05');
+  });
+  it('writes spans in words for sentences', () => {
+    expect(formatSpanWords(15 * 60_000)).toBe('15 minutes');
+    expect(formatSpanWords(3_600_000)).toBe('an hour');
+    expect(formatSpanWords(24 * 3_600_000)).toBe('24 hours');
+    expect(formatSpanWords(7 * 86_400_000)).toBe('7 days');
+    expect(formatSpanWords(36 * 3_600_000)).toBe('36 hours');
   });
 });

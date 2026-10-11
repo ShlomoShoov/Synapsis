@@ -195,7 +195,10 @@ export function sourceWindowsBody(range: TimeRange): Body {
   };
 }
 
-/** Each source over a long history: its first and last batch, and how many batches. */
+/**
+ * Each source over a long history: its first and last batch, how many batches, and the hours it sent in (a feeder
+ * run can send several batches within seconds, so hours tell its runs apart better than batches do).
+ */
 export function sourceHistoryBody(range: TimeRange): Body {
   return {
     size: 0,
@@ -207,6 +210,7 @@ export function sourceHistoryBody(range: TimeRange): Body {
           first: { min: { field: 'timestamp' } },
           last: { max: { field: 'timestamp' } },
           batches: { cardinality: { field: 'batch_id' } },
+          hours: { date_histogram: { field: 'timestamp', fixed_interval: '1h', min_doc_count: 1 } },
         },
       },
     },

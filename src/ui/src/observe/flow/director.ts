@@ -50,6 +50,8 @@ export class FlowDirector {
   /** Per source: when it last fired (engine seconds), and what waits to fire. */
   private readonly lanes = new Map<string, { last: number; pending: FlowBatch | null }>();
   private focus: string | null = null;
+  /** Whether the readouts are on screen: off screen, changes wait and are told when it returns. */
+  private shown = true;
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -62,6 +64,11 @@ export class FlowDirector {
   setEngine(engine: FlowEngine | null) {
     this.engine = engine;
     this.lanes.clear();
+  }
+
+  /** Whether the readouts are on screen. While they are not, subscribers are not told (nothing would show). */
+  setShown(shown: boolean) {
+    this.shown = shown;
   }
 
   /** Follow one source only (null for all): the others still count, but launch no arcs. */
@@ -138,7 +145,7 @@ export class FlowDirector {
       this.recent.splice(0, drop);
       this.dirty = true;
     }
-    if (this.dirty && realTime - this.lastNotify > notifyEveryMs) {
+    if (this.dirty && this.shown && realTime - this.lastNotify > notifyEveryMs) {
       this.lastNotify = realTime;
       this.dirty = false;
       this.snapshot = { feed: this.feed, stats: this.stats(sceneTime) };

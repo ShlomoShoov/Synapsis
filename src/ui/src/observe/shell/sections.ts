@@ -23,6 +23,11 @@ export interface SectionInfo {
   key: string;
 }
 
+/** A section by its id. */
+export function sectionInfo(id: SectionId): SectionInfo {
+  return sections.find((section) => section.id === id) as SectionInfo;
+}
+
 /** Every section, in page order. */
 export const sections: readonly SectionInfo[] = [
   {

@@ -10,6 +10,13 @@
   color: var(--text-1);
 }
 
+/* Scrolled away, nothing here moves: the scene stops drawing (FlowCanvas) and looping animations pause. */
+.section[data-offscreen] *,
+.section[data-offscreen] *::before,
+.section[data-offscreen] *::after {
+  animation-play-state: paused;
+}
+
 /* ---------- The scene ---------- */
 
 .canvasBox {

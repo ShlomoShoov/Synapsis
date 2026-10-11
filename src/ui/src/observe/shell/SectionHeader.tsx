@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import type { SectionInfo } from './sections';
 import styles from './SectionHeader.module.css';
 
-/** The head of a section. */
+/** The head of a section. Its title's id is "<section id>-title", for the section's aria-labelledby. */
 export function SectionHeader({
   section,
   children,
@@ -26,7 +26,9 @@ export function SectionHeader({
           <span className={styles.rule} aria-hidden="true" />
           <span>Observe</span>
         </p>
-        <h2 className={styles.title}>{section.title}</h2>
+        <h2 id={`${section.id}-title`} className={styles.title}>
+          {section.title}
+        </h2>
         <p className={styles.summary}>{section.summary}</p>
         {children}
       </div>

@@ -214,5 +214,8 @@ export function sourceHistoryOf(entries: readonly LogEntry[]): SourceHistory[] {
     last: latest(group),
     batches: new Set(group.map((entry) => entry.batchId)).size,
     entries: group.length,
+    activeHours: [
+      ...new Set(group.map((entry) => Math.floor(entry.time / 3_600_000) * 3_600_000)),
+    ].sort((a, b) => a - b),
   }));
 }

@@ -145,8 +145,8 @@
 
 .played {
   position: absolute;
-  inset: 0 auto 0 0;
-  overflow: hidden;
+  inset: 0;
+  clip-path: inset(0 100% 0 0);
 }
 
 .svg {
@@ -301,20 +301,32 @@
   text-transform: uppercase;
 }
 
+/* The dot and a ring that leaves it: transform and opacity only, so the pulse never repaints the page. */
 .liveDot {
+  position: relative;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--status-good);
+}
+
+.liveDot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgb(95 181 106 / 0.7);
   animation: live 1.8s ease-out infinite;
 }
 
 @keyframes live {
-  0% {
-    box-shadow: 0 0 0 0 rgb(95 181 106 / 0.6);
+  from {
+    transform: scale(1);
+    opacity: 0.9;
   }
-  100% {
-    box-shadow: 0 0 0 9px rgb(95 181 106 / 0);
+  to {
+    transform: scale(3.6);
+    opacity: 0;
   }
 }
 

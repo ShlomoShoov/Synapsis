@@ -77,3 +77,15 @@ html[data-theme='night'] {
   scrollbar-color: rgb(244 240 231 / 0.18) transparent;
   scrollbar-width: thin;
 }
+
+/* Asked for less motion: transitions become instant and looping animations stop (the scene has its own setting). */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='night'] *,
+  html[data-theme='night'] *::before,
+  html[data-theme='night'] *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

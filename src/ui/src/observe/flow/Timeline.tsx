@@ -5,11 +5,12 @@
  * L for live); return to the present with "Return to live".
  *
  * The bars are drawn once per refresh and slid smoothly as time passes; the playhead, the clock and the range input
- * underneath (keyboards and screen readers use it) follow the scene every frame through the DOM, so the bar costs
- * nothing while it waits.
+ * underneath (keyboards and screen readers use it) follow the scene through the DOM, written only when they change
+ * and not at all while the bar is off screen, so it costs nothing while it waits.
  */
 import { scaleTime, scaleUtc } from 'd3-scale';
 import {
+  memo,
   useEffect,
   useMemo,
   useRef,
@@ -25,6 +26,7 @@ import { formatCount, formatSpan } from '../lib/format';
 import { DAY, HOUR, niceInterval } from '../lib/time';
 import { useTimeFormats } from '../lib/timeZone';
 import { useElementSize } from '../lib/useElementSize';
+import { useInView } from '../lib/useInView';
 import { Popover, Segmented } from '../ui/controls';
 import controls from '../ui/controls.module.css';
 import { Icon } from '../ui/Icon';
@@ -70,6 +72,7 @@ export function Timeline({
   const formats = useTimeFormats();
   const [track, setTrack] = useState<HTMLDivElement | null>(null);
   const { width } = useElementSize(track);
+  const inView = useInView(track);
   const intervalMs = niceInterval(windowMs, Math.max(24, Math.floor(width / 6)));
   // The window's end when the bars were read: they are read again every 15 seconds, and slid in between.
   const readAt = useNow(15_000);
@@ -94,34 +97,54 @@ export function Timeline({
   const [hover, setHover] = useState<TrackPoint | null>(null);
   const [drag, setDrag] = useState<TrackPoint | null>(null);
 
-  // Every frame: slide the bars with time, move the playhead, write the clock, keep the range input in step.
+  // Every frame on screen: slide the bars with time, move the playhead, write the clock, keep the range input in
+  // step. Each is written only when it moved (a quarter pixel, a second), so a waiting bar does no work at all.
   useEffect(() => {
+    if (!inView || width <= 0) {
+      return;
+    }
     let frame = 0;
+    let lastShift = NaN;
+    let lastHead = NaN;
+    let lastClock = '';
+    let lastSecond = NaN;
+    const quarter = (value: number) => Math.round(value * 4) / 4;
     const draw = () => {
       frame = requestAnimationFrame(draw);
-      if (width <= 0) {
-        return;
-      }
       const now = Date.now();
-      const shift = ((now - readAt) / windowMs) * width;
-      for (const layer of [slide.current, slideTicks.current]) {
-        if (layer) {
-          layer.style.transform = `translate3d(${-shift}px, 0, 0)`;
+      const shift = quarter(((now - readAt) / windowMs) * width);
+      const scene = playback.now();
+      const x = quarter(
+        Math.min(width, Math.max(0, ((scene - (now - windowMs)) / windowMs) * width)),
+      );
+      const shifted = shift !== lastShift;
+      if (shifted) {
+        lastShift = shift;
+        for (const layer of [slide.current, slideTicks.current]) {
+          if (layer) {
+            layer.style.transform = `translate3d(${-shift}px, 0, 0)`;
+          }
         }
       }
-      const scene = playback.now();
-      const x = Math.min(width, Math.max(0, ((scene - (now - windowMs)) / windowMs) * width));
-      if (head.current) {
-        head.current.style.transform = `translate3d(${x}px, 0, 0)`;
+      if (shifted || x !== lastHead) {
+        lastHead = x;
+        if (head.current) {
+          head.current.style.transform = `translate3d(${x}px, 0, 0)`;
+        }
+        if (played.current) {
+          // A clip, not a width: moving it repaints the bright bars without laying anything out.
+          played.current.style.clipPath = `inset(0 calc(100% - ${x + shift}px) 0 0)`;
+        }
       }
-      if (played.current) {
-        played.current.style.width = `${x + shift}px`;
+      const text = formats.dateTime(scene);
+      if (text !== lastClock && clock.current) {
+        lastClock = text;
+        clock.current.textContent = text;
       }
-      if (clock.current) {
-        clock.current.textContent = formats.dateTime(scene);
-      }
+      const second = Math.floor(now / 1000);
       const input = range.current;
-      if (input && document.activeElement !== input) {
+      if (second !== lastSecond && input && document.activeElement !== input) {
+        lastSecond = second;
         input.min = String(now - windowMs);
         input.max = String(now);
         input.value = String(Math.round(scene));
@@ -133,7 +156,7 @@ export function Timeline({
     };
     draw();
     return () => cancelAnimationFrame(frame);
-  }, [width, windowMs, readAt, playback, formats]);
+  }, [inView, width, windowMs, readAt, playback, formats]);
 
   /** The point of the track at `x` pixels from its left edge. */
   const pointAt = (x: number): TrackPoint => {
@@ -364,8 +387,11 @@ export function Timeline({
   );
 }
 
-/** The bars of the histogram: records per interval (square root, so quiet intervals still show), refused in red. */
-function Bars({
+/**
+ * The bars of the histogram: records per interval (square root, so quiet intervals still show), refused in red.
+ * Memoised: they change when the activity is read again, not when the scene's readouts do.
+ */
+const Bars = memo(function Bars({
   buckets,
   from,
   windowMs,
@@ -429,7 +455,7 @@ function Bars({
       })}
     </svg>
   );
-}
+});
 
 /** Travel to a moment typed in: a date and a time, in the chosen zone. */
 function JumpTo({ windowMs, onSeek }: { windowMs: number; onSeek: (time: number) => void }) {

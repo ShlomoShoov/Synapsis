@@ -45,6 +45,7 @@ export function FlowSection() {
   const scene = useSyncExternalStore(director.subscribe, director.getSnapshot);
   const [engine, setEngine] = useState<FlowEngine | null>(null);
   const visible = useRef(false);
+  const sectionRef = useRef<HTMLElement>(null);
   const feedBox = useRef<HTMLDivElement>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const [windowMs, setWindowMs] = useState(DAY);
@@ -224,6 +225,7 @@ export function FlowSection() {
 
   return (
     <section
+      ref={sectionRef}
       id="flow"
       data-nav-section="flow"
       className={styles.section}
@@ -237,6 +239,9 @@ export function FlowSection() {
         onEngine={setEngine}
         onVisible={(value) => {
           visible.current = value;
+          // Out of sight, the readouts stop re-rendering and looping animations pause (.section[data-offscreen]).
+          director.setShown(value);
+          sectionRef.current?.toggleAttribute('data-offscreen', !value);
         }}
         reducedMotion={reducedMotion}
         avoid={feedBox}

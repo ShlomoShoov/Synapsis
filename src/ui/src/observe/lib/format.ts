@@ -92,6 +92,19 @@ export function formatSpan(ms: number): string {
   return `${Math.round(ms / DAY)} d`;
 }
 
+/** A span in words, for sentences: "15 minutes", "an hour", "24 hours", "7 days" (whole units only). */
+export function formatSpanWords(ms: number): string {
+  const words = (count: number, unit: string, one: string) =>
+    count === 1 ? one : `${count} ${unit}s`;
+  if (ms < HOUR) {
+    return words(Math.max(1, Math.round(ms / MINUTE)), 'minute', 'a minute');
+  }
+  if (ms <= 2 * DAY && Math.abs(ms / HOUR - Math.round(ms / HOUR)) < 0.01) {
+    return words(Math.round(ms / HOUR), 'hour', 'an hour');
+  }
+  return words(Math.max(1, Math.round(ms / DAY)), 'day', 'a day');
+}
+
 /** How long ago a moment was, from `now`: "just now", "40 s ago", "4 min ago", "3 h ago", "12 d ago". */
 export function formatAge(time: number, now: number): string {
   const age = now - time;
