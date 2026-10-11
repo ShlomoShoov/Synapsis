@@ -8,6 +8,13 @@ describe('filterQuery', () => {
     });
   });
 
+  it('sends whole milliseconds: Elasticsearch refuses fractions', () => {
+    const query = filterQuery({ from: 1000.6, to: 2000.2 }) as {
+      bool: { filter: { range: { timestamp: Record<string, unknown> } }[] };
+    };
+    expect(query.bool.filter[0]?.range.timestamp).toMatchObject({ gte: 1000, lt: 2001 });
+  });
+
   it('leaves the end open for an endless range (live polls)', () => {
     const query = filterQuery({ from: 1000, to: Infinity }) as {
       bool: { filter: { range: { timestamp: Record<string, unknown> } }[] };

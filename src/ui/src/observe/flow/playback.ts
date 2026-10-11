@@ -19,6 +19,8 @@ export interface PlaybackState {
   anchorReal: number;
   /** Changes on every seek, so readers can tell a jump from a steady run. */
   seekCount: number;
+  /** Where the current replay began (the moment of the last jump, or of the pause that froze the present). */
+  origin: number;
 }
 
 /** The speeds offered, in log milliseconds per real millisecond. */
@@ -52,6 +54,7 @@ export class Playback {
       anchorTime: wallNow(),
       anchorReal: realNow(),
       seekCount: 0,
+      origin: wallNow(),
     };
   }
 
@@ -87,7 +90,12 @@ export class Playback {
       this.goLive();
       return;
     }
-    this.set({ mode: 'replay', anchorTime: time, seekCount: this.state.seekCount + 1 });
+    this.set({
+      mode: 'replay',
+      anchorTime: time,
+      origin: time,
+      seekCount: this.state.seekCount + 1,
+    });
   }
 
   play() {
@@ -99,7 +107,8 @@ export class Playback {
   pause() {
     if (this.state.mode === 'live') {
       // Pausing the present freezes it: a replay that waits at this moment.
-      this.set({ mode: 'replay', playing: false, anchorTime: this.wallNow() });
+      const now = this.wallNow();
+      this.set({ mode: 'replay', playing: false, anchorTime: now, origin: now });
     } else if (this.state.playing) {
       this.set({ playing: false });
     }

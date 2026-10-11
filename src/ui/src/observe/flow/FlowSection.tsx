@@ -124,6 +124,9 @@ export function FlowSection() {
         controller.signal,
       )
       .then((page) => {
+        if (controller.signal.aborted) {
+          return;
+        }
         const entries = [...page.entries].reverse();
         poller.remember(entries);
         director.play(entries, 0, false);
@@ -156,7 +159,11 @@ export function FlowSection() {
         { range: { from: time - DAY, to: time }, order: 'desc', limit: 12 },
         controller.signal,
       )
-      .then((page) => director.play([...page.entries].reverse(), 0, false))
+      .then((page) => {
+        if (!controller.signal.aborted) {
+          director.play([...page.entries].reverse(), 0, false);
+        }
+      })
       .catch(() => {});
     return () => controller.abort();
     // The playhead's moment is read once per jump; play/pause and speed changes do not restart the replay.
@@ -267,7 +274,9 @@ export function FlowSection() {
             ) : (
               <>
                 <Icon name="clock" size={14} />
-                {play.playing ? 'Replaying' : 'Paused at'} {formats.dateMinute(play.anchorTime)}
+                {play.playing
+                  ? `Replaying from ${formats.dateMinute(play.origin)}`
+                  : `Paused at ${formats.dateTime(play.anchorTime)}`}
                 <span className={styles.statusWhere}>
                   {play.playing ? `at ${speedLabel(play.speed)}` : 'press Space to play'}
                 </span>

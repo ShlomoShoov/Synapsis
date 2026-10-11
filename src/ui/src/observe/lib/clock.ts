@@ -5,48 +5,57 @@
  */
 import { useSyncExternalStore } from 'react';
 
+/** One clock: a moment that advances every `resolutionMs`, and the views that follow it. */
 interface Tick {
   value: number;
   listeners: Set<() => void>;
   timer: number | undefined;
+  /** Stable functions for useSyncExternalStore (a new function on every render would resubscribe every render). */
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => number;
 }
 
 const ticks = new Map<number, Tick>();
 
 function tickOf(resolutionMs: number): Tick {
-  let tick = ticks.get(resolutionMs);
-  if (!tick) {
-    tick = { value: Date.now(), listeners: new Set(), timer: undefined };
-    ticks.set(resolutionMs, tick);
+  const existing = ticks.get(resolutionMs);
+  if (existing) {
+    return existing;
   }
-  return tick;
-}
-
-function subscribe(resolutionMs: number, listener: () => void): () => void {
-  const tick = tickOf(resolutionMs);
-  tick.listeners.add(listener);
-  if (tick.timer === undefined) {
-    tick.value = Date.now();
-    tick.timer = window.setInterval(() => {
-      tick.value = Date.now();
-      for (const notify of tick.listeners) {
-        notify();
+  const tick: Tick = {
+    value: Date.now(),
+    listeners: new Set(),
+    timer: undefined,
+    subscribe: (listener) => {
+      tick.listeners.add(listener);
+      if (tick.timer === undefined) {
+        // Waking after a pause: catch up first, if the moment held has gone stale.
+        if (Date.now() - tick.value >= resolutionMs) {
+          tick.value = Date.now();
+        }
+        tick.timer = window.setInterval(() => {
+          tick.value = Date.now();
+          for (const notify of tick.listeners) {
+            notify();
+          }
+        }, resolutionMs);
       }
-    }, resolutionMs);
-  }
-  return () => {
-    tick.listeners.delete(listener);
-    if (tick.listeners.size === 0) {
-      window.clearInterval(tick.timer);
-      tick.timer = undefined;
-    }
+      return () => {
+        tick.listeners.delete(listener);
+        if (tick.listeners.size === 0) {
+          window.clearInterval(tick.timer);
+          tick.timer = undefined;
+        }
+      };
+    },
+    getSnapshot: () => tick.value,
   };
+  ticks.set(resolutionMs, tick);
+  return tick;
 }
 
 /** The current time, advancing every `resolutionMs` (the component redraws then). */
 export function useNow(resolutionMs: number): number {
-  return useSyncExternalStore(
-    (listener) => subscribe(resolutionMs, listener),
-    () => tickOf(resolutionMs).value,
-  );
+  const tick = tickOf(resolutionMs);
+  return useSyncExternalStore(tick.subscribe, tick.getSnapshot);
 }

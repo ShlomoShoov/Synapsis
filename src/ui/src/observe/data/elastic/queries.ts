@@ -23,11 +23,14 @@ function outcomeSums(): Body {
   return Object.fromEntries(outcomeFields.map((field) => [field, { sum: { field } }]));
 }
 
-/** The filter of every question: a time range, optionally some sources, optionally more conditions. */
+/**
+ * The filter of every question: a time range, optionally some sources, optionally more conditions. Times go out as
+ * whole milliseconds: Elasticsearch refuses a fraction in epoch_millis (a replay's clock produces them).
+ */
 export function filterQuery(range: TimeRange, sources?: SourceSet, extra: Body[] = []): Body {
-  const timestamp: Body = { gte: range.from, format: 'epoch_millis' };
+  const timestamp: Body = { gte: Math.floor(range.from), format: 'epoch_millis' };
   if (Number.isFinite(range.to)) {
-    timestamp.lt = range.to;
+    timestamp.lt = Math.ceil(range.to);
   }
   const filter: Body[] = [{ range: { timestamp } }];
   if (sources) {
@@ -67,7 +70,7 @@ function histogram(range: TimeRange, intervalMs: number): Body {
     field: 'timestamp',
     fixed_interval: `${intervalMs}ms`,
     min_doc_count: 0,
-    extended_bounds: { min: range.from, max: range.to - 1 },
+    extended_bounds: { min: Math.floor(range.from), max: Math.ceil(range.to) - 1 },
   };
 }
 
