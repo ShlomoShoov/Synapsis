@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <!-- Synapsis.Storage: MongoDB and Elasticsearch. The stored shapes and the repositories. It depends on no other
-       Synapsis project, so every service that needs the data (the API now, the consumers and the engine later) can use it. -->
-  <ItemGroup>
-    <PackageReference Include="MongoDB.Driver" Version="3.12.0" />
-    <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.15.10" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.31" />
-  </ItemGroup>
-</Project>

@@ -1,8 +1,8 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Synapsis.Api.Models;
+using Synapsis.Api.Models.Requests;
 using Synapsis.Api.Orchestrators;
-using Synapsis.Storage.Models;
+using Synapsis.Data.Models.Results;
 
 namespace Synapsis.Api.Controllers;
 

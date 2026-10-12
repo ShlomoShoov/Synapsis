@@ -7,8 +7,9 @@ info:
     to Elasticsearch, which the UI reads directly (see x-elasticsearch at the end of this file).
 
     - JSON field names are snake_case. Times are UTC, such as "2026-10-10T08:15:00Z".
-    - The API checks only what every record shares; it does not know schema packages. A refused record is not an
-      error: it is listed in the summary with a code (E-JSON, E-MISSING, E-DUPLICATE-ID) and a reason.
+    - The API does not know schema packages. It reads every record into its class (any field of the wrong type is
+      refused) and checks the required fields. A refused record is not an error: it is listed in the summary with a
+      code (E-JSON, E-MISSING, E-DUPLICATE-ID) and a reason.
     - A request that is wrong as a whole gets ASP.NET's standard problem answer (application/problem+json:
       type, title, status, detail): 400 for a body that is not a batch, 404, 413 for an uncompressed body over the
       size limit, 500 when MongoDB fails (and, for now, for a gzip body that unpacks past the limit).
@@ -92,7 +93,7 @@ components:
         received: {type: integer}
         new: {type: integer, description: Stored for the first time (state 1).}
         changed: {type: integer, description: Stored as the next state (the content changed).}
-        unchanged: {type: integer, description: The latest stored state has the same content; nothing written.}
+        unchanged: {type: integer, description: A stored state of the record has the same content; nothing written.}
         duplicates: {type: integer, description: Exact copies of an earlier record in the same batch, dropped.}
         rejected: {type: integer}
         duration_ms: {type: integer, description: Time the API took for the batch.}
@@ -138,6 +139,8 @@ components:
         field: {enum: [source, entity_type, event_type, relation_type, conclusion_type]}
         value: {type: string, example: "src:cisa:kev"}
         count: {type: integer, description: Record states stored with this value.}
+        fields: {type: array, items: {type: string}, description: 'For a type: the top-level field names its records had (such as place, measures). Empty for a source.'}
+        measures: {type: array, items: {type: string}, description: 'For a type: the measure names its records had (such as magnitude). Empty otherwise.'}
         last_seen: {type: string, format: date-time}
 
 x-elasticsearch:

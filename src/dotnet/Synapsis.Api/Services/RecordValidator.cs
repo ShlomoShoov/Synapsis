@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Text.Json;
-using Synapsis.Api.Models;
-using Synapsis.Api.Models.Records;
-using Synapsis.Storage.Models;
+using Synapsis.Api.Models.Results;
+using Synapsis.Data.Models.Records;
+using Synapsis.Data.Models.Entities;
+using Synapsis.Data.Models.Results;
+using Synapsis.Data.Services;
 
 namespace Synapsis.Api.Services;
 
@@ -31,18 +33,12 @@ public static class RecordValidator
             JsonElement json = records[index];
 
             // 1. Read the record as the class of its kind (E-JSON when it cannot be read).
-            SilRecord? record;
-            try
+            (SilRecord? record, string? error) = RecordReader.Read(json);
+            if (record == null)
             {
-                record = RecordReader.Read(json);
-            }
-            catch (JsonException problem)
-            {
-                result.Rejected.Add(Reject(json, index, CannotRead, problem.Message));
+                result.Rejected.Add(Reject(json, index, CannotRead, error!));
                 continue;
             }
-            record.Index = index;
-            record.Json = json;
 
             // 2. Check the required fields.
             string? missing = FindMissingField(record);
@@ -68,7 +64,7 @@ public static class RecordValidator
                 continue;
             }
             firstTextByKey.Add(key, text);
-            result.Valid.Add(record);
+            result.Valid.Add(new ValidRecord { Json = json, Record = record });
         }
         return result;
     }
@@ -108,7 +104,7 @@ public static class RecordValidator
                 return "from";
             case RelationRecord relation when string.IsNullOrWhiteSpace(relation.To):
                 return "to";
-            case ConclusionRecord conclusion when conclusion.About == null:
+            case ConclusionRecord conclusion when conclusion.About.Count == 0:
                 return "about";
             case ConclusionRecord conclusion when conclusion.Statement == null:
                 return "statement";
@@ -122,10 +118,24 @@ public static class RecordValidator
     {
         RejectedRecord rejected = new RejectedRecord();
         rejected.Index = index;
-        rejected.Id = RecordReader.ReadText(json, "id");
-        rejected.Source = RecordReader.ReadText(json, "source") ?? "unknown";
+        rejected.Id = ReadText(json, "id");
+        rejected.Source = ReadText(json, "source") ?? "unknown";
         rejected.Code = code;
         rejected.Reason = reason;
         return rejected;
+    }
+
+    /// <summary>A text field of the record, or null when the record is not an object or the field is not text.</summary>
+    private static string? ReadText(JsonElement json, string field)
+    {
+        if (json.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+        if (!json.TryGetProperty(field, out JsonElement value) || value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+        return value.GetString();
     }
 }

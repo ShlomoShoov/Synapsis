@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson.IO;
-using MongoDB.Bson;
-using Synapsis.Api.Models;
-using Synapsis.Storage.Models;
-using Synapsis.Storage.Repositories;
+using Synapsis.Api.Models.Results;
+using Synapsis.Data.Models.Entities;
+using Synapsis.Api.Repositories;
+using Synapsis.Data.Services;
 
 namespace Synapsis.Api.Controllers;
 
@@ -62,8 +60,6 @@ public sealed class RecordsController : ControllerBase
     /// <summary>The stored record as an answer: its record turned from BSON back into plain JSON.</summary>
     private static RecordAnswer ToAnswer(StoredRecord stored)
     {
-        string json = stored.Record.ToJson(new JsonWriterSettings { OutputMode = JsonOutputMode.RelaxedExtendedJson });
-        using JsonDocument document = JsonDocument.Parse(json);
         RecordAnswer answer = new RecordAnswer();
         answer.Source = stored.Source;
         answer.State = stored.State;
@@ -71,7 +67,7 @@ public sealed class RecordsController : ControllerBase
         answer.ReceivedAt = stored.ReceivedAt;
         answer.BatchId = stored.BatchId;
         answer.Producer = stored.Producer;
-        answer.Record = document.RootElement.Clone();
+        answer.Record = RecordReader.ToJson(stored.Record);
         return answer;
     }
 }

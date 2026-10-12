@@ -1,0 +1,40 @@
+using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Synapsis.Data.Dal;
+using Synapsis.Data.Models.Options;
+
+namespace Synapsis.Data;
+
+/// <summary>
+/// The two functions a service calls to use Synapsis.Data: one registers it, one prepares the stores at start-up.
+/// </summary>
+public static class DataRegistration
+{
+    /// <summary>
+    /// Reads the settings sections "Mongo" and "Elastic" and registers the two connections, the settings and the
+    /// MongoDB health check (all singletons: one connection per process).
+    /// </summary>
+    public static IServiceCollection AddSynapsisData(this IServiceCollection services, IConfiguration configuration)
+    {
+        MongoOptions mongoOptions = configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
+        ElasticOptions elasticOptions = configuration.GetSection("Elastic").Get<ElasticOptions>() ?? new ElasticOptions();
+        services.AddSingleton(mongoOptions);
+        services.AddSingleton(elasticOptions);
+        services.AddSingleton<MongoContext>();
+        services.AddSingleton<ElasticContext>();
+        services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongo");
+        return services;
+    }
+
+    /// <summary>
+    /// Called once at start-up: creates what the stores need when it is missing (the MongoDB index, the ingestion log
+    /// index in Elasticsearch). When everything exists, it does nothing.
+    /// </summary>
+    public static async Task InitializeSynapsisDataAsync(this IServiceProvider services)
+    {
+        await services.GetRequiredService<MongoContext>().CreateIndexesAsync();
+        await services.GetRequiredService<ElasticContext>().CreateIngestLogIndexAsync();
+    }
+}

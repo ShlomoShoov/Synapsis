@@ -42,13 +42,17 @@ flowchart LR
 | `Synapsis.Api` | `Controllers/` | The three routes; each calls one thing |
 | | `Orchestrators/` | `IngestionOrchestrator`: the five steps of ingestion, in order, one call each |
 | | `Services/` | The steps themselves, as static classes (pure code, no database) |
-| | `Models/` | The batch, the four record classes, the step answers (`ValidationResult`, `ChangeResult`), `RecordAnswer` |
-| `Synapsis.Storage` | `Models/` | What is stored and shared: `StoredRecord`, `CatalogEntry`, `IngestSummary` (+ `RejectedRecord`, `CodeCount`) |
-| | `Dal/` | The connections: `MongoContext` (two collections, the index), `ElasticContext`, the health check |
-| | `Repositories/` | `RecordRepository`, `CatalogRepository`, `IngestLogRepository` |
+| | `Repositories/` | `RecordRepository`, `CatalogRepository`, `IngestLogRepository` (what ingestion and the routes need) |
+| | `Models/` | `Requests/` (`IngestBatch`), `Results/` (`ValidRecord`, `ValidationResult`, `ChangeResult`, `RecordAnswer`), `Options/` |
+| `Synapsis.Data` | `Models/` | `Records/` (the 15 record classes), `Entities/` (`StoredRecord`, `CatalogEntry`), `Results/` (`IngestSummary`, `RejectedRecord`, `CodeCount`), `Options/` |
+| | `Services/` | `RecordReader`: JSON → the record's class (or the reason it cannot be read); a stored record → plain JSON |
+| | `Dal/` | The connections: `MongoContext` (two collections, the index), `ElasticContext` (the log index), the health check |
+| | `DataRegistration.cs` | `AddSynapsisData(configuration)` registers it; `InitializeSynapsisDataAsync()` creates the indexes at start |
 
-`Synapsis.Storage` depends on no other Synapsis project, so later services (the consumers, the engine) can use it to
-read the data. `Program.cs` registers everything (dependency injection) and creates the MongoDB index at start.
+`Synapsis.Data` depends on no other Synapsis project, so later services (indexer, projector, engine) can use it to
+read and convert the data. The record classes hold only the record itself; in MongoDB it is the `record` field of a
+`StoredRecord`, and that envelope stays a `StoredRecord`. A single value the record does not give is `null`; a list it
+does not give is empty. `Program.cs` registers everything (dependency injection) and prepares the stores at start.
 
 ## 4. `POST /ingest`, step by step
 
@@ -64,7 +68,7 @@ sequenceDiagram
   F->>O: IngestBatch
   O->>O: 1. Validate (RecordValidator)
   O->>O: 2. Enrich (RecordEnricher)
-  O->>DB: 3. Latest state of each record key
+  O->>DB: 3. Every stored state of each record key
   O->>O: 3. Find changes (ChangeDetector)
   O->>DB: 4. Save new and changed records, update the catalog
   O->>ES: 5. One summary per source
@@ -72,9 +76,10 @@ sequenceDiagram
 ```
 
 1. **Validate** (`RecordValidator.Validate`). For each record, in batch order:
-   1. *Read* (`RecordReader.Read`): its `kind` picks the class (`EntityRecord`, `EventRecord`, `RelationRecord`,
-      `ConclusionRecord`) and System.Text.Json fills it. Not an object, an unknown kind, or a field of the wrong type
-      (a `known_at` that is not a date-time) → refused, **E-JSON**, with the framework's message as the reason.
+   1. *Read* (`RecordReader.Read`, in `Synapsis.Data`): its `kind` picks the class (`EntityRecord`, `EventRecord`,
+      `RelationRecord`, `ConclusionRecord`) and System.Text.Json fills it, parts included (time, place, measures...).
+      Not an object, an unknown kind, or any field of the wrong type (a `known_at` that is not a date-time, a measure
+      value that is text) → refused, **E-JSON**, with the framework's message as the reason. Unknown fields are skipped.
    2. *Required fields*: `id`, `type`, `source`, `known_at`; then per kind: entity `name`, event `time.start`,
       relation `from` and `to`, conclusion `about` and `statement`. Missing or empty → **E-MISSING** ("name is missing").
    3. *Same batch*: the first record with a key is kept. A later exact copy (same text) is a **duplicate** (dropped,
@@ -85,16 +90,17 @@ sequenceDiagram
 2. **Enrich** (`RecordEnricher.Enrich`): each valid record becomes a `StoredRecord`: id, source, kind, type,
    `known_at` (UTC), the content hash (`ContentHash.Of`), batch id, producer, the time the API received the batch, and
    the record itself exactly as it arrived (as BSON).
-3. **Find changes**. `RecordRepository.LatestStatesAsync` asks MongoDB once for the stored states of these ids and keeps
-   the highest state per key. `ChangeDetector.Detect` then decides for each record:
+3. **Find changes**. `RecordRepository.StatesByKeyAsync` asks MongoDB once for every stored state of these ids
+   (without the record bodies), grouped by key. `ChangeDetector.Detect` then decides for each record:
    - key not stored → **state 1** (new);
-   - same hash as the latest state → **unchanged** (nothing written);
+   - same hash as any stored state → **unchanged**, with that state's number (nothing written). So a source that
+     sends an old value again (a bank's old name with its old reports) does not add a state each time;
    - other hash → **latest state + 1** (changed).
 
    The document id becomes `"{id}|{source}|{state}"`. Answer: `ChangeResult` = to save, unchanged.
 4. **Save**: `RecordRepository.AddAsync` inserts the new and changed records in one call; `CatalogRepository.AddAsync`
    counts them per source and per type and updates the catalog in one call (a new value is created, a known one
-   counted up).
+   counted up). A type also collects the names of its records' top-level fields and measures (names, not values).
 5. **Summarize** (`SummaryBuilder`): one `IngestSummary` per source goes to Elasticsearch (at most 50 rejections each;
    best effort: if Elasticsearch fails, a warning is logged and the batch still succeeds), and one for the whole batch
    (every rejection) is the answer, 200.
@@ -107,12 +113,13 @@ A rejected record is not stored. Sending the same batch again answers everything
 2. `RecordRepository.AsOfAsync`: every state of the id with `known_at` ≤ `as_of` (and of that source, if given),
    sorted by source then state, newest first; the first of each source is kept.
 3. None → 404. Otherwise 200 with one `RecordAnswer` per source: source, state, known_at, received_at, batch_id,
-   producer, and the record as it arrived (turned from BSON back into JSON).
+   producer, and the record as it arrived (`RecordReader.ToJson`: BSON back to plain JSON, numbers as sent).
 
 ## 6. `GET /catalog` and `GET /health`
 
-- `GET /catalog`: every `CatalogEntry` (field, value, count, last_seen), sorted by field then value. Fields:
-  `source`, `entity_type`, `event_type`, `relation_type`, `conclusion_type`.
+- `GET /catalog`: every `CatalogEntry` (field, value, count, fields, measures, last_seen), sorted by field then value.
+  Fields: `source`, `entity_type`, `event_type`, `relation_type`, `conclusion_type`; for a type, `fields` and
+  `measures` list the names its records had.
 - `GET /health`: "Healthy" when MongoDB answers a ping, otherwise "Unhealthy" (503).
 
 ## 7. Errors

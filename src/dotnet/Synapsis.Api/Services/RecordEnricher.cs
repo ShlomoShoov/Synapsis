@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using MongoDB.Bson;
-using Synapsis.Api.Models;
-using Synapsis.Api.Models.Records;
-using Synapsis.Storage.Models;
+using Synapsis.Api.Models.Requests;
+using Synapsis.Api.Models.Results;
+using Synapsis.Data.Models.Records;
+using Synapsis.Data.Models.Entities;
 
 namespace Synapsis.Api.Services;
 
@@ -14,22 +15,23 @@ namespace Synapsis.Api.Services;
 public static class RecordEnricher
 {
     /// <summary>One stored record for each valid record, in the same order.</summary>
-    public static List<StoredRecord> Enrich(IReadOnlyList<SilRecord> validRecords, IngestBatch batch, DateTime receivedAt)
+    public static List<StoredRecord> Enrich(IReadOnlyList<ValidRecord> validRecords, IngestBatch batch, DateTime receivedAt)
     {
         List<StoredRecord> storedRecords = new List<StoredRecord>();
-        foreach (SilRecord record in validRecords)
+        foreach (ValidRecord valid in validRecords)
         {
+            SilRecord record = valid.Record;
             StoredRecord stored = new StoredRecord();
             stored.RecordId = record.Id!;
             stored.Source = record.Source!;
             stored.Kind = record.Kind!;
             stored.Type = record.Type!;
             stored.KnownAt = record.KnownAt!.Value.UtcDateTime;
-            stored.ContentHash = ContentHash.Of(record.Json);
+            stored.ContentHash = ContentHash.Of(valid.Json);
             stored.BatchId = batch.BatchId;
             stored.Producer = batch.Producer;
             stored.ReceivedAt = receivedAt;
-            stored.Record = BsonDocument.Parse(record.Json.GetRawText());
+            stored.Record = BsonDocument.Parse(valid.Json.GetRawText());
             storedRecords.Add(stored);
         }
         return storedRecords;

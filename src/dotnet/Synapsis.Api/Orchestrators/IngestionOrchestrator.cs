@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Synapsis.Api.Models;
+using Synapsis.Api.Models.Requests;
+using Synapsis.Api.Models.Results;
 using Synapsis.Api.Services;
-using Synapsis.Storage.Models;
-using Synapsis.Storage.Repositories;
+using Synapsis.Data.Models.Entities;
+using Synapsis.Data.Models.Results;
+using Synapsis.Api.Repositories;
 
 namespace Synapsis.Api.Orchestrators;
 
@@ -37,9 +39,9 @@ public sealed class IngestionOrchestrator
         // 2. Enrich: the content hash and where each valid record came from.
         List<StoredRecord> candidates = RecordEnricher.Enrich(validation.Valid, batch, receivedAt);
 
-        // 3. Find changes: compare each record with its latest stored state (same id, same source).
-        Dictionary<string, StoredRecord> latestStates = await _recordRepository.LatestStatesAsync(candidates);
-        ChangeResult changes = ChangeDetector.Detect(candidates, latestStates);
+        // 3. Find changes: compare each record with its stored states (same id, same source).
+        Dictionary<string, List<StoredRecord>> storedStates = await _recordRepository.StatesByKeyAsync(candidates);
+        ChangeResult changes = ChangeDetector.Detect(candidates, storedStates);
 
         // 4. Save to MongoDB: the new and changed records, then their sources and types in the catalog.
         await _recordRepository.AddAsync(changes.ToSave);

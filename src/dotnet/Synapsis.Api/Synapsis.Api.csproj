@@ -2,7 +2,7 @@
   <!-- Synapsis.Api: the ingestion server. HTTP (controllers), the records it reads (models), the steps (services)
        and the process that runs them in order (the orchestrator). -->
   <ItemGroup>
-    <ProjectReference Include="../Synapsis.Storage/Synapsis.Storage.csproj" />
+    <ProjectReference Include="../Synapsis.Data/Synapsis.Data.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />

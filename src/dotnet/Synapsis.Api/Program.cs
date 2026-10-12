@@ -5,26 +5,26 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
-using Synapsis.Api.Models;
+using Synapsis.Api.Models.Options;
 using Synapsis.Api.Orchestrators;
-using Synapsis.Storage;
-using Synapsis.Storage.Dal;
-using Synapsis.Storage.Models;
+using Synapsis.Api.Repositories;
+using Synapsis.Data;
 
-// The composition root: read the settings, register the components, create the MongoDB index, start HTTP.
+// The composition root: read the settings, register the components, prepare the stores, start HTTP.
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 ApiOptions apiOptions = builder.Configuration.GetSection("Api").Get<ApiOptions>() ?? new ApiOptions();
-MongoOptions mongoOptions = builder.Configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
-ElasticOptions elasticOptions = builder.Configuration.GetSection("Elastic").Get<ElasticOptions>() ?? new ElasticOptions();
 
-// 1. Components: storage (MongoDB, Elasticsearch), the ingestion process, HTTP.
-builder.Services.AddSynapsisStorage(mongoOptions, elasticOptions);
+// 1. Components: the data (MongoDB, Elasticsearch), the repositories, the ingestion process, HTTP.
+builder.Services.AddSynapsisData(builder.Configuration);
+builder.Services.AddSingleton<RecordRepository>();
+builder.Services.AddSingleton<CatalogRepository>();
+builder.Services.AddSingleton<IngestLogRepository>();
 builder.Services.AddSingleton<IngestionOrchestrator>();
 AddHttp(builder, apiOptions);
 
 // 2. Start-up work, then the HTTP pipeline: errors as built-in problem answers, gzip bodies, browser access, Swagger.
 WebApplication app = builder.Build();
-await app.Services.GetRequiredService<MongoContext>().CreateIndexesAsync();
+await app.Services.InitializeSynapsisDataAsync();
 app.UseExceptionHandler();
 app.UseRequestDecompression();
 app.UseCors();
