@@ -23,6 +23,7 @@ public sealed class ElasticsearchRepository
         ArgumentNullException.ThrowIfNull(record);
         _ = _elasticContext;
         _ = cancellationToken;
+        // TODO: Replace this placeholder with the actual Elasticsearch indexing call.
         throw new NotSupportedException("Elasticsearch record indexing is not implemented in this phase.");
     }
 }

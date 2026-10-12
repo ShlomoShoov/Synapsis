@@ -23,6 +23,7 @@ public sealed class Neo4jRepository
         ArgumentNullException.ThrowIfNull(record);
         _ = _neo4jContext;
         _ = cancellationToken;
+        // TODO: Replace this placeholder with the actual Neo4j graph write transaction.
         throw new NotSupportedException("Neo4j graph writes are not implemented in this phase.");
     }
 }
