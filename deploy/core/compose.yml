@@ -138,10 +138,10 @@ services:
     image: neo4j:5.26.0
     restart: unless-stopped
     environment:
-      NEO4J_AUTH: neo4j/${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
+      NEO4J_AUTH: none              # local development; no host port is published
     volumes: [neo4j-data:/data]
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${CORE_NEO4J_PASSWORD}", "RETURN 1"]
+      test: ["CMD", "cypher-shell", "RETURN 1"]
       interval: 10s
       timeout: 10s
       retries: 30
@@ -157,8 +157,6 @@ services:
       Kafka__Topic: ingest.accepted
       Kafka__GroupId: synapsis-neo4j
       Neo4j__Url: bolt://neo4j:7687
-      Neo4j__Username: neo4j
-      Neo4j__Password: ${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
       Neo4j__Database: neo4j
     depends_on:
       mongo: {condition: service_healthy}
