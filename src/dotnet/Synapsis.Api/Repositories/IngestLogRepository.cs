@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Logging;
 using Synapsis.Data.Dal;
+using Synapsis.Data.Models.Options;
 using Synapsis.Data.Models.Results;
 
 namespace Synapsis.Api.Repositories;
@@ -14,12 +15,14 @@ namespace Synapsis.Api.Repositories;
 public sealed class IngestLogRepository
 {
     private readonly ElasticContext _elasticContext;
+    private readonly ElasticOptions _elasticOptions;
     private readonly ILogger<IngestLogRepository> _logger;
 
-    /// <summary>Creates the repository over the Elasticsearch connection; warnings go to the given logger.</summary>
-    public IngestLogRepository(ElasticContext elasticContext, ILogger<IngestLogRepository> logger)
+    /// <summary>Creates the repository over the Elasticsearch connection and its index names; warnings go to the given logger.</summary>
+    public IngestLogRepository(ElasticContext elasticContext, ElasticOptions elasticOptions, ILogger<IngestLogRepository> logger)
     {
         _elasticContext = elasticContext;
+        _elasticOptions = elasticOptions;
         _logger = logger;
     }
 
@@ -31,7 +34,7 @@ public sealed class IngestLogRepository
         {
             return;
         }
-        BulkResponse response = await client.IndexManyAsync(summaries, ElasticContext.IngestLogIndex);
+        BulkResponse response = await client.IndexManyAsync(summaries, _elasticOptions.IngestLogIndex);
         if (!response.IsValidResponse)
         {
             _logger.LogWarning("The ingestion log could not be written (the records are stored): {Reason}", response.DebugInformation);

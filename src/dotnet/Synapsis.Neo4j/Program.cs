@@ -1,10 +1,7 @@
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Synapsis.Data;
-using Synapsis.Data.Dal;
-using Synapsis.Data.Models.Options;
 
 namespace Synapsis.Neo4j;
 
@@ -15,11 +12,9 @@ public static class Program
     public static async Task Main(string[] args)
     {
         HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-        MongoOptions mongoOptions = builder.Configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
-        builder.Services.AddSingleton(mongoOptions);
-        builder.Services.AddSingleton<MongoContext>();
-        builder.Services.AddSynapsisKafkaConsumer(builder.Configuration, "synapsis-neo4j");
-        builder.Services.AddSynapsisNeo4j(builder.Configuration);
+        builder.Services.AddSynapsisData(builder.Configuration);
+        builder.Services.AddSynapsisKafkaConsumer();
+        builder.Services.AddSynapsisNeo4j();
         builder.Services.AddSingleton<MongoRecordRepository>();
         builder.Services.AddSingleton<Neo4jRepository>();
         builder.Services.AddHostedService<Neo4jOrchestrator>();

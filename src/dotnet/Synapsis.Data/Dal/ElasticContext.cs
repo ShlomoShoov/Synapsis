@@ -13,12 +13,12 @@ namespace Synapsis.Data.Dal;
 /// </summary>
 public sealed class ElasticContext
 {
-    /// <summary>The index of the ingestion log (one document per batch and source; the UI reads it).</summary>
-    public const string IngestLogIndex = "synapsis-ingest-log";
+    private readonly ElasticOptions _options;
 
     /// <summary>Creates the client for the address in the options, or none when the address is empty.</summary>
     public ElasticContext(ElasticOptions options)
     {
+        _options = options;
         if (string.IsNullOrWhiteSpace(options.Url))
         {
             return;
@@ -41,12 +41,12 @@ public sealed class ElasticContext
         {
             return;
         }
-        Elastic.Clients.Elasticsearch.IndexManagement.ExistsResponse exists = await Client.Indices.ExistsAsync(IngestLogIndex);
+        Elastic.Clients.Elasticsearch.IndexManagement.ExistsResponse exists = await Client.Indices.ExistsAsync(_options.IngestLogIndex);
         if (exists.Exists)
         {
             return;
         }
-        CreateIndexResponse created = await Client.Indices.CreateAsync(new CreateIndexRequest(IngestLogIndex) { Mappings = IngestLogMapping() });
+        CreateIndexResponse created = await Client.Indices.CreateAsync(new CreateIndexRequest(_options.IngestLogIndex) { Mappings = IngestLogMapping() });
         if (!created.IsValidResponse)
         {
             throw new InvalidOperationException("The ingestion log index could not be created: " + created.DebugInformation);

@@ -13,7 +13,7 @@ public static class Program
     {
         HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
         builder.Services.AddSynapsisData(builder.Configuration);
-        builder.Services.AddSynapsisKafkaConsumer(builder.Configuration);
+        builder.Services.AddSynapsisKafkaConsumer();
         builder.Services.AddSingleton<MongoRecordRepository>();
         builder.Services.AddSingleton<ElasticsearchRepository>();
         builder.Services.AddHostedService<ElasticsearchOrchestrator>();

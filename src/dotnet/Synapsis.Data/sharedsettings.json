@@ -1,0 +1,27 @@
+{
+  "Mongo": {
+    "Url": "mongodb://localhost:27017/?replicaSet=rs0&directConnection=true",
+    "Database": "synapsis_v2"
+  },
+  "Elastic": {
+    "Url": "http://localhost:9200",
+    "IngestLogIndex": "synapsis-ingest-log",
+    "RecordsIndex": "synapsis-records"
+  },
+  "Kafka": {
+    "Bootstrap": "localhost:9092",
+    "Topic": "ingest.accepted",
+    "TopicPartitions": 6,
+    "TopicReplicationFactor": 1
+  },
+  "Neo4j": {
+    "Url": "bolt://localhost:7687",
+    "Database": "neo4j"
+  },
+  "Embedder": {
+    "Url": "http://localhost:8090",
+    "Model": "search",
+    "Dimensions": 512,
+    "MaxTextLength": 20000
+  }
+}

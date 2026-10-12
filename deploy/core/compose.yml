@@ -81,9 +81,8 @@ services:
     image: synapsis/api:dev
     build: {context: ../.., dockerfile: src/dotnet/Synapsis.Api/Dockerfile}
     restart: unless-stopped
-    environment:
+    environment:                                 # addresses only; names and other settings: sharedsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Mongo__Database: synapsis_v2
       Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log)
       Api__CorsOrigins__0: http://localhost:1897   # the UI may read the API from the browser
     ports: ["8080:8080"]
@@ -125,11 +124,9 @@ services:
     image: synapsis/kafka-relay:dev
     build: {context: ../.., dockerfile: src/dotnet/Synapsis.KafkaRelay/Dockerfile}
     restart: unless-stopped
-    environment:
+    environment:                                 # addresses only; names and other settings: sharedsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Mongo__Database: synapsis_v2
       Kafka__Bootstrap: kafka:9092
-      Kafka__Topic: ingest.accepted
     depends_on:
       mongo: {condition: service_healthy}
       kafka: {condition: service_healthy}
@@ -154,16 +151,12 @@ services:
     image: synapsis/neo4j-projector:dev
     build: {context: ../.., dockerfile: src/dotnet/Synapsis.Neo4j/Dockerfile}
     restart: unless-stopped
-    environment:
+    environment:                                 # addresses and the login; the group id: its appsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Mongo__Database: synapsis_v2
       Kafka__Bootstrap: kafka:9092
-      Kafka__Topic: ingest.accepted
-      Kafka__GroupId: synapsis-neo4j
       Neo4j__Url: bolt://neo4j:7687
       Neo4j__Username: ${CORE_NEO4J_USERNAME:-neo4j}
       Neo4j__Password: ${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
-      Neo4j__Database: neo4j
     depends_on:
       mongo: {condition: service_healthy}
       kafka: {condition: service_healthy}

@@ -1,9 +1,6 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Synapsis.Data;
-using Synapsis.Data.Dal;
-using Synapsis.Data.Models.Options;
 using System.Threading.Tasks;
 
 namespace Synapsis.KafkaRelay;
@@ -21,12 +18,9 @@ public static class Program
     {
         HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
-        // Bind configurations from existing sections
-        MongoOptions mongoOptions = builder.Configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
-        // Register shared MongoDB and Kafka infrastructure
-        builder.Services.AddSingleton(mongoOptions);
-        builder.Services.AddSingleton<MongoContext>();
-        builder.Services.AddSynapsisKafka(builder.Configuration);
+        // Register the shared settings, MongoDB and the Kafka producer
+        builder.Services.AddSynapsisData(builder.Configuration);
+        builder.Services.AddSynapsisKafka();
 
         // Register Relay components
         builder.Services.AddSingleton<IDocumentChangeMonitor, MongoDocumentChangeMonitor>();
