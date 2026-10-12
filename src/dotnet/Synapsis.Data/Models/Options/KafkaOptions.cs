@@ -8,4 +8,7 @@ public sealed class KafkaOptions
 
     /// <summary>The default topic receiving accepted document IDs.</summary>
     public string Topic { get; set; } = "ingest.accepted";
+
+    /// <summary>The consumer group used by a service consuming document IDs.</summary>
+    public string GroupId { get; set; } = "synapsis-consumer";
 }

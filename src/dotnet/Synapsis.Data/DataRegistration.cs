@@ -37,6 +37,24 @@ public static class DataRegistration
         return services;
     }
 
+    /// <summary>Registers the reusable manual-commit Kafka consumer connection for a service.</summary>
+    public static IServiceCollection AddSynapsisKafkaConsumer(this IServiceCollection services, IConfiguration configuration)
+    {
+        KafkaOptions kafkaOptions = configuration.GetSection("Kafka").Get<KafkaOptions>() ?? new KafkaOptions();
+        services.AddSingleton(kafkaOptions);
+        services.AddSingleton<KafkaConsumerContext>();
+        return services;
+    }
+
+    /// <summary>Registers the Neo4j settings and one reusable Neo4j driver connection.</summary>
+    public static IServiceCollection AddSynapsisNeo4j(this IServiceCollection services, IConfiguration configuration)
+    {
+        Neo4jOptions neo4jOptions = configuration.GetSection("Neo4j").Get<Neo4jOptions>() ?? new Neo4jOptions();
+        services.AddSingleton(neo4jOptions);
+        services.AddSingleton<Neo4jContext>();
+        return services;
+    }
+
     /// <summary>
     /// Called once at start-up: creates what the stores need when it is missing (the MongoDB index, the ingestion log
     /// index in Elasticsearch). When everything exists, it does nothing.
