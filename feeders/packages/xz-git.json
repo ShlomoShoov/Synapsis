@@ -1,0 +1,92 @@
+{
+  "note": "The xz-utils git history: every commit, placed in the repository tree.",
+  "package": "xz-git",
+  "title": "xz-utils git history",
+  "description": "One event per commit of the xz-utils repository (tukaani-project/xz on GitHub), placed in the repository tree at the deepest folder that holds every file it changed, so a contributor's path through the code base can be followed. Authors are entities named as in git; email addresses are stored only as a hash.",
+  "maintainer": "synapsis-feeders",
+  "namespaces": {
+    "records": [
+      "xz-git"
+    ],
+    "entities": [
+      "git-author"
+    ]
+  },
+  "sources": [
+    {
+      "id": "src:tukaani:xz-git",
+      "title": "xz-utils git repository",
+      "publisher": "Tukaani Project (repository mirrored on GitHub)",
+      "url": "https://github.com/tukaani-project/xz",
+      "license": "Repository metadata, public",
+      "reliability": 95,
+      "reliability_basis": "measured",
+      "publication_lag_days": 0,
+      "known_at_rule": "The committer time, the closest public record of when the commit existed (basis proxy_event_end)."
+    }
+  ],
+  "entity_types": [
+    {
+      "code": "Person",
+      "title": "A person or persona as named in a public record"
+    }
+  ],
+  "event_types": [
+    {
+      "code": "CODE.COMMIT",
+      "title": "A commit to a repository",
+      "place": [
+        "logical"
+      ],
+      "roles": {
+        "author": [
+          "Person"
+        ],
+        "committer": [
+          "Person"
+        ]
+      },
+      "measures": [
+        "files_changed"
+      ],
+      "text": "optional",
+      "attributes": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "required": true
+        },
+        "areas": {
+          "type": "string_list",
+          "max_items": 50,
+          "max_length": 200
+        }
+      }
+    }
+  ],
+  "roles": [
+    {
+      "code": "author",
+      "title": "Who wrote the change"
+    },
+    {
+      "code": "committer",
+      "title": "Who committed the change"
+    }
+  ],
+  "measures": [
+    {
+      "name": "files_changed",
+      "title": "Files changed",
+      "unit": "count",
+      "min": 0
+    }
+  ],
+  "logical_spaces": [
+    {
+      "space": "code.repo",
+      "title": "Repository then folders",
+      "max_depth": 4
+    }
+  ]
+}

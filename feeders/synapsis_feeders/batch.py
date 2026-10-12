@@ -1,4 +1,4 @@
-"""BatchSender: groups records into batches of at most FEEDER_BATCH_SIZE (5,000), sends them, reads the receipts.
+"""BatchSender: groups records into batches of at most FEEDER_BATCH_SIZE (5,000), sends them, reads the summaries.
 
 Batch ids are derived from content (feeder name + hash of the records), so the same records always travel under the
 same id; the API answers records it already holds with "unchanged"."""
@@ -47,7 +47,7 @@ class BatchSender:
             self.counts["written_to_disk"] += len(records)
             return
         try:
-            receipt = self.api.ingest(bundle)
+            summary = self.api.ingest(bundle)
         except ApiRefused as exc:
             if exc.status == 413 and len(records) > 1:      # too large for this API: halve and resend
                 half = len(records) // 2
@@ -55,11 +55,17 @@ class BatchSender:
                 self._send(records[half:])
                 return
             raise
-        for k, v in receipt["counts"].items():
-            self.counts[k] += v
-        for r in receipt.get("rejected", []):
+        for k in ("received", "new", "changed", "unchanged", "duplicates", "rejected"):
+            self.counts[k] += summary[k]
+        for r in summary["rejections"]:
             self.codes[r["code"]] += 1
-        self.state.log_rejections(bundle["batch_id"], receipt.get("rejected", []))
-        log.info("%s %s: %s", self.feeder, bundle["batch_id"], receipt["status"])
-        log.info("   new %d, versioned %d, unchanged %d, rejected %d", receipt["counts"]["new"],
-                 receipt["counts"]["versioned"], receipt["counts"]["unchanged"], receipt["counts"]["rejected"])
+        self.state.log_rejections(bundle["batch_id"], summary["rejections"])
+        log.info("%s %s: new %d, changed %d, unchanged %d, duplicates %d, rejected %d", self.feeder, bundle["batch_id"],
+                 summary["new"], summary["changed"], summary["unchanged"], summary["duplicates"], summary["rejected"])
+
+    def refuse(self, record: dict, problem: dict) -> None:
+        """A record the feeder's own checks refused: counted and written to rejections.jsonl, never sent."""
+        self.counts["refused_before_sending"] += 1
+        self.codes[problem["code"]] += 1
+        if self.dry_run_dir is None:
+            self.state.log_rejections("not-sent", [{"id": record.get("id"), **problem}])

@@ -99,7 +99,7 @@ export function toEntry(hit: Hit): LogEntry {
       index: num(item.index),
       id: item.id ?? null,
       code: String(item.code),
-      path: String(item.path ?? ''),
+      reason: String(item.reason ?? ''),
     })),
     durationMs: num(doc.duration_ms),
   };

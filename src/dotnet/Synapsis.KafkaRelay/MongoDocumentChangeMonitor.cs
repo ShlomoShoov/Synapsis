@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Synapsis.Storage.Dal;
-using Synapsis.Storage.Entities;
+using Synapsis.Data.Dal;
+using Synapsis.Data.Models.Entities;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +14,7 @@ namespace Synapsis.KafkaRelay;
 /// </summary>
 public sealed class MongoDocumentChangeMonitor : IDocumentChangeMonitor
 {
-    private readonly IMongoContext _context;
+    private readonly MongoContext _context;
     private readonly ILogger<MongoDocumentChangeMonitor> _logger;
 
     /// <summary>
@@ -22,7 +22,7 @@ public sealed class MongoDocumentChangeMonitor : IDocumentChangeMonitor
     /// </summary>
     /// <param name="context">The MongoDB data access context.</param>
     /// <param name="logger">The logger instance.</param>
-    public MongoDocumentChangeMonitor(IMongoContext context, ILogger<MongoDocumentChangeMonitor> logger)
+    public MongoDocumentChangeMonitor(MongoContext context, ILogger<MongoDocumentChangeMonitor> logger)
     {
         _context = context;
         _logger = logger;
@@ -34,11 +34,11 @@ public sealed class MongoDocumentChangeMonitor : IDocumentChangeMonitor
         Func<string, BsonDocument, CancellationToken, Task> onInsert,
         CancellationToken cancellationToken)
     {
-        IMongoCollection<RecordDocument> collection = _context.Collection<RecordDocument>("records");
+        IMongoCollection<StoredRecord> collection = _context.Records;
 
         // Filter exclusively for insert operations
-        PipelineDefinition<ChangeStreamDocument<RecordDocument>, ChangeStreamDocument<RecordDocument>> pipeline =
-            new EmptyPipelineDefinition<ChangeStreamDocument<RecordDocument>>()
+        PipelineDefinition<ChangeStreamDocument<StoredRecord>, ChangeStreamDocument<StoredRecord>> pipeline =
+            new EmptyPipelineDefinition<ChangeStreamDocument<StoredRecord>>()
                 .Match(change => change.OperationType == ChangeStreamOperationType.Insert);
 
         ChangeStreamOptions options = new ChangeStreamOptions
@@ -56,11 +56,11 @@ public sealed class MongoDocumentChangeMonitor : IDocumentChangeMonitor
             _logger.LogInformation("No resume token found. Starting Change Stream at current cluster time (ignoring historical documents).");
         }
 
-        using IChangeStreamCursor<ChangeStreamDocument<RecordDocument>> cursor = await collection.WatchAsync(pipeline, options, cancellationToken);
+        using IChangeStreamCursor<ChangeStreamDocument<StoredRecord>> cursor = await collection.WatchAsync(pipeline, options, cancellationToken);
 
         while (await cursor.MoveNextAsync(cancellationToken))
         {
-            foreach (ChangeStreamDocument<RecordDocument> change in cursor.Current)
+            foreach (ChangeStreamDocument<StoredRecord> change in cursor.Current)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 

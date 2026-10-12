@@ -1,10 +1,9 @@
 /**
- * Observe (route /observe): what the system is receiving, for the people who run it. One page, three sections,
+ * Observe (route /observe): what the system is receiving, for the people who run it. One page, two sections,
  * and a sidebar to move between them:
  *
  *   01 Live flow   every batch on its way from its source to the core, in 3D, live or replayed from the past;
  *   02 Metrics     the ingestion log's numbers over a chosen period, in dashboards the viewer can arrange;
- *   03 Schema map  every schema package, its sources and types, and how they depend on each other.
  *
  * The page turns the room dark while it is open (theme/night.css) and gives it back on leaving.
  */
@@ -18,7 +17,6 @@ import { readStored, writeStored } from './lib/storage';
 import { TimeZoneProvider } from './lib/TimeZoneProvider';
 import { MetricsSection } from './metrics/MetricsSection';
 import styles from './ObservePage.module.css';
-import { SchemaSection } from './schemas/SchemaSection';
 import { sections } from './shell/sections';
 import { ShortcutsDialog } from './shell/ShortcutsDialog';
 import { Sidebar } from './shell/Sidebar';
@@ -61,7 +59,6 @@ export function ObservePage() {
           <main ref={setMain} className={styles.main}>
             <FlowSection />
             <MetricsSection />
-            <SchemaSection />
           </main>
           <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         </div>

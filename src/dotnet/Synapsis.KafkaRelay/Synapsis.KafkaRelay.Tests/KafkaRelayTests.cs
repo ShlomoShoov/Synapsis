@@ -1,5 +1,5 @@
 using Confluent.Kafka;
-using Synapsis.Storage.Models;
+using Synapsis.Data.Models.Options;
 using System;
 using System.Threading.Tasks;
 using Xunit;

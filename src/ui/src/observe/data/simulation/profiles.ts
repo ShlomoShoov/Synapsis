@@ -1,7 +1,7 @@
 /**
  * How each demo source behaves in the simulation: which feeder sends it, how often it runs on its own timer (as in
  * deploy/feeders/compose.yml), how large its batches are, and which rules refuse its records, with the codes and
- * paths the real API would give (tests/conformance). Invented numbers, chosen to look like a working system.
+ * reasons the real API gives. Invented numbers, chosen to look like a working system.
  */
 
 /** One error code a source's refused records carry. */
@@ -10,7 +10,7 @@ export interface CodeProfile {
   /** How often this code is the reason, relative to the source's other codes. */
   weight: number;
   /** Where in the record the problem is reported. */
-  paths: readonly string[];
+  reasons: readonly string[];
 }
 
 /** How one feeder and its sources behave. */
@@ -59,8 +59,12 @@ export const profiles: readonly SourceProfile[] = [
     changedShare: 0.08,
     rejectRate: 0.002,
     codes: [
-      { code: 'E-REF-MISSING', weight: 3, paths: ['participants[1].entity'] },
-      { code: 'E-ATTRIBUTE', weight: 1, paths: ['attributes.cwes'] },
+      { code: 'E-MISSING', weight: 3, reasons: ['participants is missing'] },
+      {
+        code: 'E-DUPLICATE-ID',
+        weight: 1,
+        reasons: ['the same id and source appear earlier in the batch with other content'],
+      },
     ],
   },
   {
@@ -75,7 +79,13 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.02,
     changedShare: 0,
     rejectRate: 0.001,
-    codes: [{ code: 'E-LOGICAL-VALUE', weight: 1, paths: ['place.logical.path[0]'] }],
+    codes: [
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.place'],
+      },
+    ],
   },
   {
     feeder: 'nvd',
@@ -90,8 +100,16 @@ export const profiles: readonly SourceProfile[] = [
     changedShare: 0.3,
     rejectRate: 0.004,
     codes: [
-      { code: 'E-ATTRIBUTE', weight: 4, paths: ['attributes.affected_product', 'attributes.cwes'] },
-      { code: 'E-MEASURE-RANGE', weight: 1, paths: ['measures[0].value'] },
+      {
+        code: 'E-DUPLICATE-ID',
+        weight: 4,
+        reasons: ['the same id and source appear earlier in the batch with other content'],
+      },
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
     ],
   },
   {
@@ -106,7 +124,13 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.96,
     changedShare: 0,
     rejectRate: 0.0003,
-    codes: [{ code: 'E-MEASURE-RANGE', weight: 1, paths: ['measures[1].value'] }],
+    codes: [
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
+    ],
   },
   {
     feeder: 'ransomware-live',
@@ -122,11 +146,11 @@ export const profiles: readonly SourceProfile[] = [
     rejectRate: 0.012,
     codes: [
       {
-        code: 'E-ATTRIBUTE',
+        code: 'E-DUPLICATE-ID',
         weight: 3,
-        paths: ['attributes.victim', 'attributes.group_as_listed'],
+        reasons: ['the same id and source appear earlier in the batch with other content'],
       },
-      { code: 'E-TEXT', weight: 1, paths: ['text'] },
+      { code: 'E-MISSING', weight: 1, reasons: ['name is missing'] },
     ],
   },
   {
@@ -156,8 +180,16 @@ export const profiles: readonly SourceProfile[] = [
     changedShare: 0.25,
     rejectRate: 0.003,
     codes: [
-      { code: 'E-PLACE-ADMIN', weight: 3, paths: ['place.admin.subdivision'] },
-      { code: 'E-TIME-ORDER', weight: 1, paths: ['valid_time.end'] },
+      {
+        code: 'E-JSON',
+        weight: 3,
+        reasons: ['The JSON value could not be converted. Path: $.place'],
+      },
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.valid_time'],
+      },
     ],
   },
   {
@@ -174,12 +206,16 @@ export const profiles: readonly SourceProfile[] = [
     rejectRate: 0.018,
     codes: [
       {
-        code: 'E-PLACE-ADMIN',
+        code: 'E-JSON',
         weight: 5,
-        paths: ['place.admin.country', 'place.admin.subdivision'],
+        reasons: ['The JSON value could not be converted. Path: $.place'],
       },
-      { code: 'E-PLACE-FORM', weight: 1, paths: ['place'] },
-      { code: 'E-MEASURE-RANGE', weight: 1, paths: ['measures[4].value'] },
+      { code: 'E-MISSING', weight: 1, reasons: ['place is missing'] },
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
     ],
   },
   {
@@ -194,7 +230,13 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.05,
     changedShare: 0,
     rejectRate: 0.002,
-    codes: [{ code: 'E-TIME-ALIGN', weight: 1, paths: ['valid_time.start'] }],
+    codes: [
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.valid_time'],
+      },
+    ],
   },
   {
     feeder: 'opensanctions',
@@ -209,7 +251,11 @@ export const profiles: readonly SourceProfile[] = [
     changedShare: 0.07,
     rejectRate: 0.004,
     codes: [
-      { code: 'E-ATTRIBUTE', weight: 1, paths: ['attributes.listed_name', 'attributes.risk_tags'] },
+      {
+        code: 'E-DUPLICATE-ID',
+        weight: 1,
+        reasons: ['the same id and source appear earlier in the batch with other content'],
+      },
     ],
   },
   {
@@ -224,7 +270,7 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.6,
     changedShare: 0.1,
     rejectRate: 0.002,
-    codes: [{ code: 'E-REF-MISSING', weight: 1, paths: ['participants[0].entity'] }],
+    codes: [{ code: 'E-MISSING', weight: 1, reasons: ['participants is missing'] }],
     quietFor: 12 * DAY,
   },
   {
@@ -253,7 +299,13 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.55,
     changedShare: 0.35,
     rejectRate: 0.001,
-    codes: [{ code: 'E-MEASURE-RANGE', weight: 1, paths: ['measures[1].value'] }],
+    codes: [
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
+    ],
   },
   {
     feeder: 'fdic',
@@ -267,7 +319,13 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.2,
     changedShare: 0.05,
     rejectRate: 0.0005,
-    codes: [{ code: 'E-MEASURE-NEGATIVE', weight: 1, paths: ['measures[3].value'] }],
+    codes: [
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
+    ],
   },
   {
     feeder: 'fred',
@@ -295,7 +353,13 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.85,
     changedShare: 0,
     rejectRate: 0.003,
-    codes: [{ code: 'E-MEASURE-RANGE', weight: 1, paths: ['measures[0].value'] }],
+    codes: [
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
+    ],
   },
   {
     feeder: 'delphi',
@@ -315,7 +379,13 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.1,
     changedShare: 0.12,
     rejectRate: 0.001,
-    codes: [{ code: 'E-MEASURE-RANGE', weight: 1, paths: ['measures[0].value'] }],
+    codes: [
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
+    ],
   },
   {
     feeder: 'jhu-covid',
@@ -329,7 +399,13 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.15,
     changedShare: 0,
     rejectRate: 0.014,
-    codes: [{ code: 'E-MEASURE-NEGATIVE', weight: 1, paths: ['measures[0].value'] }],
+    codes: [
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
+    ],
   },
   {
     feeder: 'wikipedia-elections',
@@ -344,8 +420,16 @@ export const profiles: readonly SourceProfile[] = [
     changedShare: 0.04,
     rejectRate: 0.006,
     codes: [
-      { code: 'E-PLACE-ADMIN', weight: 2, paths: ['place.admin.subdivision'] },
-      { code: 'E-MEASURE-RANGE', weight: 1, paths: ['measures[0].value'] },
+      {
+        code: 'E-JSON',
+        weight: 2,
+        reasons: ['The JSON value could not be converted. Path: $.place'],
+      },
+      {
+        code: 'E-JSON',
+        weight: 1,
+        reasons: ['The JSON value could not be converted. Path: $.measures'],
+      },
     ],
   },
   {
@@ -361,8 +445,12 @@ export const profiles: readonly SourceProfile[] = [
     changedShare: 0.05,
     rejectRate: 0.005,
     codes: [
-      { code: 'E-TEXT', weight: 3, paths: ['text'] },
-      { code: 'E-ATTRIBUTE', weight: 1, paths: ['attributes.url'] },
+      { code: 'E-MISSING', weight: 3, reasons: ['name is missing'] },
+      {
+        code: 'E-DUPLICATE-ID',
+        weight: 1,
+        reasons: ['the same id and source appear earlier in the batch with other content'],
+      },
     ],
   },
   {
@@ -377,6 +465,6 @@ export const profiles: readonly SourceProfile[] = [
     newShare: 0.5,
     changedShare: 0.1,
     rejectRate: 0.004,
-    codes: [{ code: 'E-ROLE', weight: 1, paths: ['participants[0].role'] }],
+    codes: [{ code: 'E-MISSING', weight: 1, reasons: ['participants is missing'] }],
   },
 ];

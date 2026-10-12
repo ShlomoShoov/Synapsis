@@ -140,8 +140,10 @@ describe('parseEntries', () => {
         unchanged: 0,
         duplicates: 0,
         rejected: 1,
-        rejection_counts: [{ code: 'E-KIND', count: 1 }],
-        rejections: [{ index: 5, id: 'ent:cve:CVE-2099-0001', code: 'E-KIND', path: 'kind' }],
+        rejection_counts: [{ code: 'E-JSON', count: 1 }],
+        rejections: [
+          { index: 5, id: 'ent:cve:CVE-2099-0001', code: 'E-JSON', reason: 'unknown kind' },
+        ],
         duration_ms: 42,
       },
       sort: [1_791_706_500_123, 'kev-1', 'src:cisa:kev'],
@@ -151,7 +153,9 @@ describe('parseEntries', () => {
       id: 'a1',
       time: Date.parse('2026-10-10T08:15:00.123Z'),
       rejected: 1,
-      rejections: [{ index: 5, id: 'ent:cve:CVE-2099-0001', code: 'E-KIND', path: 'kind' }],
+      rejections: [
+        { index: 5, id: 'ent:cve:CVE-2099-0001', code: 'E-JSON', reason: 'unknown kind' },
+      ],
     });
     expect(full.next).toEqual(hit.sort);
     expect(parseEntries({ hits: { hits: [hit] } }, 2).next).toBeNull();

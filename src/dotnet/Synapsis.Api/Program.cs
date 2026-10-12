@@ -1,32 +1,30 @@
-using Microsoft.OpenApi.Models;
-using Synapsis.Api.Services.Swagger;
-using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Synapsis.Api.Models.Configuration;
-using Synapsis.Api.Services.Http;
-using Synapsis.Api.Services.Http.Mappers;
+using Microsoft.OpenApi.Models;
+using Synapsis.Api.Models.Options;
 using Synapsis.Api.Orchestrators;
-using Synapsis.Api.Services.Ingestion;
-using Synapsis.Api.Services.Startup;
-using Synapsis.Api.Services.Vocabulary;
-using Synapsis.Sil;
-using Synapsis.Storage;
-using Synapsis.Storage.Models;
-// The composition root: every component of the server is registered here, in three groups, then the HTTP pipeline.
+using Synapsis.Api.Repositories;
+using Synapsis.Data;
+
+// The composition root: read the settings, register the components, prepare the stores, start HTTP.
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-ApiOptions api = builder.Configuration.GetSection("Api").Get<ApiOptions>() ?? new ApiOptions();
-MongoOptions mongo = builder.Configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
-ElasticOptions elastic = builder.Configuration.GetSection("Elastic").Get<ElasticOptions>() ?? new ElasticOptions();
+ApiOptions apiOptions = builder.Configuration.GetSection("Api").Get<ApiOptions>() ?? new ApiOptions();
 
-builder.Services.AddSynapsisSil();
-builder.Services.AddSynapsisStorage(mongo, elastic);
-AddProcesses(builder.Services);
-AddHttp(builder, api);
+// 1. Components: the data (MongoDB, Elasticsearch), the repositories, the ingestion process, HTTP.
+builder.Services.AddSynapsisData(builder.Configuration);
+builder.Services.AddSingleton<RecordRepository>();
+builder.Services.AddSingleton<CatalogRepository>();
+builder.Services.AddSingleton<IngestLogRepository>();
+builder.Services.AddSingleton<IngestionOrchestrator>();
+AddHttp(builder, apiOptions);
 
+// 2. Start-up work, then the HTTP pipeline: errors as built-in problem answers, gzip bodies, browser access, Swagger.
 WebApplication app = builder.Build();
+await app.Services.InitializeSynapsisDataAsync();
 app.UseExceptionHandler();
 app.UseRequestDecompression();
 app.UseCors();
@@ -36,42 +34,20 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 app.Run();
 
-// The processes: the vocabulary in force, registration, ingestion, and the work done once at start-up.
-static void AddProcesses(IServiceCollection services)
+// HTTP: controllers with snake_case JSON, gzip bodies, the body limit, browser reads from the UI (CORS), Swagger.
+static void AddHttp(WebApplicationBuilder builder, ApiOptions apiOptions)
 {
-    services.AddSingleton(TimeProvider.System);
-    services.AddSingleton<IVocabularyProvider, VocabularyProvider>();
-    services.AddSingleton<IRegistrationOrchestrator, RegistrationOrchestrator>();
-    services.AddSingleton<IReceiptBuilder, ReceiptBuilder>();
-    services.AddSingleton<IIngestionOrchestrator, IngestionOrchestrator>();
-    services.AddHostedService<StartupInitializer>();
-}
-
-// HTTP: controllers with snake_case JSON, gzip bodies, the body limit, browser reads from the UI (CORS),
-// errors as {code, message, details}.
-static void AddHttp(WebApplicationBuilder builder, ApiOptions api)
-{
-    builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = api.MaxBodyMb * 1024L * 1024L);
-    builder.Services.AddSingleton(api);
-    builder.Services.AddControllers()
-        .AddJsonOptions(json => ApiJson.Apply(json.JsonSerializerOptions))
-        .ConfigureApiBehaviorOptions(behavior => behavior.InvalidModelStateResponseFactory = ErrorMapper.ToParameterResult);
-    builder.Services.AddRequestDecompression();
-    AddSwagger(builder.Services);
-    builder.Services.AddCors(cors => cors.AddDefaultPolicy(policy => policy.WithOrigins(api.CorsOrigins).AllowAnyHeader().WithMethods("GET")));
-    builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
-    builder.Services.AddProblemDetails();
-}
-
-// Swagger: the API described at /swagger/v1/swagger.json and testable in the browser at /swagger, in every environment.
-static void AddSwagger(IServiceCollection services)
-{
-    services.AddEndpointsApiExplorer();
-    services.AddSwaggerGen(swagger =>
+    builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = apiOptions.MaxBodyMb * 1024L * 1024L);
+    builder.Services.AddControllers().AddJsonOptions(json =>
     {
-        swagger.SwaggerDoc("v1", new OpenApiInfo { Title = "Synapsis API", Version = "v1" });
-        swagger.OperationFilter<RawBodyOperationFilter>();
+        json.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+        json.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
+    builder.Services.AddRequestDecompression();
+    builder.Services.AddProblemDetails();
+    builder.Services.AddCors(cors => cors.AddDefaultPolicy(policy => policy.WithOrigins(apiOptions.CorsOrigins).AllowAnyHeader().WithMethods("GET")));
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(swagger => swagger.SwaggerDoc("v1", new OpenApiInfo { Title = "Synapsis API", Version = "v1" }));
 }
 
 /// <summary>The program's entry point, named so the HTTP tests can start the server in-process.</summary>

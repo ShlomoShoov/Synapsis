@@ -1,0 +1,25 @@
+{
+  "note": "Johns Hopkins CSSE global COVID-19 time series (confirmed cases), January 2020 to March 2023.",
+  "package": "jhu-covid",
+  "title": "Johns Hopkins CSSE COVID-19 confirmed cases (global)",
+  "description": "Daily new confirmed cases for each country or province in the archived JHU CSSE global time series, computed as the difference of the cumulative counts. Corrections make some differences negative; those are sent as they are and the API rejects them (E-MEASURE-NEGATIVE), so the rejection log lists every correction.",
+  "maintainer": "synapsis-feeders",
+  "namespaces": {
+    "records": [
+      "jhu-covid"
+    ]
+  },
+  "sources": [
+    {
+      "id": "src:jhu:csse-covid",
+      "title": "COVID-19 Data Repository, global confirmed time series",
+      "publisher": "Center for Systems Science and Engineering, Johns Hopkins University",
+      "url": "https://github.com/CSSEGISandData/COVID-19",
+      "license": "CC BY 4.0",
+      "reliability": 85,
+      "reliability_basis": "B2",
+      "publication_lag_days": 1,
+      "known_at_rule": "Day of the value plus one day; the repository was updated daily (basis proxy_publication_lag)."
+    }
+  ]
+}

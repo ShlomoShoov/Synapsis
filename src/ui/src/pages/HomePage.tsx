@@ -28,7 +28,7 @@ const areas: Area[] = [
   {
     name: 'Observe',
     slug: 'observe',
-    text: 'What the system receives, live and in the past: its flow, its numbers, its schemas.',
+    text: 'What the system receives, live and in the past: its flow and its numbers.',
     page: '/observe',
   },
   { name: 'Analyze', slug: 'analyze', text: 'Questions answered from the record, with sources.' },

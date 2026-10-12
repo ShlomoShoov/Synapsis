@@ -180,7 +180,7 @@ function Instruments({
   collapsed: boolean;
   onShowShortcuts: () => void;
 }) {
-  const { mode, setMode, health, log, registry } = useObserveData();
+  const { mode, setMode, health, log, api } = useObserveData();
   const formats = useTimeFormats();
   const setUtc = useSetUtc();
   const overall: Ping | null =
@@ -226,7 +226,7 @@ function Instruments({
       </div>
       <ul className={styles.services}>
         <ServiceRow name="Elasticsearch" ping={health.log} where={log.location} />
-        <ServiceRow name="API" ping={health.api} where={registry.location} />
+        <ServiceRow name="API" ping={health.api} where={api.location} />
       </ul>
       <div className={styles.row}>
         <span className={styles.rowLabel}>Time</span>

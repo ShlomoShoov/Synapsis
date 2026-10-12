@@ -249,8 +249,8 @@ export class LogSimulator {
     const received = random.int(2, 14);
     const kind = random.int(0, received);
     const rejectionCounts = [
-      { code: 'E-SCHEMA', count: received - kind },
-      { code: 'E-KIND', count: kind },
+      { code: 'E-MISSING', count: received - kind },
+      { code: 'E-JSON', count: kind },
     ].filter((item) => item.count > 0);
     return {
       id: `sim-${++this.counter}`,
@@ -268,8 +268,11 @@ export class LogSimulator {
       rejections: Array.from({ length: received }, (_, index) => ({
         index,
         id: null,
-        code: index < kind ? 'E-KIND' : 'E-SCHEMA',
-        path: index < kind ? 'kind' : 'source',
+        code: index < kind ? 'E-JSON' : 'E-MISSING',
+        reason:
+          index < kind
+            ? "kind must be entity, event, relation or conclusion, not ''"
+            : 'source is missing',
       })),
       durationMs: random.int(20, 60),
     };
@@ -368,7 +371,7 @@ function rejectionDetails(
     index: sorted[i] as number,
     id: recordId(random, profile.namespace),
     code,
-    path: random.pick(profile.codes.find((item) => item.code === code)?.paths ?? ['']),
+    reason: random.pick(profile.codes.find((item) => item.code === code)?.reasons ?? ['']),
   }));
 }
 

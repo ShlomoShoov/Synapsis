@@ -1,10 +1,10 @@
-using Confluent.Kafka;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Synapsis.Storage.Dal;
-using Synapsis.Storage.Models;
+using Confluent.Kafka;
+using Synapsis.Data.Dal;
+using Synapsis.Data.Models.Options;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,40 +21,38 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
     private const string CheckpointsCollectionName = "_checkpoints";
 
     private readonly IDocumentChangeMonitor _changeMonitor;
-    private readonly IMongoContext _mongoContext;
+    private readonly KafkaContext _kafkaContext;
+    private readonly MongoOptions _mongoOptions;
     private readonly KafkaOptions _kafkaOptions;
     private readonly ILogger<DocumentRelayOrchestrator> _logger;
 
-    private readonly IProducer<Null, string> _producer;
     private readonly IMongoCollection<BsonDocument> _checkpointCollection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DocumentRelayOrchestrator"/> class.
     /// </summary>
     /// <param name="changeMonitor">The monitor tracking MongoDB Change Stream inserts.</param>
-    /// <param name="mongoContext">The MongoDB data access context.</param>
+    /// <param name="kafkaContext">The shared Kafka producer connection.</param>
+    /// <param name="mongoOptions">The MongoDB connection options.</param>
     /// <param name="kafkaOptions">The Kafka connection options.</param>
     /// <param name="logger">The logger instance.</param>
     public DocumentRelayOrchestrator(
         IDocumentChangeMonitor changeMonitor,
-        IMongoContext mongoContext,
+        KafkaContext kafkaContext,
+        MongoOptions mongoOptions,
         KafkaOptions kafkaOptions,
         ILogger<DocumentRelayOrchestrator> logger)
     {
         _changeMonitor = changeMonitor;
-        _mongoContext = mongoContext;
+        _kafkaContext = kafkaContext;
+        _mongoOptions = mongoOptions;
         _kafkaOptions = kafkaOptions;
         _logger = logger;
 
-        ProducerConfig producerConfig = new ProducerConfig
-        {
-            BootstrapServers = _kafkaOptions.Bootstrap,
-            Acks = Acks.All,
-            EnableIdempotence = true
-        };
-
-        _producer = new ProducerBuilder<Null, string>(producerConfig).Build();
-        _checkpointCollection = _mongoContext.Collection<BsonDocument>(CheckpointsCollectionName);
+        MongoClient mongoClient = new MongoClient(_mongoOptions.Url);
+        _checkpointCollection = mongoClient
+            .GetDatabase(_mongoOptions.Database)
+            .GetCollection<BsonDocument>(CheckpointsCollectionName);
     }
 
     /// <summary>
@@ -113,13 +111,12 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
     private async Task PublishWithRetryAsync(string documentId, CancellationToken cancellationToken)
     {
         int attempt = 0;
-        Message<Null, string> message = new Message<Null, string> { Value = documentId };
 
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                DeliveryResult<Null, string> deliveryResult = await _producer.ProduceAsync(_kafkaOptions.Topic, message, cancellationToken);
+                DeliveryResult<Null, string> deliveryResult = await _kafkaContext.ProduceAsync(_kafkaOptions.Topic, documentId, cancellationToken);
                 _logger.LogInformation("Published document ID '{DocumentId}' to topic '{Topic}', partition {Partition}, offset {Offset}",
                     documentId, _kafkaOptions.Topic, deliveryResult.Partition.Value, deliveryResult.Offset.Value);
                 return;
@@ -195,16 +192,6 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
     /// </summary>
     public override void Dispose()
     {
-        try
-        {
-            _producer.Flush(TimeSpan.FromSeconds(5));
-            _producer.Dispose();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error disposing Kafka producer.");
-        }
-
         base.Dispose();
     }
 }

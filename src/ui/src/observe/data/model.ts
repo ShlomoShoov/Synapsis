@@ -1,11 +1,10 @@
 /**
  * The shapes Observe works with, and the two interfaces every data source implements: IngestLog (the ingestion
- * log) and SchemaRegistry (the schema packages). Two implementations exist for each: one reads the real services
+ * log) and ApiService (the API's health). Two implementations exist for each: one reads the real services
  * (./elastic, ./api), one plays a simulation (./simulation), so every view works the same on both.
  *
  * Times are milliseconds since 1970 (UTC), as Date.now() gives them. Ranges include `from` and exclude `to`.
  */
-import type { SchemaDocument, SchemaSummary } from './contracts';
 
 /** How many records of a set ended in each outcome. received = new + changed + unchanged + duplicates + rejected. */
 export interface OutcomeCounts {
@@ -23,8 +22,8 @@ export interface LoggedRejection {
   index: number;
   id: string | null;
   code: string;
-  /** Where in the record the problem is, such as "measures[2].unit". */
-  path: string;
+  /** Why it was refused, in plain words, such as "known_at is missing". */
+  reason: string;
 }
 
 /** One log entry: what one batch brought from one source. */
@@ -212,14 +211,10 @@ export interface IngestLog {
   ping(signal?: AbortSignal): Promise<Ping>;
 }
 
-/** The schema packages. */
-export interface SchemaRegistry {
+/** The C# API: only its health is read (the ingestion log comes from Elasticsearch). */
+export interface ApiService {
   readonly kind: 'api' | 'simulated';
   readonly location: string;
-  /** The list: name, version and fingerprint of each package. */
-  list(signal?: AbortSignal): Promise<SchemaSummary[]>;
-  /** Every package with its content. */
-  all(signal?: AbortSignal): Promise<SchemaDocument[]>;
   /** Whether the API answers. */
   ping(signal?: AbortSignal): Promise<Ping>;
 }

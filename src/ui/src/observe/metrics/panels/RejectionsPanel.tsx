@@ -175,9 +175,9 @@ export function RejectionsPanel({
                 },
                 {
                   key: 'path',
-                  header: 'Where',
+                  header: 'Reason',
                   render: (row) => (
-                    <span className={styles.timeCell}>{row.rejection.path || '—'}</span>
+                    <span className={styles.timeCell}>{row.rejection.reason || '—'}</span>
                   ),
                 },
               ]}

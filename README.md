@@ -6,8 +6,8 @@ later with Compose v2, and at least 8 GB of memory for Docker.
 ## Run
 
 1. The core: MongoDB, Elasticsearch, the C# API on `http://localhost:8080` (Swagger: `http://localhost:8080/swagger`)
-   and the web client on `http://localhost:1897`. The old Python API with semantic search starts only with
-   `--profile standin` (port 8089).
+   and the web client on `http://localhost:1897`. The embedder (for the later search) starts only with
+   `--profile embedder`.
 
    ```bash
    cp deploy/core/.env.example deploy/core/.env        # first time only

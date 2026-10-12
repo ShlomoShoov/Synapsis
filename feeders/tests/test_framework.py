@@ -18,8 +18,8 @@ class FakeApi:
     def ingest(self, bundle):
         self.bundles.append(bundle)
         n = len(bundle["records"])
-        return {"status": "accepted", "counts": {"received": n, "new": n, "versioned": 0, "unchanged": 0,
-                                                 "duplicates": 0, "rejected": 0}, "rejected": []}
+        return {"received": n, "new": n, "changed": 0, "unchanged": 0, "duplicates": 0, "rejected": 0,
+                "rejection_counts": [], "rejections": []}
 
 
 def test_time_spec_floors_to_precision():
@@ -91,10 +91,6 @@ def _fake_service(monkeypatch, outcomes, stop_after):
     wake = FakeWake(stop, stop_after)
     results = iter(outcomes)
 
-    def fake_register(name, settings, api):
-        events.append("register")
-        return 1
-
     def fake_run_once(name, settings, **kw):
         events.append(("run", kw.get("since"), kw.get("reset")))
         result = next(results)
@@ -103,7 +99,6 @@ def _fake_service(monkeypatch, outcomes, stop_after):
         return {}
 
     monkeypatch.setattr(runner, "SynapsisApi", lambda settings: None)
-    monkeypatch.setattr(runner, "register_packages", fake_register)
     monkeypatch.setattr(runner, "run_once", fake_run_once)
     monkeypatch.setattr(runner, "_listen_for_signals", lambda: None)
     monkeypatch.setattr(runner, "_STOP", stop)
@@ -111,12 +106,12 @@ def _fake_service(monkeypatch, outcomes, stop_after):
     return events, wake
 
 
-def test_serve_registers_first_retries_soon_after_a_failure_and_keeps_since_until_a_success(monkeypatch):
+def test_serve_retries_soon_after_a_failure_and_keeps_since_until_a_success(monkeypatch):
     from synapsis_feeders import runner
 
     events, wake = _fake_service(monkeypatch, [RuntimeError("API still starting"), None, None], stop_after=3)
     runner.serve("t", settings=None, every="6h", since=date(2023, 1, 1), reset=True)
-    assert events == ["register", ("run", date(2023, 1, 1), True), ("run", date(2023, 1, 1), False),
+    assert events == [("run", date(2023, 1, 1), True), ("run", date(2023, 1, 1), False),
                       ("run", None, False)]
     assert wake.waits == [60.0, 6 * 3600, 6 * 3600]
 
@@ -126,7 +121,7 @@ def test_serve_without_a_timer_runs_once_then_waits_for_a_manual_trigger(monkeyp
 
     events, wake = _fake_service(monkeypatch, [None], stop_after=1)
     runner.serve("t", settings=None)
-    assert events == ["register", ("run", None, None)]
+    assert events == [("run", None, None)]
     assert wake.waits == [None]
 
 
@@ -134,7 +129,7 @@ def test_packages_are_read_from_the_feeders_packages_folder():
     from synapsis_feeders.config import Settings
 
     settings = Settings.from_env()
-    assert settings.package_file("kev").name == "kev.yaml"
+    assert settings.package_file("kev").name == "kev.json"
     assert settings.package_file("kev").is_file()
 
 

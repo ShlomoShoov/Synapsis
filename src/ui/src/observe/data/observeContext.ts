@@ -1,12 +1,10 @@
 /**
- * The context of Observe's data, shared by its three sections: where it comes from, the schema packages and the
- * catalog built from them, and the health of each service. ObserveDataProvider.tsx fills it.
+ * The context of Observe's data, shared by its two sections: where it comes from, what is known about each source,
+ * and the health of each service. ObserveDataProvider.tsx fills it.
  */
 import { createContext, use } from 'react';
 import type { Catalog } from './catalog';
-import type { SchemaDocument } from './contracts';
-import type { IngestLog, Ping, SchemaRegistry } from './model';
-import type { Resource } from './useResource';
+import type { ApiService, IngestLog, Ping } from './model';
 
 /** Where the data comes from. */
 export type DataMode = 'live' | 'simulated';
@@ -23,10 +21,8 @@ export interface ObserveDataValue {
   mode: DataMode;
   setMode: (mode: DataMode) => void;
   log: IngestLog;
-  registry: SchemaRegistry;
-  /** The schema packages, loaded once per mode. */
-  schemas: Resource<SchemaDocument[]>;
-  /** The catalog built from them (empty until they arrive). */
+  api: ApiService;
+  /** What is known about each source: empty for now, so names and domains are read from the source ids. */
   catalog: Catalog;
   health: Health;
 }

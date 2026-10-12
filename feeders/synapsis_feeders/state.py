@@ -5,7 +5,7 @@
                      Wikipedia: the spelling chosen for each pollster); cleared with the cursor by --reset
   observed/          the feeder's own observations that the source cannot give again (OpenSanctions: the day each
                      listing was first seen); kept by --reset, so back it up with the database
-  rejections.jsonl   every record the API rejected: batch, index, id, code, path, message
+  rejections.jsonl   every refused record: batch ("not-sent" when the feeder refused it itself), id, code, reason
   runs.jsonl         one line per run: counts, codes, duration, outcome
 The API's idempotency means a lost state folder costs time, never correctness: a re-run sends the same records and
 gets 'unchanged' back."""
