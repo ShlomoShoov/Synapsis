@@ -19,8 +19,8 @@ public static class DataRegistration
 
     /// <summary>
     /// Reads the shared settings file below every other source (a service's appsettings.json and the environment
-    /// override it), then registers the settings of each store, the MongoDB and Elasticsearch connections and the
-    /// MongoDB health check (all singletons: one connection per process).
+    /// override it), then registers the settings of each store, the MongoDB, Elasticsearch and embedder connections
+    /// and the MongoDB health check (all singletons: one connection per process).
     /// </summary>
     public static IServiceCollection AddSynapsisData(this IServiceCollection services, ConfigurationManager configuration)
     {
@@ -36,9 +36,10 @@ public static class DataRegistration
         services.AddSingleton(configuration.GetSection("Neo4j").Get<Neo4jOptions>() ?? new Neo4jOptions());
         services.AddSingleton(configuration.GetSection("Embedder").Get<EmbedderOptions>() ?? new EmbedderOptions());
 
-        // 3. The connections every service uses.
+        // 3. The connections (each one is made only when a service asks for it).
         services.AddSingleton<MongoContext>();
         services.AddSingleton<ElasticContext>();
+        services.AddSingleton<EmbedderClient>();
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongo");
         return services;
     }

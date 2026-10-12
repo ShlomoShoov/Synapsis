@@ -1,4 +1,5 @@
-# Synapsis core: MongoDB, Elasticsearch, Kafka, Neo4j, the setup, the API, the relay, the projector and the web client.
+# Synapsis core: MongoDB, Elasticsearch, Kafka, Neo4j, the embedder, the setup, the API, the relay, the indexer,
+# the projector and the web client.
 #
 #   cp deploy/core/.env.example deploy/core/.env              (first time only)
 #   docker compose -f deploy/core/compose.yml up -d --build --wait
@@ -7,8 +8,8 @@
 # Settings: deploy/core/.env, every name starting with CORE_.
 # The C# API answers on http://localhost:8080 (Swagger: /swagger) and, for other deployments on the Docker network
 # "synapsis", as http://api:8080. It writes records to MongoDB and the ingestion log to Elasticsearch
-# (index synapsis-ingest-log, read by the UI). The embedder (text models for the later search) starts only with
-# --profile embedder. Redis and MinIO join this file in the stage that first uses them.
+# (index synapsis-ingest-log, read by the UI). The indexer writes search documents to Elasticsearch (index
+# synapsis-records) with vectors from the embedder. Redis and MinIO join this file in the stage that first uses them.
 
 name: synapsis-core
 
@@ -57,8 +58,7 @@ services:
       timeout: 10s
       retries: 30
 
-  embedder:                   # text models for the later semantic search: --profile embedder
-    profiles: [embedder]
+  embedder:                   # text models: the indexer turns record texts into vectors (and the search, later, questions)
     image: synapsis/embedder:dev
     build: {context: ../.., dockerfile: src/python/synapsis_embedder/Dockerfile}
     restart: unless-stopped
@@ -176,6 +176,19 @@ services:
       Neo4j__Password: ${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
     depends_on:
       setup: {condition: service_completed_successfully}
+
+  elasticsearch-indexer:      # reads new record states from Kafka and writes their search documents to Elasticsearch
+    image: synapsis/elasticsearch-indexer:dev
+    build: {context: ../.., dockerfile: src/dotnet/Synapsis.Elasticsearch/Dockerfile}
+    restart: unless-stopped
+    environment:                                 # addresses only; the group id: its appsettings.json
+      Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
+      Elastic__Url: http://elasticsearch:9200
+      Kafka__Bootstrap: kafka:9092
+      Embedder__Url: http://embedder:8090
+    depends_on:
+      setup: {condition: service_completed_successfully}
+      embedder: {condition: service_healthy}
 
   ui:                         # the web client (React, served by nginx): http://localhost:1897 redirects to /home
     image: synapsis/ui:dev

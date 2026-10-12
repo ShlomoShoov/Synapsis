@@ -12,6 +12,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
     <!-- Reads the shared settings file (sharedsettings.json), the same way appsettings.json is read. -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <!-- Uber's H3 grid in plain C# (no native library): the map cells of a point (LatticeKeys). -->
+    <PackageReference Include="pocketken.H3" Version="4.5.0.1" />
   </ItemGroup>
   <ItemGroup>
     <!-- The shared settings travel with Synapsis.Data: copied next to every service that uses it. -->

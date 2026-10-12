@@ -10,8 +10,15 @@ namespace Synapsis.Data.Services;
 /// </summary>
 public static class RecordReader
 {
-    /// <summary>How record JSON is read: snake_case names (known_at is KnownAt); unknown fields are skipped.</summary>
-    private static readonly JsonSerializerOptions ReadOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    /// <summary>
+    /// How record JSON is read: snake_case names (known_at is KnownAt); unknown fields are skipped; times are UTC
+    /// (a time without an offset, such as "2024-01-01", is taken as UTC on every machine).
+    /// </summary>
+    private static readonly JsonSerializerOptions ReadOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        Converters = { new UtcTimeConverter() }
+    };
 
     /// <summary>
     /// Reads the record as the class its "kind" names (EntityRecord, EventRecord, RelationRecord, ConclusionRecord).
