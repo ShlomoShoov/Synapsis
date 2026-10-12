@@ -28,6 +28,15 @@ public static class DataRegistration
         return services;
     }
 
+    /// <summary>Registers the reusable Kafka producer connection for a service.</summary>
+    public static IServiceCollection AddSynapsisKafka(this IServiceCollection services, IConfiguration configuration)
+    {
+        KafkaOptions kafkaOptions = configuration.GetSection("Kafka").Get<KafkaOptions>() ?? new KafkaOptions();
+        services.AddSingleton(kafkaOptions);
+        services.AddSingleton<KafkaContext>();
+        return services;
+    }
+
     /// <summary>
     /// Called once at start-up: creates what the stores need when it is missing (the MongoDB index, the ingestion log
     /// index in Elasticsearch). When everything exists, it does nothing.
