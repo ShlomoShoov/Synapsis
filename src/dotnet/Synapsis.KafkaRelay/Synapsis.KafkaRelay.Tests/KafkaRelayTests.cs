@@ -1,5 +1,6 @@
 using Confluent.Kafka;
 using Synapsis.Data.Models.Options;
+using Synapsis.Data.Dal;
 using System;
 using System.Threading.Tasks;
 using Xunit;
@@ -30,20 +31,22 @@ public sealed class KafkaRelayTests
         string topic = $"synapsis.kafka-relay.test.{Guid.NewGuid():N}";
         string documentId = $"smoke-{Guid.NewGuid():N}";
 
-        using IProducer<Null, string> producer = new ProducerBuilder<Null, string>(
-            new ProducerConfig { BootstrapServers = bootstrap, Acks = Acks.All }).Build();
-        using IConsumer<Ignore, string> consumer = new ConsumerBuilder<Ignore, string>(new ConsumerConfig
+        KafkaOptions options = new KafkaOptions { Bootstrap = bootstrap, Topic = topic };
+        using KafkaContext producer = new KafkaContext(options);
+        using IConsumer<string, string> consumer = new ConsumerBuilder<string, string>(new ConsumerConfig
         {
             BootstrapServers = bootstrap,
             GroupId = $"synapsis-kafka-relay-test-{Guid.NewGuid():N}",
             AutoOffsetReset = AutoOffsetReset.Earliest
         }).Build();
 
-        DeliveryResult<Null, string> delivery = await producer.ProduceAsync(topic, new Message<Null, string> { Value = documentId });
+        string recordId = "ent:test:record";
+        DeliveryResult<string, string> delivery = await producer.ProduceAsync(topic, recordId, documentId, default);
         Assert.Equal(topic, delivery.Topic);
 
         consumer.Subscribe(topic);
-        ConsumeResult<Ignore, string> received = consumer.Consume(TimeSpan.FromSeconds(10));
+        ConsumeResult<string, string> received = consumer.Consume(TimeSpan.FromSeconds(10));
+        Assert.Equal(recordId, received.Message.Key);
         Assert.Equal(documentId, received.Message.Value);
         consumer.Close();
     }

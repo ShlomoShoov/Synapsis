@@ -18,7 +18,7 @@ public static class Program
         MongoOptions mongoOptions = builder.Configuration.GetSection("Mongo").Get<MongoOptions>() ?? new MongoOptions();
         builder.Services.AddSingleton(mongoOptions);
         builder.Services.AddSingleton<MongoContext>();
-        builder.Services.AddSynapsisKafkaConsumer(builder.Configuration);
+        builder.Services.AddSynapsisKafkaConsumer(builder.Configuration, "synapsis-neo4j");
         builder.Services.AddSynapsisNeo4j(builder.Configuration);
         builder.Services.AddSingleton<MongoRecordRepository>();
         builder.Services.AddSingleton<Neo4jRepository>();

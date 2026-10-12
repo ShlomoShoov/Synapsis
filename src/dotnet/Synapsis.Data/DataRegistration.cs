@@ -38,9 +38,13 @@ public static class DataRegistration
     }
 
     /// <summary>Registers the reusable manual-commit Kafka consumer connection for a service.</summary>
-    public static IServiceCollection AddSynapsisKafkaConsumer(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddSynapsisKafkaConsumer(this IServiceCollection services, IConfiguration configuration, string? defaultGroupId = null)
     {
         KafkaOptions kafkaOptions = configuration.GetSection("Kafka").Get<KafkaOptions>() ?? new KafkaOptions();
+        if (defaultGroupId != null && string.IsNullOrWhiteSpace(configuration["Kafka:GroupId"]))
+        {
+            kafkaOptions.GroupId = defaultGroupId;
+        }
         services.AddSingleton(kafkaOptions);
         services.AddSingleton<KafkaConsumerContext>();
         return services;

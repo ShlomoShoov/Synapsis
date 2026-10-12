@@ -26,6 +26,12 @@ public sealed class Neo4jContext : IAsyncDisposable
     /// <summary>The configured Neo4j database name.</summary>
     public string Database { get; }
 
+    /// <summary>Opens a session for the configured Neo4j database.</summary>
+    public IAsyncSession OpenSession()
+    {
+        return _driver.AsyncSession(configuration => configuration.WithDatabase(Database));
+    }
+
     /// <summary>Closes the Neo4j driver asynchronously.</summary>
     public ValueTask DisposeAsync()
     {

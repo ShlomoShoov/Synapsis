@@ -36,6 +36,7 @@ public sealed class Neo4jOrchestrator : BackgroundService
     /// <summary>Runs the manual-commit Kafka processing loop.</summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await _neo4jRepository.InitializeAsync(stoppingToken);
         while (!stoppingToken.IsCancellationRequested)
         {
             ConsumeResult<Ignore, string> message;

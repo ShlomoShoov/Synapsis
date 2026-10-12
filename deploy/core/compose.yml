@@ -1,4 +1,4 @@
-# Synapsis core: MongoDB, Elasticsearch, the API and the web client.
+# Synapsis core: MongoDB, Elasticsearch, Kafka, Neo4j, the API and the web client.
 #
 #   cp deploy/core/.env.example deploy/core/.env              (first time only)
 #   docker compose -f deploy/core/compose.yml up -d --build --wait
@@ -8,7 +8,7 @@
 # The C# API answers on http://localhost:8080 (Swagger: /swagger) and, for other deployments on the Docker network
 # "synapsis", as http://api:8080. It writes records to MongoDB and the ingestion log to Elasticsearch
 # (index synapsis-ingest-log, read by the UI). The embedder (text models for the later search) starts only with
-# --profile embedder. Kafka, Neo4j, Redis and MinIO join this file in the stage that first uses them.
+# --profile embedder. Redis and MinIO join this file in the stage that first uses them.
 
 name: synapsis-core
 
@@ -20,6 +20,7 @@ volumes:
   mongo-data:
   es-data:
   kafka-data:
+  neo4j-data:
   models:                     # embedder model weights, downloaded on the first start (about 200 MB)
 
 services:
@@ -132,6 +133,37 @@ services:
     depends_on:
       mongo: {condition: service_healthy}
       kafka: {condition: service_healthy}
+
+  neo4j:
+    image: neo4j:5.26.0
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
+    volumes: [neo4j-data:/data]
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${CORE_NEO4J_PASSWORD}", "RETURN 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+
+  neo4j-projector:
+    image: synapsis/neo4j-projector:dev
+    build: {context: ../.., dockerfile: src/dotnet/Synapsis.Neo4j/Dockerfile}
+    restart: unless-stopped
+    environment:
+      Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
+      Mongo__Database: synapsis_v2
+      Kafka__Bootstrap: kafka:9092
+      Kafka__Topic: ingest.accepted
+      Kafka__GroupId: synapsis-neo4j
+      Neo4j__Url: bolt://neo4j:7687
+      Neo4j__Username: neo4j
+      Neo4j__Password: ${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
+      Neo4j__Database: neo4j
+    depends_on:
+      mongo: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      neo4j: {condition: service_healthy}
 
   ui:                         # the web client (React, served by nginx): http://localhost:1897 redirects to /home
     image: synapsis/ui:dev

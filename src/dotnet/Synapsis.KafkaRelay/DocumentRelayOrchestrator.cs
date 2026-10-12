@@ -116,7 +116,13 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
         {
             try
             {
-                DeliveryResult<Null, string> deliveryResult = await _kafkaContext.ProduceAsync(_kafkaOptions.Topic, documentId, cancellationToken);
+                int separator = documentId.IndexOf('|');
+                if (separator <= 0)
+                {
+                    throw new InvalidOperationException("The MongoDB document id has no record id.");
+                }
+                string recordId = documentId.Substring(0, separator);
+                DeliveryResult<string, string> deliveryResult = await _kafkaContext.ProduceAsync(_kafkaOptions.Topic, recordId, documentId, cancellationToken);
                 _logger.LogInformation("Published document ID '{DocumentId}' to topic '{Topic}', partition {Partition}, offset {Offset}",
                     documentId, _kafkaOptions.Topic, deliveryResult.Partition.Value, deliveryResult.Offset.Value);
                 return;

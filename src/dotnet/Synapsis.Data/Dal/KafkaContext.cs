@@ -9,7 +9,7 @@ namespace Synapsis.Data.Dal;
 /// <summary>The shared Kafka producer connection used by services that publish Synapsis events.</summary>
 public sealed class KafkaContext : IDisposable
 {
-    private readonly IProducer<Null, string> _producer;
+    private readonly IProducer<string, string> _producer;
 
     /// <summary>Creates one idempotent producer for the process.</summary>
     public KafkaContext(KafkaOptions options)
@@ -20,13 +20,13 @@ public sealed class KafkaContext : IDisposable
             Acks = Acks.All,
             EnableIdempotence = true
         };
-        _producer = new ProducerBuilder<Null, string>(producerConfig).Build();
+        _producer = new ProducerBuilder<string, string>(producerConfig).Build();
     }
 
-    /// <summary>Publishes a string value to a topic and waits for broker acknowledgement.</summary>
-    public Task<DeliveryResult<Null, string>> ProduceAsync(string topic, string value, CancellationToken cancellationToken)
+    /// <summary>Publishes a document id under its record id and waits for broker acknowledgement.</summary>
+    public Task<DeliveryResult<string, string>> ProduceAsync(string topic, string recordId, string documentId, CancellationToken cancellationToken)
     {
-        Message<Null, string> message = new Message<Null, string> { Value = value };
+        Message<string, string> message = new Message<string, string> { Key = recordId, Value = documentId };
         return _producer.ProduceAsync(topic, message, cancellationToken);
     }
 
