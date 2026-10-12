@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,15 +62,5 @@ public static class DataRegistration
     {
         services.AddSingleton<Neo4jContext>();
         return services;
-    }
-
-    /// <summary>
-    /// Called once at start-up: creates what the stores need when it is missing (the MongoDB index, the ingestion log
-    /// index in Elasticsearch). When everything exists, it does nothing.
-    /// </summary>
-    public static async Task InitializeSynapsisDataAsync(this IServiceProvider services)
-    {
-        await services.GetRequiredService<MongoContext>().CreateIndexesAsync();
-        await services.GetRequiredService<ElasticContext>().CreateIngestLogIndexAsync();
     }
 }

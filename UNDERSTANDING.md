@@ -46,13 +46,14 @@ flowchart LR
 | | `Models/` | `Requests/` (`IngestBatch`), `Results/` (`ValidRecord`, `ValidationResult`, `ChangeResult`, `RecordAnswer`), `Options/` |
 | `Synapsis.Data` | `Models/` | `Records/` (the 15 record classes), `Entities/` (`StoredRecord`, `CatalogEntry`), `Results/` (`IngestSummary`, `RejectedRecord`, `CodeCount`), `Options/` |
 | | `Services/` | `RecordReader`: JSON → the record's class (or the reason it cannot be read); a stored record → plain JSON |
-| | `Dal/` | The connections: `MongoContext` (two collections, the index), `ElasticContext` (the log index), the health check |
-| | `DataRegistration.cs` | `AddSynapsisData(configuration)` registers it; `InitializeSynapsisDataAsync()` creates the indexes at start |
+| | `Dal/` | The connections: `MongoContext` (two collections), `ElasticContext`, Kafka, Neo4j, the health check |
+| | `DataRegistration.cs` | `AddSynapsisData(configuration)` reads `sharedsettings.json` (store addresses, index and topic names) and registers the settings and connections |
 
 `Synapsis.Data` depends on no other Synapsis project, so later services (indexer, projector, engine) can use it to
 read and convert the data. The record classes hold only the record itself; in MongoDB it is the `record` field of a
 `StoredRecord`, and that envelope stays a `StoredRecord`. A single value the record does not give is `null`; a list it
-does not give is empty. `Program.cs` registers everything (dependency injection) and prepares the stores at start.
+does not give is empty. `Program.cs` registers everything (dependency injection). The stores are prepared before the API starts by
+`Synapsis.Setup` (indexes, mappings, constraints, topics), a service that runs once and ends.
 
 ## 4. `POST /ingest`, step by step
 

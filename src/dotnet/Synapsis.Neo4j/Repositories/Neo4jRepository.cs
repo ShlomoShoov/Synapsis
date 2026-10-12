@@ -19,25 +19,6 @@ public sealed class Neo4jRepository
         _neo4jContext = neo4jContext;
     }
 
-    /// <summary>Creates the graph constraints and index before messages are processed.</summary>
-    public async Task InitializeAsync(CancellationToken cancellationToken)
-    {
-        string[] statements =
-        {
-            "CREATE CONSTRAINT entity_id IF NOT EXISTS FOR (n:Entity) REQUIRE n.id IS UNIQUE",
-            "CREATE CONSTRAINT event_id IF NOT EXISTS FOR (n:Event) REQUIRE n.id IS UNIQUE",
-            "CREATE CONSTRAINT conclusion_id IF NOT EXISTS FOR (n:Conclusion) REQUIRE n.id IS UNIQUE",
-            "CREATE INDEX event_known_at IF NOT EXISTS FOR (n:Event) ON (n.known_at)"
-        };
-        await using IAsyncSession session = _neo4jContext.OpenSession();
-        foreach (string statement in statements)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            IResultCursor result = await session.RunAsync(statement);
-            await result.ConsumeAsync();
-        }
-    }
-
     /// <summary>Stores one record and all of its graph connections in one transaction.</summary>
     public async Task StoreAsync(SilRecord record, CancellationToken cancellationToken)
     {

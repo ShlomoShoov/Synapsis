@@ -9,7 +9,7 @@
     "RecordsIndex": "synapsis-records"
   },
   "Kafka": {
-    "Bootstrap": "localhost:9092",
+    "Bootstrap": "localhost:9094",
     "Topic": "ingest.accepted",
     "TopicPartitions": 6,
     "TopicReplicationFactor": 1
