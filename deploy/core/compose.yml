@@ -1,4 +1,4 @@
-# Synapsis core: MongoDB, Elasticsearch, Kafka, Neo4j, the API and the web client.
+# Synapsis core: MongoDB, Elasticsearch, Kafka, Neo4j, the setup, the API, the relay, the projector and the web client.
 #
 #   cp deploy/core/.env.example deploy/core/.env              (first time only)
 #   docker compose -f deploy/core/compose.yml up -d --build --wait
@@ -76,14 +76,31 @@ services:
       timeout: 5s
       retries: 60
 
+  setup:                      # runs once: creates what the stores need when it is missing (indexes, mappings,
+                              # constraints, topics), then ends; the C# services start only after it ends successfully
+    image: synapsis/setup:dev
+    build: {context: ../.., dockerfile: src/dotnet/Synapsis.Setup/Dockerfile}
+    restart: "no"
+    environment:                                 # addresses and the login; names and other settings: sharedsettings.json
+      Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
+      Elastic__Url: http://elasticsearch:9200
+      Kafka__Bootstrap: kafka:9092
+      Neo4j__Url: bolt://neo4j:7687
+      Neo4j__Username: ${CORE_NEO4J_USERNAME:-neo4j}
+      Neo4j__Password: ${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
+    depends_on:
+      mongo: {condition: service_healthy}
+      elasticsearch: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      neo4j: {condition: service_healthy}
+
   api:                        # the C# API: ingest, records, catalog; Swagger at http://localhost:8080/swagger.
                               # Other deployments (the feeders) reach it as http://api:8080.
     image: synapsis/api:dev
     build: {context: ../.., dockerfile: src/dotnet/Synapsis.Api/Dockerfile}
     restart: unless-stopped
-    environment:
+    environment:                                 # addresses only; names and other settings: sharedsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Mongo__Database: synapsis_v2
       Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log)
       Api__CorsOrigins__0: http://localhost:1897   # the UI may read the API from the browser
     ports: ["8080:8080"]
@@ -93,25 +110,25 @@ services:
       timeout: 5s
       retries: 30
     depends_on:
-      mongo: {condition: service_healthy}
-      elasticsearch: {condition: service_healthy}
+      setup: {condition: service_completed_successfully}
 
   kafka:
     image: apache/kafka:3.8.0
     restart: unless-stopped
-    ports: ["9092:9092"]
+    ports: ["9094:9094"]        # from the host (tests, dotnet run): localhost:9094; containers use kafka:9092
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,HOST://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,HOST://localhost:9094
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"   # topics are created by the setup service
       KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
     volumes: [kafka-data:/var/lib/kafka/data]
     healthcheck:
@@ -125,14 +142,11 @@ services:
     image: synapsis/kafka-relay:dev
     build: {context: ../.., dockerfile: src/dotnet/Synapsis.KafkaRelay/Dockerfile}
     restart: unless-stopped
-    environment:
+    environment:                                 # addresses only; names and other settings: sharedsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Mongo__Database: synapsis_v2
       Kafka__Bootstrap: kafka:9092
-      Kafka__Topic: ingest.accepted
     depends_on:
-      mongo: {condition: service_healthy}
-      kafka: {condition: service_healthy}
+      setup: {condition: service_completed_successfully}
 
   neo4j:
     image: neo4j:5.26.0
@@ -154,20 +168,14 @@ services:
     image: synapsis/neo4j-projector:dev
     build: {context: ../.., dockerfile: src/dotnet/Synapsis.Neo4j/Dockerfile}
     restart: unless-stopped
-    environment:
+    environment:                                 # addresses and the login; the group id: its appsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Mongo__Database: synapsis_v2
       Kafka__Bootstrap: kafka:9092
-      Kafka__Topic: ingest.accepted
-      Kafka__GroupId: synapsis-neo4j
       Neo4j__Url: bolt://neo4j:7687
       Neo4j__Username: ${CORE_NEO4J_USERNAME:-neo4j}
       Neo4j__Password: ${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
-      Neo4j__Database: neo4j
     depends_on:
-      mongo: {condition: service_healthy}
-      kafka: {condition: service_healthy}
-      neo4j: {condition: service_healthy}
+      setup: {condition: service_completed_successfully}
 
   ui:                         # the web client (React, served by nginx): http://localhost:1897 redirects to /home
     image: synapsis/ui:dev

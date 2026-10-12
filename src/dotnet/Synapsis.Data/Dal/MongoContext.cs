@@ -29,19 +29,6 @@ public sealed class MongoContext
     /// <summary>Every value that has entered the system (sources and types).</summary>
     public IMongoCollection<CatalogEntry> Catalog { get; }
 
-    /// <summary>
-    /// Creates the one index the record queries need: (id, source, state). Creating an index that exists does nothing,
-    /// so this runs at every start.
-    /// </summary>
-    public Task CreateIndexesAsync()
-    {
-        IndexKeysDefinition<StoredRecord> keys = Builders<StoredRecord>.IndexKeys
-            .Ascending(record => record.RecordId)
-            .Ascending(record => record.Source)
-            .Descending(record => record.State);
-        return Records.Indexes.CreateOneAsync(new CreateIndexModel<StoredRecord>(keys));
-    }
-
     /// <summary>Asks MongoDB to answer; throws when it does not.</summary>
     public Task PingAsync()
     {

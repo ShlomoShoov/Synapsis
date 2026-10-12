@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.Elasticsearch", "S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.Neo4j", "Synapsis.Neo4j\Synapsis.Neo4j.csproj", "{8A3E8B0D-26DA-4BA9-8E12-9B3E2E1DFA42}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapsis.Setup", "Synapsis.Setup\Synapsis.Setup.csproj", "{2259E70E-472F-4419-A001-98A9419F5FAE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{8A3E8B0D-26DA-4BA9-8E12-9B3E2E1DFA42}.Release|x64.Build.0 = Release|Any CPU
 		{8A3E8B0D-26DA-4BA9-8E12-9B3E2E1DFA42}.Release|x86.ActiveCfg = Release|Any CPU
 		{8A3E8B0D-26DA-4BA9-8E12-9B3E2E1DFA42}.Release|x86.Build.0 = Release|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Debug|x64.Build.0 = Debug|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Debug|x86.Build.0 = Debug|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Release|x64.ActiveCfg = Release|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Release|x64.Build.0 = Release|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Release|x86.ActiveCfg = Release|Any CPU
+		{2259E70E-472F-4419-A001-98A9419F5FAE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

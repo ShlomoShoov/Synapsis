@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Synapsis.Data: the connections to MongoDB and Elasticsearch, the stored shapes, the record classes and their reader. It depends on no other
-       Synapsis project, so every service that needs the data (the API now, the consumers and the engine later) can use it. -->
+  <!-- Synapsis.Data: the connections to the stores, the shared settings, the stored shapes, the record classes and their reader. It depends on no other
+       Synapsis project, so every service that needs the data (the API, the setup, the consumers and the engine later) can use it. -->
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver" Version="3.12.0" />
     <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.15.10" />
@@ -8,7 +8,13 @@
     <!-- The official Neo4j .NET driver is the standard client for the Bolt protocol. -->
     <PackageReference Include="Neo4j.Driver" Version="6.3.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.31" />
-    <!-- Reads the settings sections (Mongo, Elastic) into their classes. -->
+    <!-- Reads the settings sections (Mongo, Elastic, Kafka, Neo4j, Embedder) into their classes. -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+    <!-- Reads the shared settings file (sharedsettings.json), the same way appsettings.json is read. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The shared settings travel with Synapsis.Data: copied next to every service that uses it. -->
+    <None Update="sharedsettings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

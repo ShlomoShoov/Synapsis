@@ -9,4 +9,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The service's own settings (its Kafka group id), next to the shared ones from Synapsis.Data. -->
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

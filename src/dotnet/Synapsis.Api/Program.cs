@@ -10,7 +10,7 @@ using Synapsis.Api.Orchestrators;
 using Synapsis.Api.Repositories;
 using Synapsis.Data;
 
-// The composition root: read the settings, register the components, prepare the stores, start HTTP.
+// The composition root: read the settings, register the components, start HTTP (the stores are prepared by Synapsis.Setup).
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 ApiOptions apiOptions = builder.Configuration.GetSection("Api").Get<ApiOptions>() ?? new ApiOptions();
 
@@ -22,9 +22,8 @@ builder.Services.AddSingleton<IngestLogRepository>();
 builder.Services.AddSingleton<IngestionOrchestrator>();
 AddHttp(builder, apiOptions);
 
-// 2. Start-up work, then the HTTP pipeline: errors as built-in problem answers, gzip bodies, browser access, Swagger.
+// 2. The HTTP pipeline: errors as built-in problem answers, gzip bodies, browser access, Swagger.
 WebApplication app = builder.Build();
-await app.Services.InitializeSynapsisDataAsync();
 app.UseExceptionHandler();
 app.UseRequestDecompression();
 app.UseCors();
