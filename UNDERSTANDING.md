@@ -44,9 +44,9 @@ flowchart LR
 | | `Services/` | The steps themselves, as static classes (pure code, no database) |
 | | `Repositories/` | `RecordRepository`, `CatalogRepository`, `IngestLogRepository` (what ingestion and the routes need) |
 | | `Models/` | `Requests/` (`IngestBatch`), `Results/` (`ValidRecord`, `ValidationResult`, `ChangeResult`, `RecordAnswer`), `Options/` |
-| `Synapsis.Data` | `Models/` | `Records/` (the 15 record classes), `Entities/` (`StoredRecord`, `CatalogEntry`), `Results/` (`IngestSummary`, `RejectedRecord`, `CodeCount`), `Options/` |
-| | `Services/` | `RecordReader`: JSON → the record's class (or the reason it cannot be read); a stored record → plain JSON |
-| | `Dal/` | The connections: `MongoContext` (two collections), `ElasticContext`, Kafka, Neo4j, the health check |
+| `Synapsis.Data` | `Models/` | `Records/` (the 15 record classes), `Entities/` (`StoredRecord`, `CatalogEntry`, `SearchDocument`), `Results/` (`IngestSummary`, `RejectedRecord`, `CodeCount`, `EmbedAnswer`), `Requests/` (`EmbedRequest`), `Options/` |
+| | `Services/` | `RecordReader`: JSON → the record's class (or the reason it cannot be read; times are UTC, `UtcTimeConverter`); a stored record → plain JSON. `LatticeKeys`: a point's H3 cells, the week, the logical prefixes |
+| | `Dal/` | The connections: `MongoContext` (two collections), `ElasticContext`, Kafka, Neo4j, `EmbedderClient` (text → vector), the health check |
 | | `DataRegistration.cs` | `AddSynapsisData(configuration)` reads `sharedsettings.json` (store addresses, index and topic names) and registers the settings and connections |
 
 `Synapsis.Data` depends on no other Synapsis project, so later services (indexer, projector, engine) can use it to
