@@ -1,0 +1,88 @@
+/* Analyze: the globe fills the page; the controls float over it on paper. Tokens from src/styles.css. */
+
+.page {
+  --accent: #b5452c; /* the window on the timeline, the needle: the colour of the events */
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.header {
+  position: absolute;
+  top: 22px;
+  left: 28px;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  pointer-events: none;
+}
+
+.brand {
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.area {
+  font-size: 22px;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+
+.area::before {
+  content: '/';
+  margin-right: 14px;
+  font-style: normal;
+  color: var(--line);
+  color: rgb(31 28 23 / 0.25);
+}
+
+.side {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 2;
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.error {
+  max-width: 280px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f6e3dc;
+  color: #7a2716;
+  font-size: 14px;
+  box-shadow: 0 0 0 1px rgb(122 39 22 / 0.2);
+}
+
+.controls {
+  position: absolute;
+  right: 24px;
+  bottom: 168px;
+  z-index: 2;
+}
+
+.bottom {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 20px;
+  z-index: 2;
+}
+
+.loading {
+  animation: breathe 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes breathe {
+  from {
+    opacity: 0.45;
+  }
+}

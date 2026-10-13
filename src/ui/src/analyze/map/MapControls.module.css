@@ -1,0 +1,67 @@
+/* A column of round paper buttons. */
+
+.controls {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.controls button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 8px 22px rgb(31 28 23 / 0.08);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background 200ms,
+    transform 200ms var(--ease-out);
+}
+
+.controls button:hover {
+  background: var(--paper);
+  transform: scale(1.06);
+}
+
+.controls svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  transition: rotate 120ms linear;
+}
+
+.north {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.controls svg path:not(.north) {
+  fill: none;
+}
+
+.controls button[data-active] {
+  box-shadow:
+    0 0 0 1.5px var(--accent),
+    0 8px 22px rgb(31 28 23 / 0.08);
+}

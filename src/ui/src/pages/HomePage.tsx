@@ -31,7 +31,12 @@ const areas: Area[] = [
     text: 'What the system receives, live and in the past: its flow and its numbers.',
     page: '/observe',
   },
-  { name: 'Analyze', slug: 'analyze', text: 'Questions answered from the record, with sources.' },
+  {
+    name: 'Analyze',
+    slug: 'analyze',
+    text: 'Investigate the record: events on the globe, through time, and what connects them.',
+    page: '/analyze',
+  },
 ];
 
 /** The home film: H.264, played by every browser (see assets/media/home/). */

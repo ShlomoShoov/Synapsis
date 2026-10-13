@@ -3,6 +3,7 @@
  * (the deployed server also redirects "/" itself, see nginx.conf).
  */
 import { createBrowserRouter, redirect } from 'react-router';
+import { AnalyzeLoading } from './analyze/AnalyzeLoading';
 import { ObserveLoading } from './observe/ObserveLoading';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -16,6 +17,12 @@ export const router = createBrowserRouter([
     path: '/observe',
     HydrateFallback: ObserveLoading,
     lazy: async () => ({ Component: (await import('./observe/ObservePage')).ObservePage }),
+  },
+  // Analyze carries the map engine: its code loads only when it is opened.
+  {
+    path: '/analyze',
+    HydrateFallback: AnalyzeLoading,
+    lazy: async () => ({ Component: (await import('./analyze/AnalyzePage')).AnalyzePage }),
   },
   { path: '*', Component: NotFoundPage },
 ]);

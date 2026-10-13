@@ -23,6 +23,9 @@ export default defineConfig({
   // (src/observe/config.ts).
   server: { port: 5173, strictPort: true, proxy: coreProxy() },
 
+  // Analyze's map (MapLibre) runs a worker that imports modules: built as a module too.
+  worker: { format: 'es' },
+
   build: {
     // The built code goes to dist/app/ with content hashes in its names, so the server can cache it for a year.
     // The name differs from assets/ on purpose: assets/ holds what people add, app/ holds what the build makes.
