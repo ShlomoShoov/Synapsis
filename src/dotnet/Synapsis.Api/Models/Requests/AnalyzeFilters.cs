@@ -11,7 +11,7 @@ namespace Synapsis.Api.Models.Requests;
 /// A list filter is a repeated parameter (type=A&amp;type=B): any of its values matches; different filters must all
 /// match. A missing value or an empty list means "no filter". ASP.NET answers 400 when a value cannot be read (a date
 /// that is not a date) or when Validate finds a mistake. Each route extends it with its own parameters (MapRequest,
-/// PointRequest), so the class is not sealed.
+/// GraphRequest), so the class is not sealed.
 /// </summary>
 public class AnalyzeFilters : IValidatableObject
 {

@@ -8,10 +8,10 @@ using Synapsis.Api.Services;
 namespace Synapsis.Api.Controllers;
 
 /// <summary>
-/// The Analyze routes the UI reads: GET /analyze/map (events by place and time) and GET /analyze/point (a clicked
-/// event or entity with its connections). ASP.NET reads and checks the parameters (a wrong one answers 400 before the
-/// method runs); the method passes them to AnalyzeService and returns its answer. Until the queries are built, the
-/// service says so and the route answers 501 Not Implemented.
+/// The Analyze routes the UI reads: GET /analyze/map (events by place and time) and GET /analyze/graph (the
+/// connections of a clicked event or entity; its full record is GET /records/{id}). ASP.NET reads and checks the
+/// parameters (a wrong one answers 400 before the method runs); the method passes them to AnalyzeService and returns
+/// its answer. Until the queries are built, the service says so and the route answers 501 Not Implemented.
 /// </summary>
 [ApiController]
 [Route("analyze")]
@@ -40,13 +40,13 @@ public sealed class AnalyzeController : ControllerBase
         }
     }
 
-    /// <summary>GET /analyze/point: a record in full, with its connections grouped by kind.</summary>
-    [HttpGet("point")]
-    public async Task<ActionResult<PointAnswer>> Point([FromQuery] PointRequest request)
+    /// <summary>GET /analyze/graph: a record as a summary, with its connections grouped by kind.</summary>
+    [HttpGet("graph")]
+    public async Task<ActionResult<GraphAnswer>> Graph([FromQuery] GraphRequest request)
     {
         try
         {
-            PointAnswer answer = await _analyzeService.PointAsync(request);
+            GraphAnswer answer = await _analyzeService.GraphAsync(request);
             return Ok(answer);
         }
         catch (NotImplementedException notBuilt)

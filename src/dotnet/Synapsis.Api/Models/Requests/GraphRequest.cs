@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace Synapsis.Api.Models.Requests;
 
 /// <summary>
-/// The parameters of GET /analyze/point: the id of the clicked event or entity, the shared filters (they keep the
+/// The parameters of GET /analyze/graph: the id of the clicked event or entity, the shared filters (they keep the
 /// events through which things connect), and paging of the connection groups.
 /// </summary>
-public sealed class PointRequest : AnalyzeFilters
+public sealed class GraphRequest : AnalyzeFilters
 {
     /// <summary>The record's id, such as "evt:gtd:197001060001" (in the query string, because ids may contain "/").</summary>
     [FromQuery(Name = "id")]

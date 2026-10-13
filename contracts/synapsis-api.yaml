@@ -1,10 +1,15 @@
 openapi: 3.1.0
 info:
-  title: Synapsis API (the C# ingestion server) and the ingestion log
-  version: "2.0"
+  title: Synapsis API (ingestion and Analyze) and the ingestion log
+  version: "2.1"
   description: |
-    The routes the C# API answers today (http://localhost:8080; Swagger UI at /swagger), and the ingestion log it writes
+    The routes the C# API answers (http://localhost:8080; Swagger UI at /swagger), and the ingestion log it writes
     to Elasticsearch, which the UI reads directly (see x-elasticsearch at the end of this file).
+
+    Analyze (the UI's reading routes): GET /analyze/map, GET /analyze/graph, and GET /records/{id} for the full details.
+    The real API has the routes and their parameters; its queries answer 501 until they are built. The mock
+    (Synapsis.MockApi, http://localhost:8081) answers the same three routes with the same shapes, from a sample of real
+    records; the UI switches between them by changing one address.
 
     - JSON field names are snake_case. Times are UTC, such as "2026-10-10T08:15:00Z".
     - The API does not know schema packages. It reads every record into its class (any field of the wrong type is
@@ -15,8 +20,16 @@ info:
       size limit, 500 when MongoDB fails (and, for now, for a gzip body that unpacks past the limit).
     - No authentication for now. Browsers may read from the origins in Api:CorsOrigins (the UI: http://localhost:1897).
     - The record format (SIL 1.2) is described in schemas/sil/.
+    - Analyze parameters are ordinary query parameters that ASP.NET reads and checks; a wrong one answers 400 with
+      "errors" naming it. A list filter is a repeated parameter (type=A&type=B), never comma-joined: any of its values
+      matches; different filters must all match. Ids go in the query string (id=, entity=), because some contain "/".
+      A date alone ("2024-05-01") is the start of that day, UTC.
+    - Analyze answers leave out a field whose value is null (as every answer of this API does).
 servers:
   - url: http://localhost:8080
+    description: The C# API
+  - url: http://localhost:8081
+    description: The mock (GET /analyze/map, GET /analyze/graph, GET /records/{id})
 
 paths:
   /health:
@@ -48,6 +61,7 @@ paths:
   /records/{id}:
     get:
       summary: A record as each source stated it, in its latest state known at a date.
+      description: Analyze's full details of a point (roles, attributes, measures, evidence); the UI asks for it only when the user wants the details. Example /records/evt:gtd:197001060001?as_of=2026-10-13
       parameters:
         - {name: id, in: path, required: true, schema: {type: string}, example: "evt:kev:CVE-2021-44228"}
         - {name: as_of, in: query, schema: {type: string}, description: 'A date ("2024-05-01" = the start of that day, UTC) or a date-time; none = now.'}
@@ -67,7 +81,187 @@ paths:
           description: The entries, sorted by field, then value.
           content: {application/json: {schema: {type: array, items: {$ref: "#/components/schemas/CatalogEntry"}}}}
 
+  /analyze/map:
+    get:
+      summary: "D3 map: the matching events inside the map's box, as H3 hexagons with counts (zoomed out) or as points (zoomed in)."
+      description: |
+        The map's box is bbox and the time window is from and to; every pan, zoom or new window sends the request again.
+        layer=auto gives cells when zoomed out (zoom below 6) or when more than 2,000 located events match, otherwise
+        points. zoom chooses the cell size: 0-3 resolution 2 (edge about 158 km), 4-5 resolution 3 (60 km), 6-7
+        resolution 4 (23 km), 8 and more resolution 5 (8.5 km). A point whose uncertainty is not smaller than the cell's
+        edge is not put in a cell (omitted: too_imprecise). Matching events with no point (placed by region or
+        logically only, or unplaced) are counted in omitted (no_point). Points come oldest first; cells largest count
+        first. Only events are drawn.
+        Example: /analyze/map?bbox=-125,24,-66,50&zoom=4&from=1970-01-01&to=1970-04-01
+      parameters:
+        - $ref: "#/components/parameters/as_of"
+        - $ref: "#/components/parameters/q"
+        - $ref: "#/components/parameters/kind"
+        - $ref: "#/components/parameters/type"
+        - $ref: "#/components/parameters/source"
+        - $ref: "#/components/parameters/from"
+        - $ref: "#/components/parameters/to"
+        - $ref: "#/components/parameters/bbox"
+        - $ref: "#/components/parameters/cell"
+        - $ref: "#/components/parameters/country"
+        - $ref: "#/components/parameters/subdivision"
+        - $ref: "#/components/parameters/logical"
+        - $ref: "#/components/parameters/entity"
+        - $ref: "#/components/parameters/measure"
+        - {name: zoom, in: query, required: true, schema: {type: number, minimum: 0, maximum: 22}, description: "The map's zoom."}
+        - {name: layer, in: query, schema: {enum: [auto, points, cells], default: auto}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 5000, default: 2000}, description: Points or cells per page.}
+        - $ref: "#/components/parameters/cursor"
+      responses:
+        "200": {description: The layer., content: {application/json: {schema: {$ref: "#/components/schemas/MapAnswer"}}}}
+        "400": {$ref: "#/components/responses/ValidationProblem"}
+        "501": {$ref: "#/components/responses/Problem"}
+
+  /analyze/graph:
+    get:
+      summary: "DG graph: a clicked event or entity as a short summary, with its connections grouped by kind."
+      description: |
+        Connection kinds: relation (a direct relation between entities, with its direction), together (entities that
+        take part in the same events, with how many), event (the events an entity takes part in, with its role),
+        participant (the entities taking part in an event, with their roles). The filters keep the events through which
+        things connect; relations follow as_of only. Without group, the first page (limit) of every group; with group,
+        that group from cursor. Clicking a connected entity asks again with its id. No connections: connections is empty
+        and no_connections_reason says why. The full record is GET /records/{id}.
+        Example: /analyze/graph?id=evt:gtd:197001060001
+      parameters:
+        - {name: id, in: query, required: true, schema: {type: string}, description: 'The record id, such as "ent:kev-product:apache/log4j2".'}
+        - $ref: "#/components/parameters/as_of"
+        - $ref: "#/components/parameters/q"
+        - $ref: "#/components/parameters/kind"
+        - $ref: "#/components/parameters/type"
+        - $ref: "#/components/parameters/source"
+        - $ref: "#/components/parameters/from"
+        - $ref: "#/components/parameters/to"
+        - $ref: "#/components/parameters/bbox"
+        - $ref: "#/components/parameters/cell"
+        - $ref: "#/components/parameters/country"
+        - $ref: "#/components/parameters/subdivision"
+        - $ref: "#/components/parameters/logical"
+        - $ref: "#/components/parameters/entity"
+        - $ref: "#/components/parameters/measure"
+        - {name: group, in: query, schema: {type: string}, description: A group key from a previous answer; answer only that group.}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 20}, description: Connections per group.}
+        - $ref: "#/components/parameters/cursor"
+      responses:
+        "200": {description: The centre and its connections., content: {application/json: {schema: {$ref: "#/components/schemas/GraphAnswer"}}}}
+        "400": {$ref: "#/components/responses/ValidationProblem"}
+        "404": {$ref: "#/components/responses/Problem"}
+        "501": {$ref: "#/components/responses/Problem"}
+
 components:
+  parameters:
+    as_of:
+      name: as_of
+      in: query
+      description: 'Filter. What was known by then: a date ("2024-05-01" = the start of that day, UTC) or a date-time. None = now.'
+      schema: {type: string}
+      example: "2026-10-13"
+    q:
+      name: q
+      in: query
+      description: 'Filter. Keywords: every word in the name, title or body (any case), or the whole text equal to the id.'
+      schema: {type: string}
+      example: bombing
+    kind:
+      name: kind
+      in: query
+      description: 'Filter (repeat). entity, event or conclusion.'
+      schema: {type: array, items: {enum: [entity, event, conclusion]}}
+      style: form
+      explode: true
+    type:
+      name: type
+      in: query
+      description: 'Filter (repeat). Record types.'
+      schema: {type: array, items: {type: string}}
+      style: form
+      explode: true
+      example: [SEC.ATTACK.BOMBING]
+    source:
+      name: source
+      in: query
+      description: 'Filter (repeat). Sources.'
+      schema: {type: array, items: {type: string}}
+      style: form
+      explode: true
+      example: ["src:start:gtd"]
+    from:
+      name: from
+      in: query
+      description: 'Filter. Events that start at or after this date or date-time.'
+      schema: {type: string}
+      example: "1970-01-01"
+    to:
+      name: to
+      in: query
+      description: 'Filter. Events that start before this date or date-time (must be after from).'
+      schema: {type: string}
+      example: "1970-04-01"
+    bbox:
+      name: bbox
+      in: query
+      description: 'Filter. min_lon,min_lat,max_lon,max_lat: events whose point is inside (a west edge east of the east edge crosses the 180th meridian).'
+      schema: {type: string}
+      example: "-125,24,-66,50"
+    cell:
+      name: cell
+      in: query
+      description: 'Filter (repeat). H3 cells of resolution 2 to 5: events whose point is in one of them.'
+      schema: {type: array, items: {type: string, pattern: '^8[2-5][0-9a-f]{13}$'}}
+      style: form
+      explode: true
+      example: ["832a10fffffffff"]
+    country:
+      name: country
+      in: query
+      description: 'Filter (repeat). Country codes (ISO 3166-1 alpha-2).'
+      schema: {type: array, items: {type: string}}
+      style: form
+      explode: true
+      example: [US]
+    subdivision:
+      name: subdivision
+      in: query
+      description: 'Filter (repeat). Subdivision codes (ISO 3166-2).'
+      schema: {type: array, items: {type: string}}
+      style: form
+      explode: true
+      example: [US-CO]
+    logical:
+      name: logical
+      in: query
+      description: 'Filter (repeat). Logical nodes: records at or below one of them.'
+      schema: {type: array, items: {type: string}}
+      style: form
+      explode: true
+      example: ["cyber.vendor_product/Apache"]
+    entity:
+      name: entity
+      in: query
+      description: 'Filter (repeat). Entity ids: events in which one of them takes part.'
+      schema: {type: array, items: {type: string}}
+      style: form
+      explode: true
+      example: ["ent:gtd-group:left-wing-militants"]
+    measure:
+      name: measure
+      in: query
+      description: 'Filter (repeat; all must hold). name:op:value with op gt, gte, lt, lte or eq, such as magnitude:gte:5.5.'
+      schema: {type: array, items: {type: string}}
+      style: form
+      explode: true
+      example: ["killed:gt:0"]
+    cursor:
+      name: cursor
+      in: query
+      description: 'The "next" of the previous page (or of a group, with group).'
+      schema: {type: string}
+
   responses:
     Problem:
       description: The request was refused (ASP.NET's standard problem answer).
@@ -76,6 +270,18 @@ components:
           schema:
             type: object
             properties: {type: {type: string}, title: {type: string}, status: {type: integer}, detail: {type: string}}
+
+    ValidationProblem:
+      description: A parameter is wrong; errors names it (ASP.NET's validation problem answer).
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: {type: string}
+              title: {type: string}
+              status: {type: integer}
+              errors: {type: object, additionalProperties: {type: array, items: {type: string}}}
 
   schemas:
     IngestSummary:
@@ -142,6 +348,110 @@ components:
         fields: {type: array, items: {type: string}, description: 'For a type: the top-level field names its records had (such as place, measures). Empty for a source.'}
         measures: {type: array, items: {type: string}, description: 'For a type: the measure names its records had (such as magnitude). Empty otherwise.'}
         last_seen: {type: string, format: date-time}
+
+    MapAnswer:
+      type: object
+      description: Only the list of the chosen layer is filled.
+      required: [as_of, layer, events, total, omitted, points, cells]
+      properties:
+        as_of: {type: string, format: date-time, description: The as_of used (now when none was given).}
+        layer: {enum: [points, cells]}
+        resolution: {type: integer, description: The H3 resolution of the cells (absent for points).}
+        events: {type: integer, description: The matching events drawn, in all the points or cells.}
+        total: {type: integer, description: All the points or cells, not only this page.}
+        next: {type: string, description: The cursor of the next page (absent on the last page).}
+        omitted: {type: array, items: {$ref: "#/components/schemas/OmittedCount"}}
+        points: {type: array, items: {$ref: "#/components/schemas/RecordSummary"}}
+        cells: {type: array, items: {$ref: "#/components/schemas/MapCell"}}
+
+    MapCell:
+      type: object
+      required: [cell, resolution, count, center, boundary]
+      properties:
+        cell: {type: string, example: "832a10fffffffff", description: Send it as the cell filter to list its events.}
+        resolution: {type: integer}
+        count: {type: integer, description: Matching events in the cell.}
+        center: {type: array, items: {type: number}, minItems: 2, maxItems: 2, description: '[longitude, latitude]'}
+        boundary: {type: array, items: {type: array, items: {type: number}, minItems: 2, maxItems: 2}, description: 'The corners, each [longitude, latitude].'}
+
+    OmittedCount:
+      type: object
+      required: [reason, count, message]
+      properties:
+        reason: {enum: [no_point, too_imprecise], description: 'no_point: placed by region or logically only, or unplaced. too_imprecise: the uncertainty is not smaller than the cell.'}
+        count: {type: integer}
+        message: {type: string}
+
+    GraphAnswer:
+      type: object
+      required: [as_of, center, connections]
+      properties:
+        as_of: {type: string, format: date-time}
+        center: {$ref: "#/components/schemas/RecordSummary"}
+        connections: {type: array, items: {$ref: "#/components/schemas/ConnectionGroup"}}
+        no_connections_reason: {type: string, description: Why there are no connections (only when connections is empty).}
+
+    ConnectionGroup:
+      type: object
+      required: [key, kind, label, count, items]
+      properties:
+        key: {type: string, example: "relation:PRODUCT_OF:out", description: Send it back as group to read the next page.}
+        kind: {enum: [relation, together, event, participant]}
+        type: {type: string, description: The relation type, the event type, or the type of the entities.}
+        label: {type: string}
+        count: {type: integer, description: All the connections in the group.}
+        next: {type: string, description: The cursor of the group's next page (absent on the last).}
+        items: {type: array, items: {$ref: "#/components/schemas/ConnectedRecord"}}
+
+    ConnectedRecord:
+      description: A connected record as a summary, plus how it is connected.
+      allOf:
+        - $ref: "#/components/schemas/RecordSummary"
+        - type: object
+          properties:
+            role: {type: string, description: 'event and participant groups: the entity''s role in the event.'}
+            direction: {enum: [out, in], description: 'relation groups: out = from the centre to this record.'}
+            shared_events: {type: integer, description: 'together groups: the events both take part in.'}
+
+    RecordSummary:
+      type: object
+      description: |
+        One record, enough to draw it and show a popup. One summary per id: the fields come from the most reliable
+        statement, sources lists every source, known_at is the earliest. Absent fields are fields the record does not give.
+      required: [id, kind, type, sources, known_at, label, label_from, logical, measures, participants]
+      properties:
+        id: {type: string}
+        kind: {enum: [entity, event, conclusion]}
+        type: {type: string}
+        sources: {type: array, items: {type: string}}
+        known_at: {type: string, format: date-time}
+        label: {type: string, description: What to show (derived for display, never stored).}
+        label_from: {enum: [name, title, body, statement, generated], description: 'body: the first 140 characters; generated: "type · where · what" for an event without text.'}
+        time_start: {type: string, format: date-time}
+        time_end: {type: string, format: date-time}
+        time_precision: {enum: [second, minute, hour, day, week, month, quarter, year]}
+        point: {type: array, items: {type: number}, minItems: 2, maxItems: 2, description: '[longitude, latitude]'}
+        uncertainty_km: {type: number}
+        country: {type: string}
+        subdivision: {type: string}
+        area_name: {type: string, description: The place name the source gives.}
+        logical: {type: array, items: {type: string}, description: 'The logical nodes, such as "cyber.vendor_product/Apache/Log4j2".'}
+        measures: {type: array, items: {$ref: "#/components/schemas/Measure"}}
+        participants: {type: array, items: {$ref: "#/components/schemas/EntityLabel"}, description: The entities taking part (roles are in the full record).}
+
+    Measure:
+      type: object
+      properties:
+        name: {type: string}
+        value: {type: number}
+        unit: {type: string}
+
+    EntityLabel:
+      type: object
+      required: [id, label]
+      properties:
+        id: {type: string}
+        label: {type: string}
 
 x-elasticsearch:
   description: |
