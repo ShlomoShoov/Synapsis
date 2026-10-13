@@ -1,0 +1,89 @@
+/* A page with one short message, over the veiled dawn. Uses the tokens from src/styles.css. */
+
+.page {
+  position: relative;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.content {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  max-width: 900px;
+  padding: calc(var(--header-height) + 24px) var(--margin) 64px;
+  text-align: center;
+}
+
+.content > * {
+  animation: rise 1100ms var(--ease-out) both;
+}
+
+.content > :nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.content > :nth-child(3) {
+  animation-delay: 400ms;
+}
+
+.content > :nth-child(4) {
+  animation-delay: 650ms;
+}
+
+.content:not([data-ready]) > * {
+  animation-play-state: paused;
+}
+
+.label {
+  margin: 0 0 28px;
+  font: 400 13px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dawn-ink);
+}
+
+.title {
+  margin: 0;
+  padding-bottom: 0.2em;
+  font: 300 clamp(52px, 8.5vw, 132px) / 1 var(--font-display);
+  letter-spacing: -0.03em;
+  color: var(--dawn-ink);
+  text-wrap: balance;
+  mask-image: var(--texture-speckle);
+  mask-size: 180px;
+}
+
+.line {
+  max-width: 26em;
+  margin: 8px 0 0;
+  font: italic 400 clamp(20px, 2vw, 26px) / 1.35 var(--font-tagline);
+  color: var(--dawn-deep);
+  text-wrap: balance;
+}
+
+.home {
+  margin-top: 48px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.5);
+  background: rgb(255 255 255 / 0.2);
+  backdrop-filter: blur(16px) saturate(1.4);
+  font: 400 16px/1 var(--font-display);
+  color: var(--dawn-deep);
+  text-decoration: none;
+  transition: background-color 300ms var(--ease-out);
+}
+
+.home:hover {
+  background: rgb(255 255 255 / 0.5);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}

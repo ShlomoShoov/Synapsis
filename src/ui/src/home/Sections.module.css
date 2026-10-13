@@ -1,0 +1,15 @@
+/* The explanations: the plainest styling until they are designed. */
+
+.sections {
+  padding-top: 32px;
+}
+
+.section {
+  padding: 64px 0;
+}
+
+.media {
+  display: block;
+  width: 100%;
+  height: auto;
+}

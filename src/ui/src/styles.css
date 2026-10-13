@@ -1,20 +1,36 @@
 /*
- * Global styles: the design tokens (every colour, font and space the client uses) and the base rules.
+ * Global styles: the design tokens (every colour, font, space and texture the client uses) and the base rules.
  * Pages and components use these names, never raw values, so the look is changed here.
+ * Observe redefines the colour names for its night theme (src/observe/theme/night.css).
  */
 :root {
+  /* Paper and ink: the light pages. */
   --paper: #f4f0e7; /* the page */
   --paper-deep: #e9e3d6; /* a recessed surface */
   --ink: #1f1c17; /* text */
   --ink-muted: #6b6457; /* secondary text (readable on paper) */
   --line: rgb(31 28 23 / 0.12); /* hairlines */
 
-  --font-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  /* The dawn: colours taken from the home image, for what is set on it. */
+  --dawn-ink: #4a4c3f; /* the olive of the far ground: the name */
+  --dawn-deep: #16150f; /* the tagline and the buttons */
 
-  --margin: clamp(24px, 5vw, 88px); /* page side margin */
+  /* Faces (registered in src/fonts/fonts.ts). Each stack ends in fonts every system has. */
+  --font-display: 'Anthropic Serif', 'Iowan Old Style', Georgia, serif; /* the face of Synapsis */
+  --font-tagline:
+    'The Seasons', 'Playfair Display Variable', Georgia, serif; /* the tagline and accents */
+  --font-serif:
+    'Newsreader Variable', Georgia, 'Times New Roman', serif; /* Observe's headings only */
+
+  --margin: clamp(20px, 5vw, 88px); /* page side margin */
   --header-height: 72px;
-  --radius: 20px;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Textures, drawn by the browser from small SVG noise tiles (no image files). */
+  /* Grey film grain, laid over the dawn with mix-blend-mode: overlay. */
+  --texture-grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+  /* A mask of ink with small holes, so large type looks printed rather than drawn. */
+  --texture-speckle: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='s' color-interpolation-filters='sRGB'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' seed='12' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -8 0 0 0 6.85'/></filter><rect width='100%25' height='100%25' filter='url(%23s)'/></svg>");
 }
 
 *,
@@ -31,7 +47,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 18px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;

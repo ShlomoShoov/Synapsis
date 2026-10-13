@@ -1,0 +1,128 @@
+/* The site header. Uses the tokens from src/styles.css. */
+
+.header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 20;
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 var(--margin);
+  transition:
+    background-color 600ms var(--ease-out),
+    box-shadow 600ms var(--ease-out),
+    backdrop-filter 600ms var(--ease-out);
+}
+
+.header[data-paper] {
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+/* The pane itself arrives (not the bar), so nothing above it breaks its view of what lies behind. */
+.header[data-late] .nav {
+  animation: arrive 1000ms var(--ease-out) 850ms both;
+}
+
+.wordmark {
+  font: 460 24px/1 var(--font-display);
+  letter-spacing: -0.015em;
+  color: var(--dawn-ink);
+  text-decoration: none;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 700ms var(--ease-out);
+}
+
+.wordmark[data-shown] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* The three buttons share one pane of glass. */
+.nav {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.16);
+  border: 1px solid rgb(255 255 255 / 0.42);
+  box-shadow:
+    0 10px 36px rgb(74 60 52 / 0.1),
+    inset 0 1px 0 rgb(255 255 255 / 0.4);
+  backdrop-filter: blur(18px) saturate(1.5);
+  transition:
+    background-color 600ms var(--ease-out),
+    border-color 600ms var(--ease-out),
+    box-shadow 600ms var(--ease-out);
+}
+
+.button {
+  padding: 10px 18px;
+  border-radius: 999px;
+  font: 400 16px/1 var(--font-display);
+  letter-spacing: 0.005em;
+  color: var(--dawn-deep);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 300ms var(--ease-out),
+    color 300ms var(--ease-out);
+}
+
+.button:hover {
+  background: rgb(255 255 255 / 0.42);
+}
+
+.button[aria-current='page'] {
+  background: rgb(255 255 255 / 0.7);
+}
+
+.button:focus-visible {
+  outline-offset: 1px;
+}
+
+/* Over paper: the glass becomes a hairline, the light fills become paper shades. */
+.header[data-paper] .nav {
+  background: rgb(255 255 255 / 0.35);
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+.header[data-paper] .button:hover {
+  background: var(--paper-deep);
+}
+
+.header[data-paper] .button[aria-current='page'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Phones: the buttons take the whole bar; the name gives way. */
+@media (max-width: 600px) {
+  .header {
+    padding: 0 12px;
+    justify-content: flex-end;
+  }
+  .wordmark {
+    display: none;
+  }
+  .button {
+    padding: 9px 12px;
+    font-size: 14px;
+  }
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}

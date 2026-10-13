@@ -1,0 +1,114 @@
+/* The overview on the home page's paper. Uses the tokens from src/styles.css. */
+
+.eyebrow {
+  margin: 0 0 36px;
+  font: 400 13px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.lead {
+  max-width: 25em;
+  margin: 0 0 clamp(112px, 13vw, 176px);
+  font: 300 clamp(24px, 2.5vw, 36px) / 1.36 var(--font-display);
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.lead em {
+  font-family: var(--font-tagline);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* The contents: number, name, leader, state; the line below the name. */
+.contents {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 3.2em auto 1fr auto;
+  grid-template-areas:
+    'number name leader state'
+    '. line line line';
+  align-items: baseline;
+  column-gap: 20px;
+  row-gap: 10px;
+  padding: 40px 0 44px;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.number {
+  grid-area: number;
+  font: 400 14px/1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+
+.name {
+  grid-area: name;
+  font: 300 clamp(28px, 2.9vw, 40px) / 1.05 var(--font-display);
+  letter-spacing: -0.018em;
+  transition: transform 500ms var(--ease-out);
+}
+
+/* Round dots on the baseline, like the leaders of a printed table of contents. */
+.leader {
+  grid-area: leader;
+  align-self: end;
+  height: 4px;
+  margin-bottom: 0.62em;
+  background-image: radial-gradient(circle, currentColor 0.9px, transparent 1.3px);
+  background-size: 8px 4px;
+  background-repeat: repeat-x;
+  opacity: 0.3;
+  transition: opacity 500ms var(--ease-out);
+}
+
+.state {
+  grid-area: state;
+  font: italic 400 17px/1 var(--font-tagline);
+  color: var(--ink-muted);
+}
+
+.line {
+  grid-area: line;
+  max-width: 34em;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+.entry:hover .name {
+  transform: translateX(10px);
+}
+
+.entry:hover .leader {
+  opacity: 0.75;
+}
+
+@media (max-width: 600px) {
+  .entry {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      'number number number'
+      'name leader state'
+      'line line line';
+    column-gap: 12px;
+    row-gap: 12px;
+    padding: 32px 0 36px;
+  }
+  .state {
+    font-size: 15px;
+  }
+}

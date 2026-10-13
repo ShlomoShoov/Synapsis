@@ -1,0 +1,196 @@
+/* The home page's first screen. Uses the tokens from src/styles.css. */
+
+.hero {
+  /* Where the orange light meets the blue in Shlomo's image (row 326 of 640), as a share of the screen's height. */
+  --horizon: 51%;
+  /* How far above that line the name's baseline sits. */
+  --lift: 3.5%;
+  /* The name's size, and the tagline's. */
+  --name: clamp(74px, 10vw, 172px);
+  --tagline: clamp(24px, 3.15vw, 56px);
+
+  position: relative;
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+/* The image's foot dissolves into the paper below, like morning mist over the ground. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 74%, transparent);
+}
+
+/* The image moves at two thirds of the page's speed as it scrolls away (--scrolled, 0 to 1). */
+.depth {
+  position: absolute;
+  inset: 0;
+  transform: translateY(calc(var(--scrolled, 0) * 34%));
+}
+
+/*
+ * Shlomo's image as he made it: no filter, no overlay. It fills the window: stretched to it on landscape screens
+ * (its colour bands allow it, and every part of it stays in view), cropped on portrait ones (whose full height still
+ * shows, so the line of the horizon stays at the same height).
+ */
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  animation: appear 1400ms ease-out both;
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .image {
+    object-fit: cover;
+  }
+}
+
+/* The words fade, and drift a little, as the page scrolls. */
+.content {
+  position: absolute;
+  inset: 0;
+  padding: 0 var(--margin);
+  transform: translateY(calc(var(--scrolled, 0) * 16svh));
+  opacity: calc(1 - var(--scrolled, 0) * 1.8);
+}
+
+/*
+ * The name and the tagline as one block, as wide as the name: the name from the left margin, its baseline a little
+ * above the horizon (in this face the baseline lies 0.86 of the size below the top of a line set solid); the tagline
+ * under it, ending where the name ends.
+ */
+.words {
+  position: absolute;
+  left: var(--margin);
+  top: calc(var(--horizon) - var(--lift) - var(--name) * 0.86);
+  display: grid;
+  justify-items: start;
+}
+
+/*
+ * Masks clip to the element's box, and the letters reach past their tight line (the tails of y and p):
+ * the padding gives the mask room and the negative margin takes it back from the layout.
+ */
+.title,
+.tagline {
+  padding: 0 0.06em 0.26em;
+  margin: 0 -0.06em -0.26em;
+}
+
+/*
+ * Ink with small holes: the name looks printed. The tracking also follows the last letter, so the right margin takes
+ * it back: the block (and the tagline's end) then stops at the last letter.
+ */
+.title {
+  margin-right: calc(-0.06em - 0.015em);
+  font: 500 var(--name) / 1 var(--font-display);
+  letter-spacing: 0.015em;
+  color: var(--dawn-ink);
+  mask-image: var(--texture-speckle);
+  mask-size: 180px;
+  animation: rise 1200ms var(--ease-out) 150ms both;
+}
+
+/* Under the name, a little below its tails, its last line ("and beyond.") ending where the name ends. */
+.tagline {
+  justify-self: end;
+  margin-top: calc(var(--tagline) * 1.2 - var(--name) * 0.14);
+  font-family: var(--font-tagline);
+  font-size: var(--tagline);
+  line-height: 1.12;
+  letter-spacing: -0.012em;
+  color: var(--dawn-deep);
+  mask-image: var(--texture-speckle);
+  mask-size: 240px;
+}
+
+.know,
+.beyond {
+  display: block;
+  white-space: nowrap;
+}
+
+.know {
+  font-weight: 400;
+  animation: rise 1200ms var(--ease-out) 450ms both;
+}
+
+.beyond {
+  padding-left: 4.2em;
+  font-weight: 600;
+  animation: rise 1200ms var(--ease-out) 650ms both;
+}
+
+@media (max-width: 700px) {
+  .hero {
+    --name: 20.5vw;
+    --tagline: 7.4vw;
+  }
+  .beyond {
+    padding-left: 3.4em;
+  }
+}
+
+/* Nothing starts before the fonts are ready (useFontsReady). */
+.hero:not([data-ready]) :is(.title, .know, .beyond) {
+  animation-play-state: paused;
+}
+
+/* A thin line at the foot, with a light running down it: the page goes on. */
+.cue {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(24px, 4.5svh, 44px);
+  opacity: calc(1 - var(--scrolled, 0) * 6);
+}
+
+.line {
+  position: relative;
+  display: block;
+  width: 1px;
+  height: 56px;
+  overflow: hidden;
+  background: rgb(22 21 15 / 0.16);
+  animation: rise 1200ms var(--ease-out) 1200ms both;
+}
+
+.line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent, var(--dawn-deep), transparent);
+  transform: translateY(-100%);
+  animation: travel 2600ms ease-in-out 2400ms infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .depth,
+  .content {
+    transform: none;
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes travel {
+  to {
+    transform: translateY(100%);
+  }
+}
