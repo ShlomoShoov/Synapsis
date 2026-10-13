@@ -91,6 +91,14 @@ public sealed class ReadController : ControllerBase
         return Ok(graph);
     }
 
+    /// <summary>GET /logical: one level of the logical tree (the children of node, or the top level), with documents and records per key.</summary>
+    [HttpGet("logical")]
+    public async Task<IActionResult> Logical(string? node, DateTime? from, DateTime? to, [FromQuery] string[]? source, [FromQuery] string[]? type)
+    {
+        List<JsonObject> filters = SearchRepository.Filters(from, to, source, type, null);
+        return Ok(await _searchRepository.LogicalAsync(filters, node));
+    }
+
     /// <summary>"minLon,minLat,maxLon,maxLat" as four numbers in range; null when it is not.</summary>
     private static double[]? ParseBox(string text)
     {

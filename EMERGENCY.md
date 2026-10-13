@@ -170,6 +170,7 @@ UI in development (from `src/ui`, no Node needed):
 - **Stage 2.1**: `GET /map/cells` (§12). CORS also allows the UI dev server, http://localhost:5173.
 - **Stage 2.2**: `GET /map/points` (§12).
 - **Stage 2.3**: `GET /graph` (§12): one Cypher statement. Ytshak's `/analyze/graph` is still there until Stage 3.
+- **Stage 2.4**: `GET /logical` (§12).
 
 ## 11. How the system looks now
 
@@ -395,3 +396,53 @@ neighbours. Exact.
 **Limits at full scale**: hubs (Microsoft with NVD loaded: tens of thousands of links) return only `limit` links,
 chosen in no particular order (Neo4j's storage order); `total` stays true. Ordering them (newest first) would mean
 sorting every link of the hub: add `ORDER BY n.known_at DESC` before `LIMIT` if needed.
+
+### GET /logical
+
+*Logical places* are paths a record is filed under when it has no map place, such as a vulnerability under
+`cyber.vendor_product/Apache/Log4j2`. The indexer stores every prefix of each path in `logical_prefixes`
+(`cyber.vendor_product`, `cyber.vendor_product/Apache`, `cyber.vendor_product/Apache/Log4j2`), so one level of the tree
+is a group-by on that field.
+
+**Receives**: `node` (optional: a key from a previous answer; none = the top level), and the shared filters `from`,
+`to`, `source`, `type`. All kinds of record are counted.
+
+**Returns** one level: the direct children of `node` (or the top-level spaces), the most documents first, at most
+1,000, as Elasticsearch gives the buckets:
+```json
+{ "sum_other_doc_count": 0,
+  "buckets": [ { "key": "cyber.vendor_product/Microsoft", "doc_count": 389, "records": { "value": 389 } },
+               { "key": "cyber.vendor_product/Cisco", "doc_count": 100, "records": { "value": 100 } } ] }
+```
+`key` = the full path (send it back as `node` to open it, or as `/search?logical=` to list its records);
+`doc_count` = documents (states); `records.value` = distinct records (show this one). `sum_other_doc_count` =
+documents in children beyond the 1,000 returned (0 = nothing cut). A key with no children answers empty buckets.
+(Changed from the plan, which returned a bare list: the object carries `sum_other_doc_count`, so nothing is cut
+silently.)
+
+**Sends to Elasticsearch** (`SearchRepository.LogicalAsync`, `SearchRepository.cs:223`; route `ReadController.cs:95`;
+the request `node=cyber.vendor_product`):
+```bash
+curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
+  "size": 0,
+  "query": { "bool": { "filter": [] } },
+  "aggs": { "level": {
+    "terms": { "field": "logical_prefixes", "size": 1000, "include": "cyber\\.vendor_product\\/[^/]+" },
+    "aggs": { "records": { "cardinality": { "field": "id" } } } } } }'
+```
+`include` is a regular expression (Lucene syntax) the key must match whole: the node, written literally (a backslash
+before every character that is not a letter or digit), then `/`, then one segment with no `/`. With no node it is
+`[^/]+` (keys with no `/`: the spaces).
+
+**Counts**: `doc_count` documents (exact); `records.value` distinct records (cardinality; exact up to about 3,000).
+
+**Checked** (13 Oct, sample): top level → 7 spaces (`cyber.vendor_product` 1,739, `social.forum` 386,
+`health.region`, `health.signal`, `market.polymarket` 200 each, `code.repo` 198, `cyber.ransom_group` 176); by hand
+(Python over all documents, distinct ids per key with no `/`) the same 7 with the same numbers.
+`node=cyber.vendor_product` → 288 vendors, Microsoft 389, Cisco 100, Apple 95; by hand 288, 389, 100, 95. With
+`size` 2 by hand, `sum_other_doc_count` = 1,250 = 1,739 − 389 − 100 (it counts only the children left out).
+
+**Limits at full scale**: 1,000 children per level (NVD names tens of thousands of vendors: the vendor level will be
+cut, and `sum_other_doc_count` says by how many documents). The terms aggregation reads every value of
+`logical_prefixes` in the matching documents, then keeps the ones the regex accepts: with millions of documents this is
+the slowest route; filters (`source`, `from`/`to`) make it faster.
