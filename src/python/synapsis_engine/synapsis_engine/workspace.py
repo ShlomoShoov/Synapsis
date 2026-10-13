@@ -159,6 +159,19 @@ class Workspace:
             args.append(as_of)
         return self.con.execute(q + " GROUP BY e.id, e.p0, e.known_at, e.t_start ORDER BY e.id", args).df()
 
+    def typed_wide(self, typ, names, as_of=None):
+        """Every event of a type (any source): id, source, known_at, t_start, subdivision, first participant,
+        attributes and the named measures."""
+        cols = ", ".join(f"max(CASE WHEN m.name = '{n}' THEN m.value END) AS \"{n}\"" for n in names)
+        q = (f"""SELECT e.id, e.source, e.known_at, e.t_start, e.subdivision, e.p0, e.attrs, {cols} FROM events e
+                 LEFT JOIN measures m USING (source, id)
+                 WHERE e.type = ? AND e.t_start IS NOT NULL AND e.known_at IS NOT NULL""")
+        args = [typ]
+        if as_of is not None:
+            q += " AND e.known_at <= ?"
+            args.append(as_of)
+        return self.con.execute(q + " GROUP BY ALL ORDER BY e.source, e.id", args).df()
+
     def of_type(self, typ, as_of=None):
         """id, subject (first participant), time and known_at of every event of a type (any source)."""
         q = "SELECT id, p0 subject, t_start, known_at FROM events WHERE type = ? AND t_start IS NOT NULL"

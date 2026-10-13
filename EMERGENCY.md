@@ -306,6 +306,10 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   spark at |z| >= 4 within the 0.5% budget). FDIC lenses (A run risk, B credit stress): robust z over all banks of the
   quarter, joint = the minimum, top 50 per lens and quarter as `joint_anomaly`, year-end scores when the failures
   cover the year after. On the sample: **SVB rank 5 of 4,683, joint z 3.60** (golden), Signature 324 (golden).
+- **Stage C**: the source-bias routine (elections), as `case_f6_elections.py` ("routine_bias+prior_blend"):
+  `calibrated_estimate` per state and election {poll, bias, corrected, probability}, and a `forecast_score` per
+  election {mae, winners, of, brier, brier_market}. Dated no earlier than the first result of the year (the election
+  day is read from the results). The sample has no `POL.ELECTION.RESULT` yet: pending; tested on synthetic data.
 
 ## 11. How the system looks now
 
