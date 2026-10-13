@@ -13,6 +13,8 @@ export interface Focus {
   id: string;
   heading?: Heading;
   point?: LngLat;
+  /** The logical place it is filed under (its deepest key), when known. */
+  logical?: string;
 }
 
 export interface ObjectAnswers {

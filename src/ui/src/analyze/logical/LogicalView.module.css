@@ -1,0 +1,411 @@
+/* The logical dimension: two panes of dark glass over deep space, the tree and the records of the chosen place. */
+
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  gap: 12px;
+  padding: 116px 0 18px 18px;
+  background:
+    radial-gradient(ellipse 50% 45% at 30% 50%, rgb(30 60 120 / 0.18), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 70% 20%, rgb(90 60 160 / 0.08), transparent 70%),
+    var(--space);
+}
+
+.tree,
+.records {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  border-radius: 18px;
+  background: rgb(6 11 20 / 0.86);
+  backdrop-filter: blur(22px) saturate(1.3);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  animation: enter 340ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.tree {
+  width: 470px;
+}
+
+.records {
+  width: 400px;
+  animation-delay: 60ms;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.head {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--glass-edge);
+}
+
+.kicker {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.title {
+  margin: 8px 0 4px;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--text-1);
+}
+
+.sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.note {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.04);
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.note b {
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* The tree: one row per place, indented by depth, a guide line down each open level. */
+.rows {
+  margin: 0;
+  padding: 6px 8px 12px;
+  overflow: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(150 190 255 / 0.18) transparent;
+}
+
+.rows .rows {
+  position: relative;
+  padding: 0;
+  overflow: visible;
+}
+
+.rows .rows::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 6px;
+  left: calc(var(--guide, 0) * 1px);
+  border-left: 1px solid var(--glass-edge);
+}
+
+.node {
+  --pad: calc(10px + var(--depth) * 18px);
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 12px 0 var(--pad);
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  animation: grow 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes grow {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+/* The records under it, as a thin light along the row's foot, the largest of its level the longest. */
+.node::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: calc(var(--pad) + 22px);
+  width: calc((100% - var(--pad) - 76px) * var(--share));
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent) 70%, transparent),
+    transparent
+  );
+  opacity: 0.45;
+}
+
+.node:hover {
+  background: rgb(255 255 255 / 0.04);
+}
+
+.node[data-chosen] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.node[data-chosen]::after {
+  opacity: 0.9;
+}
+
+.node svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 200ms;
+}
+
+.node[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+  stroke: var(--accent-soft);
+}
+
+.node svg[data-leaf] {
+  visibility: hidden;
+}
+
+.name {
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text-1);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name code {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-4);
+}
+
+.node[data-path] .name {
+  color: var(--accent-soft);
+}
+
+.node[data-path]::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(var(--pad) - 8px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  translate: 0 -50%;
+  background: var(--accent-soft);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.node b {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.reading,
+.levelNote {
+  margin: 4px 8px 6px calc(10px + var(--depth, 0) * 18px);
+}
+
+.reading {
+  display: grid;
+  gap: 8px;
+  padding: 6px 0 6px 22px;
+}
+
+.reading i {
+  height: 9px;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 0.04),
+    rgb(255 255 255 / 0.1),
+    rgb(255 255 255 / 0.04)
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+
+.reading i + i {
+  width: 70%;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.levelNote {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.035);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-3);
+  list-style: none;
+}
+
+/* The records of the chosen place. */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 0;
+  margin: 8px 0 4px;
+}
+
+.crumbs button {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: 500 15px var(--font-sans);
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.crumbs button + button::before {
+  content: '/';
+  margin-right: 8px;
+  color: var(--text-4);
+}
+
+.crumbs button:hover {
+  color: var(--text-1);
+}
+
+.crumbs button[aria-current] {
+  font-size: 18px;
+  color: var(--text-1);
+}
+
+.list {
+  display: grid;
+  align-content: start;
+  gap: 1px;
+  padding: 8px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(150 190 255 / 0.18) transparent;
+}
+
+.record {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) 14px;
+  grid-template-areas:
+    'dot label go'
+    '. detail go';
+  align-items: center;
+  column-gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms;
+}
+
+.record i {
+  grid-area: dot;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.recordLabel {
+  grid-area: label;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-1);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recordDetail {
+  grid-area: detail;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record svg {
+  grid-area: go;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--text-4);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 160ms;
+}
+
+.record:hover {
+  background: rgb(255 255 255 / 0.05);
+}
+
+.record:hover svg {
+  stroke: var(--accent-soft);
+  transform: translateX(2px);
+}
+
+.record[data-current] {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 36%, transparent);
+}
+
+.more {
+  margin: 6px 10px;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  font: 600 12px var(--font-sans);
+  color: var(--accent-soft);
+  text-align: left;
+  cursor: pointer;
+}
+
+.more:hover {
+  color: var(--text-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree,
+  .records,
+  .node,
+  .reading i {
+    animation: none;
+  }
+}

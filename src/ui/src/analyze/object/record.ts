@@ -31,6 +31,8 @@ export interface Attribute {
 export interface RecordView {
   facts: Fact[];
   point?: LngLat;
+  /** The logical place's key, as the tree names it: "cyber.vendor_product/Apache/Log4j2". */
+  logical?: string;
   title?: string;
   body?: string;
   measures: { label: string; value: string; unit?: string }[];
@@ -132,6 +134,10 @@ export function viewOf(record: SilRecord): RecordView {
   return {
     facts,
     point: place?.point,
+    logical:
+      place?.logical?.space && place.logical.path?.length
+        ? [place.logical.space, ...place.logical.path].join('/')
+        : undefined,
     title: record.text?.title?.trim() || undefined,
     body: record.text?.body?.trim() || undefined,
     measures: (record.measures ?? []).map((measure) => ({

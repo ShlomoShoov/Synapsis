@@ -760,3 +760,11 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   Controls: closer, farther, back to the object, the whole graph; drag turns, right-drag moves, wheel zooms. "Show on
   map" in the panel returns to the globe at the object. The address can open an object: `&object=<id>`, and
   `&dimension=graph`.
+- **Stage 3 (13 Oct)**: **the logical dimension** (`analyze/logical/`). The switch is now always at the top: Map |
+  Graph (needs an open object) | Logical. The tree of logical places opens one level per click: `GET /logical`, then
+  `GET /logical?node=<key>` for each node that opens (records per node = `records.value`, a light under each row
+  sized against the largest of its level; "And more" when `sum_other_doc_count` > 0). The chosen node lists its records
+  beside the tree: `GET /search?logical=<key>`, "N of M", "Show up to 500". With an object open, the tree opens along
+  the object's own path and chooses its place (from its record's `place.logical`); an object with none says so. A
+  click on a record opens it in the object panel; from there Map (it has a point) or Graph. The panel's "Filed under"
+  has "Show in the tree". Closing the object keeps the tree; `&dimension=logical` opens it from the address.

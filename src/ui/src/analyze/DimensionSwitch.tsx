@@ -1,10 +1,10 @@
 /**
- * The dimensions the object can be seen in, top centre while an object is open: the map (where it is) and the graph
- * (what it is connected to). The same object stays open across them.
+ * The dimensions, top centre: the map (where things are), the graph (what the open object is connected to) and the
+ * logical tree (where things are filed). The open object stays open across them; the graph needs one.
  */
 import styles from './DimensionSwitch.module.css';
 
-export type Dimension = 'map' | 'graph';
+export type Dimension = 'map' | 'graph' | 'logical';
 
 const dimensions: { id: Dimension; label: string; icon: React.ReactNode }[] = [
   {
@@ -32,14 +32,29 @@ const dimensions: { id: Dimension; label: string; icon: React.ReactNode }[] = [
       </>
     ),
   },
+  {
+    id: 'logical',
+    label: 'Logical',
+    icon: (
+      <>
+        <rect x="3" y="3.5" width="5" height="3.5" rx="1" />
+        <rect x="10" y="9" width="6.5" height="3" rx="1" />
+        <rect x="10" y="14.5" width="6.5" height="3" rx="1" />
+        <path d="M5.5 7v8.5H10M5.5 10.5H10" />
+      </>
+    ),
+  },
 ];
 
 export function DimensionSwitch({
   value,
   onChange,
+  hasObject,
 }: {
   value: Dimension;
   onChange: (dimension: Dimension) => void;
+  /** An object is open (the graph shows an object's connections). */
+  hasObject: boolean;
 }) {
   return (
     <nav className={styles.switch} aria-label="Dimension">
@@ -48,6 +63,12 @@ export function DimensionSwitch({
           key={dimension.id}
           type="button"
           aria-pressed={dimension.id === value}
+          disabled={dimension.id === 'graph' && !hasObject}
+          title={
+            dimension.id === 'graph' && !hasObject
+              ? 'Open an object to see its connections'
+              : undefined
+          }
           onClick={() => onChange(dimension.id)}
         >
           <svg viewBox="0 0 20 20" aria-hidden="true">

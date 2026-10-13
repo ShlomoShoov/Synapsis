@@ -3,12 +3,12 @@
  * events shine on it as lights coloured by category. Over it: the time card (top right), the key (bottom left), the
  * query panel (left), and the view buttons (right). A click on an event opens it in the object panel (right, under
  * the time card), and marks it on the globe; a click on the map away from the lights, Esc or the panel's close
- * returns to the map alone. While an object is open, the switch at the top shows it in another dimension: the graph
- * of its connections (graph/), over the globe.
+ * returns to the map alone. The switch at the top shows another dimension over the globe: the graph of the open
+ * object's connections (graph/), or the logical tree (logical/), where the open object's place is opened.
  *
  * The address can open a window, a moment of knowledge and a place: ?from=1970-01-01&to=1971-01-01 (the second date
  * excluded), &as_of=2026-10-01, &view=35.5,33.4,7 (longitude, latitude, zoom, and optionally pitch and bearing), and
- * an object: &object=evt:ucdp:7578, seen in a dimension: &dimension=graph.
+ * an object: &object=evt:ucdp:7578, seen in a dimension: &dimension=graph (or logical).
  */
 import '@fontsource-variable/instrument-sans/wght.css';
 import '@fontsource/fragment-mono/400.css';
@@ -20,6 +20,7 @@ import { GlobeMap, type Camera, type GlobeController, type MapLook } from './map
 import { MapControls } from './map/MapControls';
 import { useEvents } from './map/useEvents';
 import { requestOf } from './map/viewport';
+import { LogicalView } from './logical/LogicalView';
 import { headingOfItem, headingOfRecord } from './object/describe';
 import { ObjectPanel } from './object/ObjectPanel';
 import { current, useObject, type Focus } from './object/useObject';
@@ -62,20 +63,36 @@ export function AnalyzePage() {
     return id ? [{ id }] : [];
   });
   const focus = trail.at(-1) ?? null;
-  const [dimension, setDimension] = useState<Dimension>(() =>
-    searchParams.get('object') && searchParams.get('dimension') === 'graph' ? 'graph' : 'map',
-  );
+  const [dimension, setDimension] = useState<Dimension>(() => {
+    const asked = searchParams.get('dimension');
+    if (asked === 'logical') return 'logical';
+    return asked === 'graph' && searchParams.get('object') ? 'graph' : 'map';
+  });
   const [keySlot, setKeySlot] = useState<HTMLElement | null>(null);
   const [controlsSlot, setControlsSlot] = useState<HTMLElement | null>(null);
   const onMap = dimension === 'map';
+  // Closing the object leaves the graph (it shows an object) for the map; the tree stays.
   const close = () => {
     setTrail([]);
-    setDimension('map');
+    setDimension((shown) => (shown === 'graph' ? 'map' : shown));
   };
   const answers = useObject(focus?.id ?? null);
   const record = current(answers.records)?.[0]?.record;
   const place = focus?.point ?? record?.place?.point;
-  const color = (record ? headingOfRecord(record) : focus?.heading)?.color ?? '#8fb6ff';
+  const heading = record ? headingOfRecord(record) : focus?.heading;
+  const color = heading?.color ?? '#8fb6ff';
+  // The logical place of the object: known from where it was opened, or from its record (undefined while unknown).
+  const filed = record?.place?.logical;
+  const logicalPlace =
+    focus?.logical ??
+    (filed?.space && filed.path?.length
+      ? [filed.space, ...filed.path].join('/')
+      : answers.records.pending
+        ? undefined
+        : null);
+  /** Moves the panel to another record, the next step of the trail. */
+  const open = (next: Focus) =>
+    setTrail((steps) => (steps.at(-1)?.id === next.id ? steps : [...steps, next]));
   const placeKey = focus && place ? `${focus.id}@${place.join(',')}` : null;
 
   // The globe turns to the object when it is hidden behind the panel or the Earth.
@@ -118,15 +135,27 @@ export function AnalyzePage() {
             trail={trail}
             graph={answers.graph}
             inset={panelInset}
-            onOpen={(next) =>
-              setTrail((steps) => (steps.at(-1)?.id === next.id ? steps : [...steps, next]))
-            }
+            onOpen={open}
             keySlot={keySlot}
             controlsSlot={controlsSlot}
           />
         </Suspense>
       )}
-      {focus && <DimensionSwitch value={dimension} onChange={setDimension} />}
+      {dimension === 'logical' && (
+        <LogicalView
+          object={
+            focus
+              ? {
+                  id: focus.id,
+                  title: heading?.title ?? focus.id,
+                  place: logicalPlace,
+                }
+              : null
+          }
+          onOpen={open}
+        />
+      )}
+      <DimensionSwitch value={dimension} onChange={setDimension} hasObject={focus !== null} />
 
       <header className={styles.header}>
         <Link className={styles.brand} to="/home">
@@ -172,12 +201,11 @@ export function AnalyzePage() {
           <ObjectPanel
             trail={trail}
             answers={answers}
-            onOpen={(next) =>
-              setTrail((steps) => (steps.at(-1)?.id === next.id ? steps : [...steps, next]))
-            }
+            onOpen={open}
             onTrail={(index) => setTrail((steps) => steps.slice(0, index + 1))}
             onClose={close}
-            onOpenGraph={onMap ? () => setDimension('graph') : undefined}
+            onOpenGraph={dimension === 'graph' ? undefined : () => setDimension('graph')}
+            onShowInTree={() => setDimension('logical')}
             onShowOnMap={(point) => {
               setDimension('map');
               controller?.reveal(point, panelInset);

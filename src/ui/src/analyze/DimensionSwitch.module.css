@@ -41,8 +41,13 @@
     background 200ms;
 }
 
-.switch button:hover {
+.switch button:hover:not(:disabled) {
   color: var(--text-1);
+}
+
+.switch button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .switch button[aria-pressed='true'] {

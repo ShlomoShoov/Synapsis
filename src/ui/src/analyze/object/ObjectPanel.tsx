@@ -35,8 +35,10 @@ interface ObjectPanelProps {
   onTrail: (index: number) => void;
   onClose: () => void;
   onShowOnMap: (point: LngLat) => void;
-  /** Open the connections graph (given while the map is shown). */
+  /** Open the connections graph (given while the graph is not shown). */
   onOpenGraph?: () => void;
+  /** Show the record's logical place in the tree. */
+  onShowInTree: () => void;
 }
 
 /** The rows of a group shown before "All". */
@@ -52,6 +54,7 @@ export function ObjectPanel({
   onClose,
   onShowOnMap,
   onOpenGraph,
+  onShowInTree,
 }: ObjectPanelProps) {
   const focus = trail.at(-1)!;
   const record = current(answers.records)?.[0]?.record;
@@ -132,6 +135,7 @@ export function ObjectPanel({
         onOpen={onOpen}
         onShowOnMap={onShowOnMap}
         onOpenGraph={onOpenGraph}
+        onShowInTree={onShowInTree}
       />
     </aside>
   );
@@ -143,12 +147,14 @@ function ObjectBody({
   onOpen,
   onShowOnMap,
   onOpenGraph,
+  onShowInTree,
 }: {
   title: string;
   answers: ObjectAnswers;
   onOpen: (focus: Focus) => void;
   onShowOnMap: (point: LngLat) => void;
   onOpenGraph?: () => void;
+  onShowInTree: () => void;
 }) {
   const statements = current(answers.records);
   const [chosen, setChosen] = useState(0);
@@ -174,7 +180,7 @@ function ObjectBody({
           ))}
         </div>
       )}
-      {view && <Facts view={view} onShowOnMap={onShowOnMap} />}
+      {view && <Facts view={view} onShowOnMap={onShowOnMap} onShowInTree={onShowInTree} />}
       {view && (view.body || (view.title && view.title !== title)) && (
         <section className={styles.section}>
           <h3 className={styles.heading}>Text</h3>
@@ -253,7 +259,15 @@ function ObjectBody({
   );
 }
 
-function Facts({ view, onShowOnMap }: { view: RecordView; onShowOnMap: (point: LngLat) => void }) {
+function Facts({
+  view,
+  onShowOnMap,
+  onShowInTree,
+}: {
+  view: RecordView;
+  onShowOnMap: (point: LngLat) => void;
+  onShowInTree: () => void;
+}) {
   return (
     <dl className={styles.facts}>
       {view.facts.map((fact, index) => (
@@ -273,6 +287,17 @@ function Facts({ view, onShowOnMap }: { view: RecordView; onShowOnMap: (point: L
                   <path d="M10 2.5v3M10 14.5v3M2.5 10h3M14.5 10h3" />
                 </svg>
                 Show on map
+              </button>
+            )}
+            {fact.label === 'Filed under' && view.logical && (
+              <button type="button" className={styles.pill} onClick={onShowInTree}>
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="3" y="3.5" width="5" height="3.5" rx="1" />
+                  <rect x="10" y="9" width="6.5" height="3" rx="1" />
+                  <rect x="10" y="14.5" width="6.5" height="3" rx="1" />
+                  <path d="M5.5 7v8.5H10M5.5 10.5H10" />
+                </svg>
+                Show in the tree
               </button>
             )}
           </dd>
