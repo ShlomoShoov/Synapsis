@@ -302,6 +302,10 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   `verify` on the sample: same maths 0 difference, determinism (same sha256, second POST all unchanged), no hindsight
   (truncated reruns identical), placebo, pipeline counts, coverage: all pass; golden values pending the full load.
   UCDP's lag is pinned to 4 weeks (its measured p99 follows month-long events). New conclusion type `forecast_score`.
+- **Stage B**: measurements: per subject and measure, the change against its own previous 52 changes (robust z,
+  spark at |z| >= 4 within the 0.5% budget). FDIC lenses (A run risk, B credit stress): robust z over all banks of the
+  quarter, joint = the minimum, top 50 per lens and quarter as `joint_anomaly`, year-end scores when the failures
+  cover the year after. On the sample: **SVB rank 5 of 4,683, joint z 3.60** (golden), Signature 324 (golden).
 
 ## 11. How the system looks now
 

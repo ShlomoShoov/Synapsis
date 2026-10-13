@@ -1,6 +1,6 @@
 # Engine report
 
-Generated 2026-10-13 19:26 UTC by `python -m synapsis_engine verify`. Records: 4,429 (4,409 conclusions).
+Generated 2026-10-13 19:33 UTC by `python -m synapsis_engine verify`. Records: 4,733 (4,713 conclusions).
 
 Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 
@@ -25,12 +25,12 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 
 ## 2. Determinism
 
-- Two backfills: sha256 `82792d1e5310674f54f710a8b3fc5e2c89e1c16d5c7bd209852a819cf87afd51` and `82792d1e5310674f54f710a8b3fc5e2c89e1c16d5c7bd209852a819cf87afd51`: same.
-- POST: first {"received": 4429, "new": 4429, "changed": 0, "unchanged": 0, "rejected": 0}; second {"received": 4429, "new": 0, "changed": 0, "unchanged": 4429, "rejected": 0}.
+- Two backfills: sha256 `8894cbe07ac991bfb114c20226e707e418d771bfaee74df1f5c405a5f94013c9` and `8894cbe07ac991bfb114c20226e707e418d771bfaee74df1f5c405a5f94013c9`: same.
+- POST: first {"received": 4733, "new": 0, "changed": 0, "unchanged": 4733, "rejected": 0}; second {"received": 4733, "new": 0, "changed": 0, "unchanged": 4733, "rejected": 0}.
 
 ## 3. No hindsight
 
-- Every event counted for a conclusion has known_at <= the conclusion's known_at: 4,409 conclusions checked, 0 violations.
+- Every event counted for a conclusion has known_at <= the conclusion's known_at: 4,713 conclusions checked, 0 violations.
 - Runs on records truncated at known_at <= the issue time (frozen model cards):
 
 | Source | Issue time | Conclusions (full run) | Conclusions (truncated) | Same |
@@ -41,6 +41,9 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 | src:delphi:hhs-admissions | 2020-06-05 00:00:00 | 2 | 2 | yes |
 | src:delphi:hhs-admissions | 2020-06-19 00:00:00 | 4 | 4 | yes |
 | src:delphi:hhs-admissions | 2020-07-10 00:00:00 | 7 | 7 | yes |
+| src:fdic:financials | 2023-02-15 00:00:00 | 100 | 100 | yes |
+| src:fdic:financials | 2023-05-16 00:00:00 | 200 | 200 | yes |
+| src:fdic:financials | 2023-08-15 00:00:00 | 300 | 300 | yes |
 | src:hn:algolia | 2026-01-26 00:00:00 | 14 | 14 | yes |
 | src:hn:algolia | 2026-04-27 00:00:00 | 27 | 27 | yes |
 | src:hn:algolia | 2026-10-19 00:00:00 | 52 | 52 | yes |
@@ -53,6 +56,8 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 | src:reddit:arcticshift | 2026-01-26 00:00:00 | 14 | 14 | yes |
 | src:reddit:arcticshift | 2026-04-27 00:00:00 | 27 | 27 | yes |
 | src:reddit:arcticshift | 2026-10-19 00:00:00 | 52 | 52 | yes |
+| src:tukaani:xz-git | 2008-06-23 00:00:00 | 2 | 2 | yes |
+| src:tukaani:xz-git | 2008-09-01 00:00:00 | 4 | 4 | yes |
 | src:usgs:comcat | 2016-11-22 00:54:07 | 280 | 280 | yes |
 | src:usgs:comcat | 2016-12-05 00:54:07 | 540 | 540 | yes |
 | src:usgs:comcat | 2016-12-31 00:54:07 | 1,060 | 1,060 | yes |
@@ -108,6 +113,43 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 | src:start:gtd | routine top1% | 0.335 | pending | needs the full data (160 events now) |
 | src:start:gtd | M3 AUC | 0.896 | pending | needs the full data (160 events now) |
 | src:start:gtd | M3 top1% | 0.411 | pending | needs the full data (160 events now) |
+| src:fdic:financials | SVB, lens A, 2022 year-end: rank | 5 | 5 | ok |
+| src:fdic:financials | SVB, lens A, 2022 year-end: of | 4683 | 4683 | ok |
+| src:fdic:financials | SVB, lens A, 2022 year-end: z | 3.6 | 3.599 | ok |
+| src:fdic:financials | SVB, lens A, 2022 year-end: uninsured | 0.864 | 0.864 | ok |
+| src:fdic:financials | SVB, lens A, 2022 year-end: unreal_loss_to_equity | 1.144 | 1.144 | ok |
+| src:fdic:financials | Signature, lens A, 2022 year-end: rank | 324 | 324 | ok |
+| src:fdic:financials | Republic First, lens A, 2023 year-end: rank | 16 | pending | no report of that quarter yet |
+| src:fdic:financials | lens A 2006: in top 50 / AUC | 0 / 0.367 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2006: in top 50 / AUC | 2 / 0.671 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2007: in top 50 / AUC | 0 / 0.552 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2007: in top 50 / AUC | 7 / 0.707 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2008: in top 50 / AUC | 2 / 0.516 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2008: in top 50 / AUC | 26 / 0.951 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2009: in top 50 / AUC | 2 / 0.517 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2009: in top 50 / AUC | 27 / 0.957 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2010: in top 50 / AUC | 0 / 0.419 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2010: in top 50 / AUC | 12 / 0.952 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2011: in top 50 / AUC | 0 / 0.364 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2011: in top 50 / AUC | 15 / 0.984 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2012: in top 50 / AUC | 0 / 0.359 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2012: in top 50 / AUC | 10 / 0.98 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2013: in top 50 / AUC | 0 / 0.342 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2013: in top 50 / AUC | 8 / 0.953 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2014: in top 50 / AUC | 0 / 0.39 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2014: in top 50 / AUC | 3 / 0.916 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2015: in top 50 / AUC | 0 / 0.341 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2015: in top 50 / AUC | 7 / 1.0 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2016: in top 50 / AUC | 0 / 0.175 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2016: in top 50 / AUC | 2 / 0.822 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2018: in top 50 / AUC | 0 / 0.334 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2018: in top 50 / AUC | 3 / 0.822 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2019: in top 50 / AUC | 0 / 0.134 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2019: in top 50 / AUC | 4 / 0.998 | pending | no year-end report yet |
+| src:fdic:financials | lens A 2022: in top 50 / AUC | 1 / 0.9 | pending | pending: failures recorded only to 2023-03-12 00:00:00 (< 2024-02-15) |
+| src:fdic:financials | lens B 2022: in top 50 / AUC | 0 / 0.71 | pending | pending: failures recorded only to 2023-03-12 00:00:00 (< 2024-02-15) |
+| src:fdic:financials | lens A 2023: in top 50 / AUC | 1 / 0.366 | pending | no year-end report yet |
+| src:fdic:financials | lens B 2023: in top 50 / AUC | 0 / 0.608 | pending | no year-end report yet |
 
 ## 7. Coverage
 
@@ -116,7 +158,7 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 | src:cisa:kev | week | 0.0 / 0 | CYB.VULN.KNOWN_EXPLOITED | 1,739 | occurrence (no measures (0% of events)); subject: logical prefix at depth 2 | forecast 1,040, forecast_score 101 |
 | src:delphi:hhs-admissions | week | 96.0 / 0 | HLT.SIGNAL.DAILY | 200 | occurrence (only 19% of (subject, period) pairs hold one record (< 80%)); subject: logical prefix at depth 2 | forecast 7, forecast_score 7 |
 | src:fdic:failures | week | 0.0 / 0 | FIN.BANK.FAILURE | 68 | measurement: 100% of 68 (subject, period) pairs hold one record (>= 80%) | none |
-| src:fdic:financials | quarter | 1080.0 / 0 | FIN.BANK.QUARTER_REPORT | 14,227 | measurement: 100% of 14227 (subject, period) pairs hold one record (>= 80%) | none |
+| src:fdic:financials | quarter | 1080.0 / 0 | FIN.BANK.QUARTER_REPORT | 14,227 | measurement: 100% of 14227 (subject, period) pairs hold one record (>= 80%) | joint_anomaly 300 |
 | src:first:epss | week | 0.0 / 0 | CYB.VULN.EPSS_SCORE | 100 | measurement: 100% of 100 (subject, period) pairs hold one record (>= 80%) | none |
 | src:gdelt:events | week | 124.6 / 0 | SEC.NEWS.CONFLICT | 200 | occurrence (only 38% of (subject, period) pairs hold one record (< 80%)); subject: H3 r3 cell (>= 50% of events have one) | none |
 | src:hn:algolia | week | 0.0 / 0 | TXT.POST | 93 | occurrence (no measures (0% of events)); subject: logical prefix at depth 2 | forecast 52, forecast_score 2 |
@@ -135,7 +177,7 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 |  |  |  | SEC.ATTACK.HIJACKING | 3 | pinned in engine.yaml: H3 r3, week |  |
 |  |  |  | SEC.ATTACK.KIDNAPPING | 11 | pinned in engine.yaml: H3 r3, week |  |
 |  |  |  | SEC.ATTACK.UNKNOWN | 3 | pinned in engine.yaml: H3 r3, week |  |
-| src:tukaani:xz-git | week | 0.0 / 0 | CODE.COMMIT | 198 | measurement: 100% of 198 (subject, period) pairs hold one record (>= 80%) | none |
+| src:tukaani:xz-git | week | 0.0 / 0 | CODE.COMMIT | 198 | measurement: 100% of 198 (subject, period) pairs hold one record (>= 80%) | spark 4 |
 | src:ucdp:ged | week | 672.0 / 4 (pinned; measured p99 9384 h) | SEC.CONFLICT.NON_STATE | 45 | pinned in engine.yaml: H3 r3, week | none |
 |  |  |  | SEC.CONFLICT.ONE_SIDED | 21 | pinned in engine.yaml: H3 r3, week |  |
 |  |  |  | SEC.CONFLICT.STATE_BASED | 72 | pinned in engine.yaml: H3 r3, week |  |
@@ -146,16 +188,26 @@ Operators per series (model cards):
 
 - `src:cisa:kev|logical`: 1,739 events (0 arrived after their bucket closed and are left out of the inputs), 725 subjects, weeks 2021-11-01..2026-10-12, calibration 154 buckets (frozen 2024-10-14 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 86.560; test: M3 AUC 0.4734707573438679, top1% 0.157 vs routine AUC 0.45837977202254143, top1% 0.157
 - `src:delphi:hhs-admissions|logical`: 200 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2020-03-23..2020-07-06, calibration 9 buckets (frozen 2020-05-29 00:00:00), M3 (a, decay, gamma) = (0.2, 0.7, 0.0), spark threshold 45.239; test: M3 AUC None, top1% 1.000 vs routine AUC None, top1% 1.000
+- `src:fdic:failures|measurement|FIN.BANK.FAILURE`: own past, 128 values, 0 with a z (>= 8 previous changes, MAD > 0), calibration 2783 buckets (frozen 1987-08-17 00:00:00), |z| threshold inf
+- `src:fdic:financials|lenses`: lenses A and B on 2022-10-01..2023-07-01; year-end scores: A|2022: pending: failures recorded only to 2023-03-12 00:00:00 (< 2024-02-15); B|2022: pending: failures recorded only to 2023-03-12 00:00:00 (< 2024-02-15)
+- `src:fdic:financials|measurement|FIN.BANK.QUARTER_REPORT`: own past, 0 values: not covered: only 1 calibration buckets (< 8)
+- `src:first:epss|measurement|CYB.VULN.EPSS_SCORE`: own past, 0 values: not covered: only 0 calibration buckets (< 8)
 - `src:gdelt:events|cell`: not covered: only 3 calibration buckets (< 8) (200 events, 21 subjects)
 - `src:hn:algolia|logical`: 186 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2021-11-01..2026-10-19, calibration 155 buckets (frozen 2024-10-21 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 294.000; test: M3 AUC None, top1% 1.000 vs routine AUC None, top1% 1.000
+- `src:jhu:csse-covid|measurement|HLT.SIGNAL.DAILY`: own past, 200 values, 126 with a z (>= 8 previous changes, MAD > 0), calibration 17 buckets (frozen 2020-05-18 00:00:00), |z| threshold 19.80
 - `src:nist:nvd|participant`: 133 events (0 arrived after their bucket closed and are left out of the inputs), 67 subjects, weeks 1998-12-28..2026-06-22, calibration 860 buckets (frozen 2015-06-22 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 9.000; test: M3 AUC 0.5146825396825397, top1% 0.015 vs routine AUC 0.5146825396825397, top1% 0.015
+- `src:polymarket:prices|measurement|MKT.PREDICTION.PRICE`: own past, 0 values: not covered: only 1 calibration buckets (< 8)
 - `src:ransomware-live:victims|logical`: 176 events (0 arrived after their bucket closed and are left out of the inputs), 24 subjects, weeks 2019-12-30..2024-04-22, calibration 135 buckets (frozen 2022-08-01 00:00:00), M3 (a, decay, gamma) = (0.1, 0.5, 0.0), spark threshold 9.000; test: M3 AUC 0.0, top1% 0.000 vs routine AUC 0.0, top1% 0.000
 - `src:reddit:arcticshift|logical`: 200 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2020-06-29..2026-10-19, calibration 197 buckets (frozen 2024-04-08 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 300.000; test: M3 AUC None, top1% 1.000 vs routine AUC None, top1% 1.000
 - `src:start:gtd|cell`: not covered: no bucket after the calibration span (the data ends 1970-06-29) (160 events, 58 subjects)
+- `src:tukaani:xz-git|measurement|CODE.COMMIT`: own past, 198 values, 188 with a z (>= 8 previous changes, MAD > 0), calibration 24 buckets (frozen 2008-05-19 00:00:00), |z| threshold 10.24
 - `src:ucdp:ged|cell`: not covered: no bucket after the calibration span (the data ends 1989-01-09) (50 events, 23 subjects)
 - `src:usgs:comcat|cell`: 200 events (2 arrived after their bucket closed and are left out of the inputs), 86 subjects, days 1965-01-01..2016-12-31, calibration 9131 buckets (frozen 1990-01-01 00:54:07), M3 (a, decay, gamma) = (0.03, 0.7, 0.4), spark threshold 21.157; test: M3 AUC None, top1% 0.000 vs routine AUC None, top1% 0.000
 - `src:wikipedia:polls|participant`: not covered: only 2 calibration buckets (< 8) (109 events, 54 subjects)
+- `src:fdic:financials`: FIN.BANK.QUARTER_REPORT (own past): only 1 calibration buckets (< 8)
+- `src:first:epss`: CYB.VULN.EPSS_SCORE (own past): only 0 calibration buckets (< 8)
 - `src:gdelt:events`: SEC.NEWS.CONFLICT: only 3 calibration buckets (< 8)
+- `src:polymarket:prices`: MKT.PREDICTION.PRICE (own past): only 1 calibration buckets (< 8)
 - `src:start:gtd`: SEC.ATTACK.ARMED_ASSAULT, SEC.ATTACK.ASSASSINATION, SEC.ATTACK.BOMBING, SEC.ATTACK.FACILITY, SEC.ATTACK.HIJACKING, SEC.ATTACK.KIDNAPPING, SEC.ATTACK.UNKNOWN: no bucket after the calibration span (the data ends 1970-06-29)
 - `src:ucdp:ged`: SEC.CONFLICT.NON_STATE, SEC.CONFLICT.ONE_SIDED, SEC.CONFLICT.STATE_BASED: no bucket after the calibration span (the data ends 1989-01-09)
 - `src:wikipedia:polls`: POL.POLL.STATE: only 2 calibration buckets (< 8)
@@ -168,6 +220,7 @@ Operators per series (model cards):
 | src:cisa:kev | forecast_score | 101 |
 | src:delphi:hhs-admissions | forecast | 7 |
 | src:delphi:hhs-admissions | forecast_score | 7 |
+| src:fdic:financials | joint_anomaly | 300 |
 | src:hn:algolia | forecast | 52 |
 | src:hn:algolia | forecast_score | 2 |
 | src:nist:nvd | forecast | 1,040 |
@@ -177,5 +230,6 @@ Operators per series (model cards):
 | src:ransomware-live:victims | spark | 1 |
 | src:reddit:arcticshift | forecast | 52 |
 | src:reddit:arcticshift | forecast_score | 2 |
+| src:tukaani:xz-git | spark | 4 |
 | src:usgs:comcat | forecast | 1,060 |
 | (map cells) | MapCell | 20 |
