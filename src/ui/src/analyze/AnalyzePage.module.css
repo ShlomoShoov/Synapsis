@@ -1,7 +1,7 @@
 /*
  * Analyze at night: the Earth in deep space, the controls on dark glass. The names below are Analyze's own; the type
- * follows Observe's night theme (the serif for the name, the sans for the interface and numbers, the mono for codes,
- * times and queries).
+ * follows Observe's night theme (the site's display face for the name, the sans for the interface and numbers, the
+ * mono for codes, times and queries).
  */
 
 .page {
@@ -50,7 +50,7 @@
 }
 
 .brand {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 22px;
   letter-spacing: -0.01em;
   color: var(--text-1);
@@ -59,7 +59,7 @@
 }
 
 .area {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 22px;
   font-style: italic;
   color: var(--text-3);
