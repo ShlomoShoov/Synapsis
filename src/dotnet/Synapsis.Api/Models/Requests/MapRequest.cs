@@ -15,7 +15,7 @@ public sealed class MapRequest : AnalyzeFilters
     [Range(0, 22, ErrorMessage = "zoom must be between 0 and 22.")]
     public double? Zoom { get; set; }
 
-    /// <summary>auto (points when at most 2,000 located events match, otherwise cells), points or cells.</summary>
+    /// <summary>auto (cells when zoomed out, below zoom 6, or when more than 2,000 located events match; otherwise points), points or cells.</summary>
     [FromQuery(Name = "layer")]
     [RegularExpression("^(auto|points|cells)$", ErrorMessage = "layer must be auto, points or cells.")]
     public string Layer { get; set; } = "auto";
