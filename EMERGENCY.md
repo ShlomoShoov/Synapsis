@@ -169,6 +169,7 @@ UI in development (from `src/ui`, no Node needed):
   nodes; relationships PARTICIPATES 5,673, RELATED 787, ABOUT 198, PREMISE 198.
 - **Stage 2.1**: `GET /map/cells` (§12). CORS also allows the UI dev server, http://localhost:5173.
 - **Stage 2.2**: `GET /map/points` (§12).
+- **Stage 2.3**: `GET /graph` (§12): one Cypher statement. Ytshak's `/analyze/graph` is still there until Stage 3.
 
 ## 11. How the system looks now
 
@@ -339,3 +340,58 @@ over all documents: events with a location in the box and `time_start` in the wi
 5,000 records or fewer. `collapse` with a large `size` costs more than a plain search (fine at 5,000). The total above
 3,000 is an estimate, so near 5,000 a few points may be missing from a "complete" list: the UI compares `total` with
 `items.length`.
+
+### GET /graph
+
+**Receives**: `id` (a record id, required; 400 without it), `limit` (1–1,000, default 200; 400 outside). No other
+filter: the graph shows every link the node has.
+
+**Returns** the node, its true number of links, and at most `limit` of them, each with the node at its other end.
+Node properties are as the projector wrote them to Neo4j, plus `labels`; times are ISO text:
+```json
+{ "center": { "id": "ent:kev-product:apache/log4j2", "labels": ["Entity"], "name": "Log4j2", "type": "Product",
+              "aliases": [], "sources": ["src:cisa:kev"], "known_at": "2021-12-11T00:00:00Z" },
+  "total": 4,
+  "links": [
+    { "type": "ABOUT", "from": "con:kev-classes:apache/log4j2", "to": "ent:kev-product:apache/log4j2",
+      "properties": { "known_at": "2026-10-02T00:00:00Z" },
+      "node": { "id": "con:kev-classes:apache/log4j2", "labels": ["Conclusion"], "type": "classification",
+                "predicate": "in_logical_space", "about": ["ent:kev-product:apache/log4j2"],
+                "premises": ["evt:kev:CVE-2021-44228"], "confidence": 90, "known_at": "2026-10-02T00:00:00Z" } },
+    { "type": "PARTICIPATES", "from": "ent:kev-product:apache/log4j2", "to": "evt:kev:CVE-2021-44228",
+      "properties": { "role": "affected_product", "known_at": "2021-12-11T00:00:00Z" },
+      "node": { "id": "evt:kev:CVE-2021-44228", "labels": ["Event"], "type": "CYB.VULN.KNOWN_EXPLOITED",
+                "title": "Apache Log4j2 Remote Code Execution Vulnerability", "source": "src:cisa:kev",
+                "time_start": "2021-12-10T00:00:00Z", "precision": "day", "known_at": "2021-12-11T00:00:00Z" } } ] }
+```
+`from`/`to` give the direction (an entity PARTICIPATES in an event; a conclusion is ABOUT a record and has a record
+as PREMISE; RELATED links two entities and carries the relation's properties). `total` = all the node's links; when
+`total > links.length` the list was cut. Unknown id, or an id that is not `ent:`/`evt:`/`con:` (relations are links,
+not nodes): 404. The UI moves further by calling `/graph?id=` on a neighbour.
+
+**Sends to Neo4j** one statement (`GraphRepository.NeighboursStatement`, `GraphRepository.cs:162`; run by
+`NeighboursAsync`, `GraphRepository.cs:174`; route `ReadController.cs:75`). The label comes from the id's prefix
+(`ent:` Entity, `evt:` Event, `con:` Conclusion), so Neo4j finds the node through its `id` index instead of scanning
+every node:
+```bash
+set -a; . deploy/core/.env; set +a
+docker exec synapsis-core-neo4j-1 cypher-shell -u neo4j -p "$CORE_NEO4J_PASSWORD" \
+  "MATCH (c:Entity {id: 'ent:kev-product:apache/log4j2'})
+   WITH c, COUNT { (c)--() } AS total
+   OPTIONAL MATCH (c)-[r]-(n)
+   WITH c, total, r, n LIMIT 200
+   RETURN c {.*, labels: labels(c)} AS center, total,
+          collect({type: type(r), from: startNode(r).id, to: endNode(r).id, properties: properties(r), node: n {.*, labels: labels(n)}}) AS links"
+```
+`COUNT { (c)--() }` is the node's degree, which Neo4j keeps with the node, so it costs the same for 4 links or 40,000.
+
+**Counts**: links (relationships). No two nodes are linked twice in our data (checked: 0 pairs), so links =
+neighbours. Exact.
+
+**Checked** (13 Oct, sample): `ent:kev-product:apache/log4j2` → total 4, 4 links; Cypher `count(r)` 4.
+`evt:kev:CVE-2021-44228` → total 4, 4 links; Cypher 4. The biggest hub, `ent:kev-vendor:microsoft` → total 460,
+200 links; with `limit=1000`, 460 links. `ent:nope:x` → 404; no id → 400.
+
+**Limits at full scale**: hubs (Microsoft with NVD loaded: tens of thousands of links) return only `limit` links,
+chosen in no particular order (Neo4j's storage order); `total` stays true. Ordering them (newest first) would mean
+sorting every link of the hub: add `ORDER BY n.known_at DESC` before `LIMIT` if needed.

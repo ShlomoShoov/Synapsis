@@ -71,6 +71,26 @@ public sealed class ReadController : ControllerBase
         return Ok(await _searchRepository.ListAsync(filters, latestStateFirst, limit));
     }
 
+    /// <summary>GET /graph: the node with this id and at most limit (200, max 1,000) of its direct links; 404 when no node has the id.</summary>
+    [HttpGet("graph")]
+    public async Task<IActionResult> Graph(string? id, int limit = 200)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return Problem(statusCode: 400, detail: "id is required.");
+        }
+        if (limit < 1 || limit > 1000)
+        {
+            return Problem(statusCode: 400, detail: "limit must be 1 to 1000.");
+        }
+        JsonObject? graph = await _graphRepository.NeighboursAsync(id, limit);
+        if (graph == null)
+        {
+            return Problem(statusCode: 404, detail: "No node has the id " + id + ".");
+        }
+        return Ok(graph);
+    }
+
     /// <summary>"minLon,minLat,maxLon,maxLat" as four numbers in range; null when it is not.</summary>
     private static double[]? ParseBox(string text)
     {
