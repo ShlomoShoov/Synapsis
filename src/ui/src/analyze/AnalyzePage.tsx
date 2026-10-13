@@ -3,15 +3,18 @@
  * events shine on it as lights coloured by category. Over it: the time card (top right), the key (bottom left), the
  * query panel (left), and the view buttons (right). A click on an event opens it in the object panel (right, under
  * the time card), and marks it on the globe; a click on the map away from the lights, Esc or the panel's close
- * returns to the map alone.
+ * returns to the map alone. While an object is open, the switch at the top shows it in another dimension: the graph
+ * of its connections (graph/), over the globe.
  *
  * The address can open a window, a moment of knowledge and a place: ?from=1970-01-01&to=1971-01-01 (the second date
- * excluded), &as_of=2026-10-01, &view=35.5,33.4,7 (longitude, latitude, zoom, and optionally pitch and bearing).
+ * excluded), &as_of=2026-10-01, &view=35.5,33.4,7 (longitude, latitude, zoom, and optionally pitch and bearing), and
+ * an object: &object=evt:ucdp:7578, seen in a dimension: &dimension=graph.
  */
 import '@fontsource-variable/instrument-sans/wght.css';
 import '@fontsource/fragment-mono/400.css';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { DimensionSwitch, type Dimension } from './DimensionSwitch';
 import { EventsKey } from './map/EventsKey';
 import { GlobeMap, type Camera, type GlobeController, type MapLook } from './map/GlobeMap';
 import { MapControls } from './map/MapControls';
@@ -25,6 +28,9 @@ import { TimeCard } from './time/TimeCard';
 import { useLive } from './time/useLive';
 import { fromDayInput, lastMonth, type TimeWindow } from './time/window';
 import styles from './AnalyzePage.module.css';
+
+// The graph carries three.js: its code loads when it is first opened.
+const GraphView = lazy(async () => ({ default: (await import('./graph/GraphView')).GraphView }));
 
 /** The width the object panel takes on the right (its width and the gaps around it), kept clear on the globe. */
 const panelInset = 388 + 18 + 18;
@@ -51,8 +57,21 @@ export function AnalyzePage() {
   const live = useLive(timeWindow, (time) => controller?.setLive(time));
 
   // The object looked at: the trail of records the investigation went through, the last one shown.
-  const [trail, setTrail] = useState<Focus[]>([]);
+  const [trail, setTrail] = useState<Focus[]>(() => {
+    const id = searchParams.get('object');
+    return id ? [{ id }] : [];
+  });
   const focus = trail.at(-1) ?? null;
+  const [dimension, setDimension] = useState<Dimension>(() =>
+    searchParams.get('object') && searchParams.get('dimension') === 'graph' ? 'graph' : 'map',
+  );
+  const [keySlot, setKeySlot] = useState<HTMLElement | null>(null);
+  const [controlsSlot, setControlsSlot] = useState<HTMLElement | null>(null);
+  const onMap = dimension === 'map';
+  const close = () => {
+    setTrail([]);
+    setDimension('map');
+  };
   const answers = useObject(focus?.id ?? null);
   const record = current(answers.records)?.[0]?.record;
   const place = focus?.point ?? record?.place?.point;
@@ -61,16 +80,16 @@ export function AnalyzePage() {
 
   // The globe turns to the object when it is hidden behind the panel or the Earth.
   useEffect(() => {
-    if (placeKey && place) controller?.reveal(place, panelInset);
+    if (onMap && placeKey && place) controller?.reveal(place, panelInset);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per object and place
-  }, [placeKey, controller]);
+  }, [placeKey, controller, onMap]);
 
   // Esc returns to the map.
   useEffect(() => {
     if (!focus) return;
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (event.key === 'Escape' && !target?.closest('input, textarea, select')) setTrail([]);
+      if (event.key === 'Escape' && !target?.closest('input, textarea, select')) close();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -87,11 +106,27 @@ export function AnalyzePage() {
             { id, heading: item ? headingOfItem(item) : undefined, point: item?.place?.point },
           ])
         }
-        onEmptyClick={() => setTrail([])}
+        onEmptyClick={close}
         selected={place ? { place, color } : null}
         onCameraChange={setCamera}
         onReady={setController}
       />
+
+      {focus && dimension === 'graph' && (
+        <Suspense fallback={null}>
+          <GraphView
+            trail={trail}
+            graph={answers.graph}
+            inset={panelInset}
+            onOpen={(next) =>
+              setTrail((steps) => (steps.at(-1)?.id === next.id ? steps : [...steps, next]))
+            }
+            keySlot={keySlot}
+            controlsSlot={controlsSlot}
+          />
+        </Suspense>
+      )}
+      {focus && <DimensionSwitch value={dimension} onChange={setDimension} />}
 
       <header className={styles.header}>
         <Link className={styles.brand} to="/home">
@@ -102,31 +137,33 @@ export function AnalyzePage() {
 
       <div className={styles.left}>
         <QueryPanel />
-        <EventsKey events={events} />
+        {onMap ? <EventsKey events={events} /> : <div ref={setKeySlot} />}
       </div>
 
       <div className={styles.right} data-object={focus ? '' : undefined}>
-        <TimeCard
-          window={timeWindow}
-          onWindowChange={setTimeWindow}
-          asOf={asOf}
-          onAsOfChange={setAsOf}
-          now={now}
-          live={live}
-          status={
-            pending ? (
-              <span className={styles.reading}>reading</span>
-            ) : events ? (
-              `${events.layer.events.toLocaleString('en')} shown`
-            ) : null
-          }
-          liveNote={
-            events?.layer.layer === 'cells'
-              ? 'Too many events here to play one by one: zoom in or narrow the window.'
-              : undefined
-          }
-        />
-        {error && (
+        <div className={styles.timeSlot} data-hidden={onMap ? undefined : ''}>
+          <TimeCard
+            window={timeWindow}
+            onWindowChange={setTimeWindow}
+            asOf={asOf}
+            onAsOfChange={setAsOf}
+            now={now}
+            live={live}
+            status={
+              pending ? (
+                <span className={styles.reading}>reading</span>
+              ) : events ? (
+                `${events.layer.events.toLocaleString('en')} shown`
+              ) : null
+            }
+            liveNote={
+              events?.layer.layer === 'cells'
+                ? 'Too many events here to play one by one: zoom in or narrow the window.'
+                : undefined
+            }
+          />
+        </div>
+        {onMap && error && (
           <p className={styles.error} role="alert">
             {error.message}
           </p>
@@ -139,14 +176,22 @@ export function AnalyzePage() {
               setTrail((steps) => (steps.at(-1)?.id === next.id ? steps : [...steps, next]))
             }
             onTrail={(index) => setTrail((steps) => steps.slice(0, index + 1))}
-            onClose={() => setTrail([])}
-            onShowOnMap={(point) => controller?.reveal(point, panelInset)}
+            onClose={close}
+            onOpenGraph={onMap ? () => setDimension('graph') : undefined}
+            onShowOnMap={(point) => {
+              setDimension('map');
+              controller?.reveal(point, panelInset);
+            }}
           />
         )}
       </div>
 
       <div className={styles.controls}>
-        <MapControls controller={controller} bearing={camera.bearing} pitch={camera.pitch} />
+        {onMap ? (
+          <MapControls controller={controller} bearing={camera.bearing} pitch={camera.pitch} />
+        ) : (
+          <div ref={setControlsSlot} />
+        )}
       </div>
     </div>
   );

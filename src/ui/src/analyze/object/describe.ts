@@ -139,6 +139,20 @@ export function headingOfItem(item: Item): Heading {
   return { kind: item.kind, type: item.type, title, ...familyOf(item.kind, item.type) };
 }
 
+/** The head of a record as the graph knows it (when its full record is not to be had). */
+export function headingOfNode(node: WireGraphNode): Heading {
+  const kind = kindOfNode(node);
+  const type = typeof node.type === 'string' ? node.type : '';
+  return { kind, type, title: labelOfNode(node), ...familyOf(kind, type) };
+}
+
+/** The kind of a record from its id's prefix (evt:, con:, ent:), as the API reads it. */
+export function kindOfId(id: string): RecordKind {
+  if (id.startsWith('evt:')) return 'event';
+  if (id.startsWith('con:')) return 'conclusion';
+  return 'entity';
+}
+
 /** The kind of a graph node, from its labels (Entity, Event, Conclusion). */
 export function kindOfNode(node: WireGraphNode): RecordKind {
   if (node.labels.includes('Event')) return 'event';

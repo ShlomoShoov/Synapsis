@@ -12,7 +12,15 @@ import { ApiError } from '../api/http';
 import type { LngLat } from '../api/model';
 import { tokensOf } from '../query/jsonView';
 import { groupsOf, type LinkGroup, type Neighbour } from './connections';
-import { familyOf, formatTime, headingOfRecord, sourceName, type Heading } from './describe';
+import {
+  familyOf,
+  formatTime,
+  headingOfNode,
+  headingOfRecord,
+  kindOfId,
+  sourceName,
+  type Heading,
+} from './describe';
 import { viewOf, type Named, type RecordView } from './record';
 import { current, type Focus, type ObjectAnswers } from './useObject';
 import styles from './ObjectPanel.module.css';
@@ -27,6 +35,8 @@ interface ObjectPanelProps {
   onTrail: (index: number) => void;
   onClose: () => void;
   onShowOnMap: (point: LngLat) => void;
+  /** Open the connections graph (given while the map is shown). */
+  onOpenGraph?: () => void;
 }
 
 /** The rows of a group shown before "All". */
@@ -41,17 +51,19 @@ export function ObjectPanel({
   onTrail,
   onClose,
   onShowOnMap,
+  onOpenGraph,
 }: ObjectPanelProps) {
   const focus = trail.at(-1)!;
   const record = current(answers.records)?.[0]?.record;
+  const centre = current(answers.graph)?.center;
   const heading: Heading = record
     ? headingOfRecord(record)
-    : (focus.heading ?? {
-        kind: 'entity',
+    : (focus.heading ??
+      (centre ? headingOfNode(centre) : undefined) ?? {
+        kind: kindOfId(focus.id),
         type: '',
         title: focus.id,
-        family: 'Record',
-        color: 'var(--accent-soft)',
+        ...familyOf(kindOfId(focus.id), ''),
       });
 
   return (
@@ -76,7 +88,7 @@ export function ObjectPanel({
           </button>
           <ol className={styles.trail}>
             {trail.length < 2 ? (
-              <li className={styles.trailHint}>From the map</li>
+              <li className={styles.trailHint}>The first record</li>
             ) : (
               trail.slice(0, -1).map((step, index) => (
                 <li key={`${step.id}-${index}`}>
@@ -119,6 +131,7 @@ export function ObjectPanel({
         answers={answers}
         onOpen={onOpen}
         onShowOnMap={onShowOnMap}
+        onOpenGraph={onOpenGraph}
       />
     </aside>
   );
@@ -129,11 +142,13 @@ function ObjectBody({
   answers,
   onOpen,
   onShowOnMap,
+  onOpenGraph,
 }: {
   title: string;
   answers: ObjectAnswers;
   onOpen: (focus: Focus) => void;
   onShowOnMap: (point: LngLat) => void;
+  onOpenGraph?: () => void;
 }) {
   const statements = current(answers.records);
   const [chosen, setChosen] = useState(0);
@@ -167,7 +182,12 @@ function ObjectBody({
           {view.body && <p className={styles.text}>{view.body}</p>}
         </section>
       )}
-      <Connections graph={answers.graph} named={view?.named ?? []} onOpen={onOpen} />
+      <Connections
+        graph={answers.graph}
+        named={view?.named ?? []}
+        onOpen={onOpen}
+        onOpenGraph={onOpenGraph}
+      />
       {view && view.measures.length > 0 && (
         <section className={styles.section}>
           <h3 className={styles.heading}>
@@ -266,10 +286,12 @@ function Connections({
   graph,
   named,
   onOpen,
+  onOpenGraph,
 }: {
   graph: ObjectAnswers['graph'];
   named: Named[];
   onOpen: (focus: Focus) => void;
+  onOpenGraph?: () => void;
 }) {
   const answer: WireGraph | undefined = current(graph);
   const groups = useMemo(() => (answer ? groupsOf(answer) : []), [answer]);
@@ -299,6 +321,22 @@ function Connections({
           The API sent {answer.links.length.toLocaleString('en')} of its{' '}
           {answer.total.toLocaleString('en')} connections; the groups below count only those.
         </p>
+      )}
+      {onOpenGraph && answer && answer.total > 0 && (
+        <button type="button" className={styles.openGraph} onClick={onOpenGraph}>
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="2.2" />
+            <circle cx="4" cy="5" r="1.5" />
+            <circle cx="16" cy="6" r="1.5" />
+            <circle cx="6" cy="16" r="1.5" />
+            <circle cx="15.5" cy="15" r="1.5" />
+            <path d="M8.3 8.6 5.2 6M11.9 9.1l2.8-2.2M8.6 11.7l-1.6 3M11.7 11.5l2.6 2.4" />
+          </svg>
+          Open the connections graph
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="m8 5 5 5-5 5" />
+          </svg>
+        </button>
       )}
       {groups.map((group) => (
         <Group key={group.key} group={group} onOpen={onOpen} />

@@ -1,0 +1,286 @@
+/* The connections graph: deep space over the globe, the same glass and type as the rest of Analyze. */
+
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 50% at 40% 48%, rgb(30 60 120 / 0.2), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 80% 15%, rgb(90 60 160 / 0.1), transparent 70%), var(--space);
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.canvas canvas {
+  display: block;
+  outline: none;
+  cursor: grab;
+}
+
+.canvas canvas:active {
+  cursor: grabbing;
+}
+
+/* Names, placed by the scene every frame (their top left is the node; they centre themselves under it). */
+.label,
+.group {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms;
+  will-change: transform;
+}
+
+.label span {
+  display: block;
+  max-width: 200px;
+  overflow: hidden;
+  translate: -50% 10px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--text-2);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow:
+    0 0 4px var(--space),
+    0 0 10px var(--space);
+}
+
+.label[data-opened] span {
+  font-size: 12.5px;
+  color: var(--text-1);
+}
+
+.label[data-focus] span {
+  max-width: 260px;
+  translate: -50% 18px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(6 11 20 / 0.72);
+  box-shadow: 0 0 0 1px var(--glass-edge);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-1);
+  text-shadow: none;
+}
+
+.group {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  translate: -50% -50%;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 0 8px var(--space);
+}
+
+.group b {
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--text-2);
+}
+
+/* What is shown of the object's connections: top, in the free part of the screen. */
+.status {
+  position: absolute;
+  top: 70px;
+  left: calc((100% - 424px) / 2);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  translate: -50% 0;
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.status:empty {
+  display: none;
+}
+
+.status > span {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: var(--glass-shadow);
+}
+
+.status b {
+  font-weight: 500;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.status em {
+  font-style: normal;
+  color: var(--text-1);
+}
+
+.status button {
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, rgb(9 15 26 / 0.8));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent),
+    0 0 18px -6px var(--accent);
+  font: 600 12px var(--font-sans);
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.status button:hover {
+  background: color-mix(in srgb, var(--accent) 30%, rgb(9 15 26 / 0.8));
+}
+
+.reading::after {
+  content: '…';
+}
+
+.failed {
+  color: #ffb3c0;
+}
+
+.hover {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  display: grid;
+  gap: 3px;
+  max-width: 340px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgb(8 14 24 / 0.82);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 0 0 1px var(--glass-edge),
+    0 18px 40px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+
+.hoverTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-1);
+}
+
+.hoverTitle i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  translate: 0 -1px;
+}
+
+.hoverLine {
+  padding-left: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* The key: what is drawn, each kind a chip that hides it. */
+.key {
+  display: grid;
+  gap: 10px;
+  width: 290px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: var(--glass-shadow);
+  font-size: 13px;
+}
+
+.total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-2);
+}
+
+.total strong {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.05);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  font: 500 12px var(--font-sans);
+  color: var(--text-1);
+  cursor: pointer;
+  transition:
+    opacity 200ms,
+    box-shadow 200ms;
+}
+
+.chips button[data-link] {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.chips button:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.chips button[aria-pressed='false'] {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.chips i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.chips b {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-3);
+}

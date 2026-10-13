@@ -750,3 +750,13 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   those); 404 says "Not in the graph". A click on a connection moves the panel to it (a trail of the records looked at,
   with back). The globe marks the object with a ring and turns to it when it is hidden; the view buttons step left of
   the panel. A click on the map away from the lights, Esc, or close returns to the map.
+- **Stage 2 (13 Oct)**: **GRAPH-D**, the connections graph (`analyze/graph/`, three.js, loaded when first opened). A
+  switch at the top (Map | Graph) shows the open object in either dimension; the panel has "Open the connections
+  graph". The object sits at the centre; each kind of connection gets its own direction and its nodes fan out in a
+  cone (`layout.ts`, deterministic: nodes never move once placed). A click on a node opens it in the panel and grows
+  its connections out of it (`GET /graph?id=`), so the investigation goes on from any node; the trail is lit. Top:
+  "N of total connections of X", and "Load up to 1,000" when the API sent fewer (`limit=1000`). 404: the object alone,
+  "Not in the graph". Bottom left: what is drawn, and a chip per kind of record and kind of link that hides it.
+  Controls: closer, farther, back to the object, the whole graph; drag turns, right-drag moves, wheel zooms. "Show on
+  map" in the panel returns to the globe at the object. The address can open an object: `&object=<id>`, and
+  `&dimension=graph`.

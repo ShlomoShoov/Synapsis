@@ -148,3 +148,12 @@
 .page[data-object] :global(.maplibregl-ctrl-bottom-right) {
   transform: translateX(-406px);
 }
+
+/* The time card's place: no box of its own; hidden while another dimension than the map is shown. */
+.timeSlot {
+  display: contents;
+}
+
+.timeSlot[data-hidden] {
+  display: none;
+}
