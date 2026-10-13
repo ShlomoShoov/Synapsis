@@ -1,5 +1,10 @@
 # EMERGENCY.md: the only guide until the product ships
 
+> **From now on (14 Oct 2026) everything is tested against ALL the records, not the local sample (8,606 records).**
+> NVD about 1.2 M, FDIC about 549 k, UCDP about 434 k, EPSS about 14 M, KEV, GDELT and the rest: millions in all.
+> Counting happens in the stores; every list carries the total that matched; no answer grows with the data. §13 lists
+> what can be slow, approximate or cut at that scale.
+
 Written 13 Oct 2026, about 15:45. **About 6 hours left.** This file replaces every earlier document, plan and coding
 rule. History, if ever needed: `docs/HISTORY.md`. Archived originals: `~/synapsis-docs-archive-2026-10-13/` (outside
 the repo). Update this file whenever a task is done or a decision changes. Keep it short.
@@ -181,6 +186,7 @@ UI in development (from `src/ui`, no Node needed):
   set to 50 for the check, 56 records in view gave the warm cell lights and the "each light gathers..." key. The
   threshold is back at 5,000. The sample never holds more than 5,000 records in view, so cells appear only with full
   data.
+- **Stage 5**: the full-data review (§13) and the rule at the top of this file. Nothing in the code changed.
 - **Stage 3**: deleted every old read class, the mock and their tests (list below). The `/analyze/*` routes are gone. Build: 0 warnings.
 
 **Deleted in Stage 3** (lines per file):
@@ -605,3 +611,23 @@ start with "CVE". A *leading wildcard* on `id` (`*CVE-2021-44228*`) would find i
 expands to at most 50 indexed words (`phrase_prefix`'s `max_expansions`), so "a" finds only some of the words starting
 with "a". `num_candidates` 500 bounds the meaning search: at millions of vectors it is approximate (a near document can
 be missed).
+
+## 13. Full-data review: what can be slow, approximate or cut
+
+Every read query, judged at millions of documents. "Fix" is what to change tomorrow if it bites, not done today.
+
+| # | Where | What happens at full scale | Fix if needed |
+| --- | --- | --- | --- |
+| 1 | **cardinality** (every `records` / `total`) | Exact up to about 3,000 distinct ids, then an estimate. Measured on the sample: no-`q` search says **7,771**, the true number is **7,786** (0.2 % low). At millions the error stays around 1 %. A total near the UI's 5,000-points limit can be off by a few dozen. | Add `"precision_threshold": 40000` to the top-level totals in `SearchRepository` (`MapCellsAsync`'s `records`, `HitsOf`'s `records`): exact up to 40,000 (checked: 7,786), about 320 kB per count. Not on the per-cell counts (10,000 cells × 320 kB). |
+| 2 | `/map/cells` **terms size 10,000** | Resolution 2 has 5,882 cells on the whole Earth: never cut. Resolution 3 has about 41,000, 4 about 288,000, 5 about 2 M: cut without a bbox. The UI sends a bbox from zoom 3 up, so a view holds far fewer cells. `sum_other_doc_count` > 0 says when cells were cut. | The UI shows "cells cut" when `sum_other_doc_count` > 0. |
+| 3 | `/map/cells` **memory** | One cardinality per cell, ordered by it. At resolution 2 with millions of events, about 5,900 counts of up to about 24 kB each, so roughly 140 MB in one request. Elasticsearch has a **1 GB heap** (`CORE_ES_HEAP`); its request circuit breaker trips at 60 % (600 MB) and answers 500. | Set `CORE_ES_HEAP=4g` in `deploy/core/.env` for full data (the machine has 8 GB). If it still trips: order by `_count` (documents) instead of `records`. |
+| 4 | `/logical` **terms size 1,000** | NVD files records under tens of thousands of vendors: `cyber.vendor_product` opens with the 1,000 largest. `sum_other_doc_count` says how many documents are in the rest. The first call after new data builds the field's *global ordinals* (a table of every distinct path) and can take seconds. | Raise `size` to 5,000, or add a search box for the level (`include` with the typed prefix). |
+| 5 | `/search` meaning: **knn num_candidates 500** | The vector index (HNSW, `int8_hnsw`: one byte per number) finds the nearest *approximately*: it looks at 500 candidates, so a close document can be missed at millions of vectors. Memory: about 512 bytes per vector, so 1.2 M NVD vectors ≈ 600 MB on disk and in the page cache, not in the heap. `total` is never more than `k`. | Raise `num_candidates` (1,000–2,000) for better recall, at some speed cost. |
+| 6 | `/search` words | `phrase_prefix` expands a short word to at most 50 indexed words ("a" finds only some). `prefix` on `id`, case-insensitive, walks the id terms that start with the word: fine for typed ids. A bare CVE id does not find `evt:kev:CVE-…` (the text does not repeat it; §12). Collapse + sort: Elasticsearch reads every match to keep the best 50 records (linear, fine at millions). | Indexer: copy the id's last part into the searchable text. |
+| 7 | `/map/points` **collapse, size 5,000** | Collapse returns one document per record, at most 5,000 (below `max_result_window`, 10,000). With more than 5,000 records in the box, `total` > items: the UI then keeps the cells (it asks for points only when the cells say ≤ 5,000). | — |
+| 8 | **hits.total** | Not used: with collapse it counts documents (states), not records. Every `total` comes from cardinality (row 1). | — |
+| 9 | **geo_bounding_box across the 180th meridian** | Handled by Elasticsearch itself (`minLon > maxLon`): checked 75 = two boxes = by hand. A box covering the poles is clamped to ±90 by the UI. | — |
+| 10 | `/graph` **hubs** | `COUNT { (c)--() }` reads the degree Neo4j keeps with the node: the same cost for 4 links or 40,000. `LIMIT` returns the first 200 (max 1,000) in storage order, not the newest or the most relevant. Microsoft has 460 links on the sample and tens of thousands with NVD. | `ORDER BY n.known_at DESC` before `LIMIT` (sorts all of the hub's links: fine up to about 100 k). |
+| 11 | **States, not records** | Filters match any state of a record. A record whose older state matches `from`/`to`/`type` but whose latest state does not is still counted and listed (collapse shows its latest matching state). Rare: states change for revised data (UCDP, NVD scores). | Index only the latest state (the indexer deletes the older document), or add `"state"` filtering. A data-policy decision. |
+| 12 | **The embedder** | `/search?semantic=true` needs the `embedder` service (the API waits for it at start-up). If it stops, semantic search answers 500; word search keeps working. | — |
+| 13 | **Time filters on entities** | `from`/`to` drop every record without `time_start` (all entities): a search with a time window never lists entities. | The UI sends `from`/`to` to `/search` only when it wants events. |
