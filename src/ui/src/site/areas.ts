@@ -20,7 +20,7 @@ export const areas: readonly Area[] = [
     name: 'Getting started',
     path: '/getting-started',
     line: 'How Synapsis works, and how a new source joins it.',
-    ready: false,
+    ready: true,
   },
   {
     name: 'Observe',
