@@ -8,7 +8,7 @@ import h3
 import numpy as np
 import pandas as pd
 
-from . import backfill, config, m3
+from . import backfill, config, findings, m3
 from .__main__ import compute, digest, load_workspace, records_of, volume
 from .io import api_client, mongo_reader
 
@@ -132,6 +132,44 @@ def golden_occurrences(ws, cards):
     return rows
 
 
+LENS_GOLDEN = [("A|2022-10-01|ent:fdic:cert-24735", "SVB, lens A, 2022 year-end", {"rank": 5, "of": 4683, "z": 3.60, "uninsured": 0.864, "unreal_loss_to_equity": 1.144}),
+               ("A|2022-10-01|ent:fdic:cert-57053", "Signature, lens A, 2022 year-end", {"rank": 324}),
+               ("A|2023-10-01|ent:fdic:cert-27332", "Republic First, lens A, 2023 year-end", {"rank": 16})]
+LENS_YEARS = {2006: (0, 0.367, 2, 0.671), 2007: (0, 0.552, 7, 0.707), 2008: (2, 0.516, 26, 0.951), 2009: (2, 0.517, 27, 0.957),
+              2010: (0, 0.419, 12, 0.952), 2011: (0, 0.364, 15, 0.984), 2012: (0, 0.359, 10, 0.980), 2013: (0, 0.342, 8, 0.953),
+              2014: (0, 0.390, 3, 0.916), 2015: (0, 0.341, 7, 1.000), 2016: (0, 0.175, 2, 0.822), 2018: (0, 0.334, 3, 0.822),
+              2019: (0, 0.134, 4, 0.998), 2022: (1, 0.900, 0, 0.710), 2023: (1, 0.366, 0, 0.608)}
+
+
+def golden_lenses(cards):
+    """reference/EXPECTED.md section 4."""
+    card = next((c for k, c in cards.items() if k.endswith("|lenses")), {})
+    ranks, scores, rows = card.get("ranks", {}), card.get("lens_scores", {}), []
+    for k, name, want in LENS_GOLDEN:
+        got = ranks.get(k)
+        if got is None:
+            rows += [("src:fdic:financials", f"{name}: {m}", v, "pending", "no report of that quarter yet") for m, v in want.items()]
+            continue
+        same_count = got["of"] == want.get("of", got["of"])
+        for m, v in want.items():
+            g = got[m]
+            tol = (0 if same_count else 1) if m == "rank" else (0 if m == "of" else 0.005 if m != "z" else 0.01)
+            if m == "rank" and "of" not in want:
+                tol = 0 if not same_count else 0
+            rows.append(("src:fdic:financials", f"{name}: {m}", v, round(g, 3) if isinstance(g, float) else g,
+                         "ok" if abs(g - v) <= tol else ("FAIL" if m == "rank" and "of" in want or m != "rank" else "differs")))
+    for y, (a_top, a_auc, b_top, b_auc) in LENS_YEARS.items():
+        for lens, top, auc in (("A", a_top, a_auc), ("B", b_top, b_auc)):
+            got = scores.get(f"{lens}|{y}")
+            if not isinstance(got, dict):
+                rows.append(("src:fdic:financials", f"lens {lens} {y}: in top 50 / AUC", f"{top} / {auc}", "pending", got or "no year-end report yet"))
+                continue
+            ok = abs(got["failed_in_top50"] - top) <= 1 and got["auc"] is not None and abs(got["auc"] - auc) <= 0.01
+            rows.append(("src:fdic:financials", f"lens {lens} {y}: in top 50 / AUC", f"{top} / {auc}",
+                         f"{got['failed_in_top50']} / {findings.fmt(got['auc'])}", "ok" if ok else "FAIL"))
+    return rows
+
+
 def usgs_extra(ws, card):
     s = backfill.series_for(ws, card)
     N = m3.neighbours(s.subjects)
@@ -166,7 +204,16 @@ def coverage(shapes, cards, notes, out):
             first = False
     lines += ["", "Operators per series (model cards):", ""]
     for ck, c in sorted(cards.items()):
-        if c.get("skip"):
+        if c["kind"] == "measurement":
+            lines.append(f"- `{ck}`: own past, {c['values']:,} values" + (f": not covered: {c['skip']}" if c.get("skip") else
+                         f", {c['with_z']:,} with a z (>= {8} previous changes, MAD > 0), calibration {c['t_cal']} "
+                         f"buckets (frozen {c['freeze']}), |z| threshold {max(4, c['threshold']):.2f}"))
+        elif c["kind"] == "lenses":
+            sc = "; ".join(f"{k}: " + (v if isinstance(v, str) else f"{v['failed_in_top50']} of {v['failed']} failures in the top 50, AUC {v['auc']}")
+                           for k, v in sorted(c.get("lens_scores", {}).items()))
+            lines.append(f"- `{ck}`: lenses A and B on {c.get('start')}..{c.get('end')}" + (f": {c['skip']}" if c.get("skip") else "")
+                         + (f"; year-end scores: {sc}" if sc else ""))
+        elif c.get("skip"):
             lines.append(f"- `{ck}`: not covered: {c['skip']} ({c['events']:,} events, {c['subjects']:,} subjects)")
         else:
             sc = c.get("scores", {})
@@ -225,8 +272,8 @@ def main():
     L += ["## 5. Pipeline: events per source, MongoDB (first states) = DuckDB", "", "| Source | MongoDB | DuckDB |", "|---|---|---|"]
     L += [f"| {s} | {mongo.get(s, 0):,} | {duck.get(s, 0):,} |" for s in sorted(set(mongo) | set(duck))] + [""]
 
-    g = golden_occurrences(ws, cards)
-    ok[6] = all(r[4] in ("ok", "pending") or r[3] == "pending" for r in g)
+    g = golden_occurrences(ws, cards) + golden_lenses(cards)
+    ok[6] = all(r[4] != "FAIL" for r in g)
     L += ["## 6. Golden values (reference/EXPECTED.md)", "", "| Source | Value | Expected | Engine | Result |", "|---|---|---|---|---|"]
     L += [f"| {s} | {n} | {w} | {v} | {e} |" for s, n, w, v, e in g] + [""]
 

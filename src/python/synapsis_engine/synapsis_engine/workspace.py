@@ -122,17 +122,51 @@ class Workspace:
             df["subject"] = df["lkey2" if subject == "logical" else "p0"]
         return df.loc[df.subject.notna(), ["id", "known_at", "bucket", "subject"]].reset_index(drop=True)
 
-    def measurement_rows(self, source, types, as_of=None):
-        """Measurement records with their subject (participant entity, else logical path, else admin) and values."""
-        q = (f"""SELECT e.id, e.type, e.known_at, e.t_start, e.prec, coalesce(e.p0, e.lkey, e.subdivision, e.country) subject,
+    def measure_names(self, source, types):
+        return [r[0] for r in self.con.execute(
+            f"SELECT DISTINCT m.name FROM measures m JOIN events e USING (source, id) WHERE e.source = ? AND e.type IN "
+            f"({', '.join('?' * len(types))}) ORDER BY 1", [source, *types]).fetchall()]
+
+    def measurement_rows(self, source, types, bucket, as_of=None, name=None):
+        """Measurement records that fill a bucket, with their subject (participant entity, else logical path, else
+        admin subdivision, else country), its kind, and one row per measure."""
+        q = (f"""SELECT e.id, e.known_at, e.t_start, e.prec, coalesce(e.p0, e.lkey, e.subdivision, e.country) subject,
+                       CASE WHEN e.p0 IS NOT NULL THEN 'entity' WHEN e.lkey IS NOT NULL THEN 'logical'
+                            WHEN e.subdivision IS NOT NULL THEN 'subdivision' ELSE 'country' END skind,
                        m.name, m.value FROM events e JOIN measures m USING (source, id)
-                 WHERE e.source = ? AND e.type IN ({', '.join('?' * len(types))}) AND e.t_start IS NOT NULL
-                   AND e.known_at IS NOT NULL""")
+                 WHERE e.source = ? AND e.type IN ({', '.join('?' * len(types))}) AND e.prank <= ?
+                   AND e.t_start IS NOT NULL AND e.known_at IS NOT NULL""")
+        args = [source, *types, config.RANK[bucket]]
+        if name is not None:
+            q += " AND m.name = ?"
+            args.append(name)
+        if as_of is not None:
+            q += " AND e.known_at <= ?"
+            args.append(as_of)
+        df = self.con.execute(q + " ORDER BY e.id, m.name", args).df()
+        return df[df.subject.notna()].reset_index(drop=True)
+
+    def wide(self, source, types, names, as_of=None):
+        """One row per record: id, subject (first participant), known_at, t_start and the named measures."""
+        cols = ", ".join(f"max(CASE WHEN m.name = '{n}' THEN m.value END) AS \"{n}\"" for n in names)
+        q = (f"""SELECT e.id, e.p0 subject, e.known_at, e.t_start, {cols} FROM events e
+                 LEFT JOIN measures m USING (source, id)
+                 WHERE e.source = ? AND e.type IN ({', '.join('?' * len(types))}) AND e.p0 IS NOT NULL
+                   AND e.t_start IS NOT NULL AND e.known_at IS NOT NULL""")
         args = [source, *types]
         if as_of is not None:
             q += " AND e.known_at <= ?"
             args.append(as_of)
-        return self.con.execute(q + " ORDER BY e.id, m.name", args).df()
+        return self.con.execute(q + " GROUP BY e.id, e.p0, e.known_at, e.t_start ORDER BY e.id", args).df()
+
+    def of_type(self, typ, as_of=None):
+        """id, subject (first participant), time and known_at of every event of a type (any source)."""
+        q = "SELECT id, p0 subject, t_start, known_at FROM events WHERE type = ? AND t_start IS NOT NULL"
+        args = [typ]
+        if as_of is not None:
+            q += " AND known_at <= ?"
+            args.append(as_of)
+        return self.con.execute(q + " ORDER BY id", args).df()
 
     def max_known(self, source):
         return self.con.execute("SELECT max(known_at) FROM events WHERE source = ?", [source]).fetchone()[0]

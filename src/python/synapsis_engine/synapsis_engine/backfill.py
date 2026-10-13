@@ -18,23 +18,27 @@ FORECAST_LAST = 52
 NAT = np.iinfo(np.int64).min
 
 
+def schedule(bucket, start, end, L, lag_hours):
+    """The bucket axis, tau[t] (issue time of the forecast for row t) and close[b] (when bucket b's events count)."""
+    B = pd.date_range(start, end, freq=config.FREQ[bucket])
+    lag = pd.Timedelta(seconds=math.ceil(lag_hours * 3600))
+    tau = (pd.date_range(B[0] - L * config.offset(bucket), periods=len(B) + L + 1, freq=config.FREQ[bucket]) + lag).values
+    return B, tau, tau[L + 1:L + 1 + len(B)]
+
+
 class Series:
     """One occurrence series: counts per (bucket, subject) on a fixed axis, with the issue schedule."""
 
     def __init__(self, ev, bucket, start, end, L, lag_hours):
         self.bucket, self.L = bucket, L
-        off = config.offset(bucket)
-        self.B = B = pd.date_range(start, end, freq=config.FREQ[bucket])
+        self.B, self.tau, self.close = schedule(bucket, start, end, L, lag_hours)
+        B = self.B
         ti = B.get_indexer(ev.bucket)
         ev = ev[ti >= 0].copy()
         ev["ti"] = ti[ti >= 0]
         self.subjects = sorted(ev.subject.unique())
         si = {s: i for i, s in enumerate(self.subjects)}
         ev["si"] = ev.subject.map(si).astype(int)
-        lag = pd.Timedelta(seconds=math.ceil(lag_hours * 3600))
-        ext = pd.date_range(B[0] - L * off, periods=len(B) + L + 1, freq=config.FREQ[bucket])
-        self.tau = (ext + lag).values                       # tau[t]: issue time of the forecast for row t
-        self.close = self.tau[L + 1:L + 1 + len(B)]          # close[b]: when bucket b's events are counted
         ev["counted"] = ev.known_at.values <= self.close[ev.ti.values]
         T, S = len(B), len(self.subjects)
         self.C_full = np.zeros((T, S))
@@ -215,6 +219,224 @@ def occurrence_scores(series, card, lam, routine, params):
     return out
 
 
+# ---------------------------------------------------------------------------------- measurements: own past
+
+def period_start(ts, prec):
+    out = ts.copy()
+    for p in sorted(prec.unique()):
+        m = prec == p
+        out[m] = (ts[m].dt.floor({"second": "s", "minute": "min", "hour": "h", "day": "D"}[p])
+                  if config.RANK[p] <= config.RANK["day"] else config.bucket_start(ts[m], p))
+    return out
+
+
+def measurement_frame(ws, card, name, as_of=None):
+    """Values of one measure counted on schedule, one per (subject, period), with their own-past change and z."""
+    B, tau, close = schedule(card["bucket"], card["start"], card["end"], card["L"], card["lag_hours"])
+    df = ws.measurement_rows(card["source"], card["types"], card["bucket"], as_of, name)
+    if df.empty:
+        return df, B, close
+    bi = B.get_indexer(config.bucket_start(df.t_start, card["bucket"]))
+    df = df[bi >= 0].assign(bi=bi[bi >= 0])
+    df = df[df.known_at.values <= close[df.bi.values]].copy()
+    df["period"] = period_start(df.t_start, df.prec)
+    df = (df.sort_values(["subject", "name", "period", "known_at", "id"])
+            .drop_duplicates(["subject", "name", "period"]).reset_index(drop=True))
+    key = (df.subject + "\x00" + df.name).values
+    starts = np.flatnonzero(np.r_[True, key[1:] != key[:-1]]) if len(df) else np.array([], int)
+    ends = np.r_[starts[1:], len(df)]
+    change, z = np.full(len(df), np.nan), np.full(len(df), np.nan)
+    k = df.known_at.values.astype("datetime64[ns]").astype(np.int64)
+    kmax = np.empty(len(df), np.int64)
+    for a, b in zip(starts, ends):
+        change[a:b], z[a:b] = anomalies.own_past(df.value.values[a:b])
+        kmax[a:b] = np.maximum.accumulate(k[a:b])
+    df["change"], df["z"], df["kmax"] = change, z, kmax
+    df["first"] = np.repeat(starts, ends - starts)
+    return df, B, close
+
+
+def measurement_card(ws, decl, source, typ, shape):
+    card = {"source": source, "kind": "measurement", "types": [typ], "bucket": shape["bucket"], "L": shape["L"],
+            "lag_hours": shape["lag_hours"], "budget": decl["budget"], "names": ws.measure_names(source, [typ])}
+    span = ws.con.execute(f"SELECT min(t_start), max(t_start), count(*) FROM events WHERE source = ? AND type = ? "
+                          f"AND has_m AND prank <= ?", [source, typ, config.RANK[shape["bucket"]]]).fetchone()
+    card["values"] = 0
+    if not span[2]:
+        card["skip"] = f"no measure fills a {shape['bucket']} bucket"
+        return card
+    b = config.bucket_start(pd.Series(pd.to_datetime([span[0], span[1]])), shape["bucket"])
+    card.update(start=str(b.min().date()), end=str((b.max() + config.offset(shape["bucket"])).date()))
+    B = pd.date_range(card["start"], card["end"], freq=config.FREQ[shape["bucket"]])
+    t_cal = card["t_cal"] = int(config.CALIBRATION_SHARE * (len(B) - 1))
+    if t_cal < config.MIN_CALIBRATION_BUCKETS:
+        card["skip"] = f"only {t_cal} calibration buckets (< {config.MIN_CALIBRATION_BUCKETS})"
+        return card
+    cal, card["with_z"] = [], 0
+    for name in card["names"]:
+        mf, B, close = measurement_frame(ws, card, name)
+        card["values"] += len(mf)
+        if len(mf):
+            card["with_z"] += int(mf.z.notna().sum())
+            cal.append(mf.z[mf.bi < t_cal].abs().dropna().values)
+    card["threshold"] = m3.threshold_for_budget(np.concatenate(cal) if cal else np.array([]), decl["budget"])
+    card["calibrate_before"] = str(B[t_cal].date())
+    card["freeze"] = pd.Timestamp(close[t_cal - 1])
+    return card
+
+
+def measurement_about(ws, skind, subject):
+    if skind == "entity":
+        return [subject], findings.key(subject), {}, ws.name(subject) or subject
+    if skind == "logical":
+        about, skey, extra = findings.subject_about("logical", subject)
+        return about, skey, extra, subject
+    return [f"ent:{skind}:{subject}"], findings.key(subject), {}, subject
+
+
+def measurement_conclusions(ws, card, as_of=None):
+    return [c for name in card["names"] for c in measurement_sparks(ws, card, name, as_of)]
+
+
+def measurement_sparks(ws, card, name, as_of=None):
+    mf, B, close = measurement_frame(ws, card, name, as_of)
+    if mf.empty:
+        return []
+    thr = max(anomalies.OWN_PAST_Z, card["threshold"])
+    sp = mf[(mf.bi >= card["t_cal"]) & (mf.z.abs() >= thr)]
+    if as_of is not None:
+        sp = sp[close[sp.bi.values] <= np.datetime64(pd.Timestamp(as_of), "ns")]
+    params = {"model": "own_past", "window": anomalies.OWN_PAST_WINDOW, "min_changes": anomalies.OWN_PAST_MIN,
+              "threshold": round(card["threshold"], 6), "budget": card["budget"], "bucket": card["bucket"],
+              "L": card["L"], "lag_hours": card["lag_hours"], "calibrate_before": card["calibrate_before"]}
+    out = []
+    for i, r in zip(sp.index, sp.itertuples()):
+        about, skey, extra, label = measurement_about(ws, r.skind, r.subject)
+        fine = config.RANK[r.prec] < config.RANK["day"]
+        period = r.period.strftime("%Y-%m-%dT%H:%M:%S") if fine else findings.day(r.period)
+        out.append(findings.conclusion(
+            "spark", card["source"], f"{skey}.{findings.key(r.name)}", period, close[r.bi], about,
+            {"value": r.value, "change": r.change, "z": r.z},
+            f"{label}: {r.name} {findings.fmt(r.value)} ({'+' if r.change >= 0 else ''}{findings.fmt(r.change)} "
+            f"since the previous value), robust z {r.z:.1f} against its own past changes",
+            list(mf.id.values[max(r.first, i - 49):i + 1]), "engine.own_past_spark", params, r.period,
+            r.prec if fine else "day", extra, ts(r.kmax)))
+    return out
+
+
+# ---------------------------------------------------------------------------------- bank lenses (declared)
+
+LENS_MIN_BANKS = 100      # as fdic_lenses.py: fewer banks with the measures, no lens that quarter
+LENS_TOP = 50
+GOLDEN_BANKS = ("ent:fdic:cert-24735", "ent:fdic:cert-57053", "ent:fdic:cert-27332")   # SVB, Signature, Republic First
+DERIVED = {"uninsured": ("deposits_uninsured", "deposits"),
+           "unreal_loss_to_equity": ("afs_amortized_cost", "afs_fair_value", "htm_amortized_cost", "htm_fair_value", "equity")}
+
+
+def lens_card(ws, decl, shape):
+    spec = decl["lenses"]
+    types = sorted(t for t, v in shape["types"].items() if v["shape"] == "measurement")
+    card = {"source": spec["source"], "kind": "lenses", "types": types, "bucket": shape["bucket"], "L": shape["L"],
+            "lag_hours": shape["lag_hours"]}
+    w = ws.wide(spec["source"], types, ["deposits"])
+    if w.empty:
+        card["skip"] = "no bank report"
+        return card
+    b = config.bucket_start(w.t_start, shape["bucket"])
+    card.update(start=str(b.min().date()), end=str((b.max() + config.offset(shape["bucket"])).date()))
+    return card
+
+
+def lens_conclusions(ws, decl, card, as_of=None):
+    spec = decl["lenses"]
+    lenses = {k: v for k, v in sorted(spec.items()) if isinstance(v, dict)}
+    used = {m for v in lenses.values() for m in v["measures"]}
+    names = sorted({n for m in used for n in DERIVED.get(m, (m,))} | {"deposits", "equity"})
+    B, tau, close = schedule(card["bucket"], card["start"], card["end"], card["L"], card["lag_hours"])
+    w = ws.wide(card["source"], card["types"], names, as_of)
+    bi = B.get_indexer(config.bucket_start(w.t_start, card["bucket"]))
+    w = w[bi >= 0].assign(bi=bi[bi >= 0])
+    w = w[w.known_at.values <= close[w.bi.values]]
+    w = w.sort_values(["subject", "bi", "known_at", "id"]).drop_duplicates(["subject", "bi"]).copy()
+    if "uninsured" in used:
+        w["uninsured"] = w.deposits_uninsured / w.deposits
+    if "unreal_loss_to_equity" in used:
+        w["unreal_loss_to_equity"] = ((w.afs_amortized_cost.fillna(0) - w.afs_fair_value.fillna(0))
+                                      + (w.htm_amortized_cost.fillna(0) - w.htm_fair_value.fillna(0))) / w.equity
+    w = w[(w.deposits > 0) & (w.equity > 0)]
+    fails = ws.of_type(spec["failures"], as_of)
+    limit = None if as_of is None else np.datetime64(pd.Timestamp(as_of), "ns")
+    card.setdefault("ranks", {})
+    card.setdefault("lens_scores", {})
+    out = []
+    for b, g in w.groupby("bi", sort=True):
+        g = g.sort_values("subject")
+        kmax = g.known_at.max()
+        for lens, ls in lenses.items():
+            ms = ls["measures"]
+            gl = g.dropna(subset=list(ms))
+            if len(gl) < LENS_MIN_BANKS:
+                continue
+            zs = {m: anomalies.peer_z(gl[m].values, d) for m, d in ms.items()}
+            jt = anomalies.joint(list(zs.values()))
+            order = np.argsort(-jt, kind="stable")
+            rank = np.empty(len(gl), int)
+            rank[order] = np.arange(1, len(gl) + 1)
+            subj = gl.subject.values
+            for i in (np.flatnonzero(np.isin(subj, GOLDEN_BANKS)) if as_of is None else []):
+                card["ranks"][f"{lens}|{findings.day(B[b])}|{subj[i]}"] = {
+                    "rank": int(rank[i]), "of": len(gl), "z": float(jt[i]), **{m: float(gl[m].values[i]) for m in ms}}
+            if limit is not None and close[b] > limit:
+                continue
+            params = {"lens": lens, "title": ls["title"], "measures": ms, "min_banks": LENS_MIN_BANKS, "top": LENS_TOP,
+                      "bucket": card["bucket"], "lag_hours": card["lag_hours"]}
+            for i in order[:LENS_TOP]:
+                val = {"rank": rank[i], "of": len(gl), "z": jt[i], **{f"z_{m}": zs[m][i] for m in ms},
+                       **{m: gl[m].values[i] for m in ms}}
+                out.append(findings.conclusion(
+                    "joint_anomaly", card["source"], f"{lens}.{findings.key(subj[i])}", findings.day(B[b]), close[b],
+                    [subj[i]], val,
+                    f"{ws.name(subj[i]) or subj[i]}: rank {rank[i]} of {len(gl):,} banks on {ls['title']} ("
+                    + ", ".join(f"{m.replace('_', ' ')} {findings.fmt(gl[m].values[i])}" for m in ms)
+                    + f"; joint z {jt[i]:.2f})", [gl.id.values[i]], "engine.lens", params, B[b], card["bucket"],
+                    None, kmax))
+            if as_of is None and B[b].month == 10:
+                out += lens_score(card, lens, ls, B[b], close[b], gl, jt, order, fails, params, kmax)
+    return out
+
+
+def lens_score(card, lens, ls, start, closed, gl, jt, order, fails, params, kmax):
+    """Year-end reports: failed = a failure of the bank within 365 days after the report's known_at."""
+    year = start.year
+    report_known = gl.known_at.values
+    window_end = pd.Timestamp(report_known.max()) + pd.Timedelta(days=365)
+    tag = f"{lens}|{year}"
+    if fails.empty or fails.t_start.max() < window_end:
+        card["lens_scores"][tag] = f"pending: failures recorded only to {fails.t_start.max()} (< {window_end.date()})"
+        return []
+    f = fails[fails.subject.isin(set(gl.subject))]
+    pos = np.zeros(len(gl), bool)
+    hit = []
+    idx = {s: i for i, s in enumerate(gl.subject.values)}
+    for r in f.itertuples():
+        i = idx[r.subject]
+        if report_known[i] <= np.datetime64(r.t_start) < report_known[i] + np.timedelta64(365, "D"):
+            pos[i] = True
+            hit.append(r)
+    a = anomalies.auc(list(jt), list(pos))
+    top = int(pos[order[:LENS_TOP]].sum())
+    val = {"auc": a, "failed_in_top50": top, "failed": int(pos.sum()), "base_rate": pos.mean(), "banks": len(gl)}
+    card["lens_scores"][tag] = val
+    known = max([window_end, pd.Timestamp(closed)] + [pd.Timestamp(r.known_at) for r in hit])
+    about, logical = findings.logical_about("engine.score", findings.source_key(card["source"]), f"lens-{lens}")
+    return [findings.conclusion(
+        "forecast_score", card["source"], f"lens-{lens}", findings.day(start), known, about, val,
+        f"Lens {lens} ({ls['title']}), year-end {year}: {top} of {int(pos.sum())} banks that failed within a year were in "
+        f"the top {LENS_TOP} of {len(gl):,}; AUC {findings.fmt(a)}",
+        [r.id for r in hit] + list(gl.id.values[order[:LENS_TOP]]), "engine.lens_score", params, start, "quarter",
+        logical, max([pd.Timestamp(kmax)] + [pd.Timestamp(r.known_at) for r in hit]))]
+
+
 def series_for(ws, card, as_of=None, ev=None):
     if ev is None:
         ev = ws.occurrences(card["source"], card["types"], card["bucket"], card["kind"], card["resolution"], as_of)
@@ -264,6 +486,26 @@ def run(ws, decl, shapes, only=None, cards=None, as_of=None):
             if card.get("skip"):
                 notes[source].append(f"{', '.join(types)}: {card['skip']}")
                 continue
-            got = occurrence_conclusions(ws, series, card, as_of)
-            out += got
+            out += occurrence_conclusions(ws, series, card, as_of)
+        for typ, t in sorted(shape["types"].items()):
+            if t["shape"] != "measurement":
+                continue
+            ck = f"{source}|measurement|{typ}"
+            card = (cards or {}).get(ck) if cards is not None else measurement_card(ws, decl, source, typ, shape)
+            if card is None:
+                continue
+            cards_out[ck] = card
+            if card.get("skip"):
+                notes[source].append(f"{typ} (own past): {card['skip']}")
+                continue
+            out += measurement_conclusions(ws, card, as_of)
+        if source == decl["lenses"]["source"]:
+            ck = f"{source}|lenses"
+            card = (cards or {}).get(ck) if cards is not None else lens_card(ws, decl, shape)
+            if card is not None:
+                cards_out[ck] = card
+                if card.get("skip"):
+                    notes[source].append(f"lenses: {card['skip']}")
+                else:
+                    out += lens_conclusions(ws, decl, card, as_of)
     return out, cards_out, notes
