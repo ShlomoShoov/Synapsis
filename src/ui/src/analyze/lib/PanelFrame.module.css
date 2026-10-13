@@ -16,6 +16,7 @@
   position: fixed;
   inset: 16px;
   z-index: 40;
+  height: auto;
   max-height: none;
 }
 
