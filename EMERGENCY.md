@@ -171,6 +171,7 @@ UI in development (from `src/ui`, no Node needed):
 - **Stage 2.2**: `GET /map/points` (§12).
 - **Stage 2.3**: `GET /graph` (§12): one Cypher statement. Ytshak's `/analyze/graph` is still there until Stage 3.
 - **Stage 2.4**: `GET /logical` (§12).
+- **Stage 2.5**: `GET /search` (§12): words, meaning, or the filtered list. The `api` service now gets the embedder's address (`Embedder__Url`) and waits for it. **Stage 2 done.**
 
 ## 11. How the system looks now
 
@@ -446,3 +447,85 @@ before every character that is not a letter or digit), then `/`, then one segmen
 cut, and `sum_other_doc_count` says by how many documents). The terms aggregation reads every value of
 `logical_prefixes` in the matching documents, then keeps the ones the regex accepts: with millions of documents this is
 the slowest route; filters (`source`, `from`/`to`) make it faster.
+
+### GET /search
+
+**Receives**:
+
+| Parameter | Type | Default | |
+| --- | --- | --- | --- |
+| `q` | text | none | the words; none = just the filtered list |
+| `semantic` | `true` / `false` | `false` | `true` = by meaning (needs `q`; 400 without it) |
+| `kind` | `event`, `entity`, `conclusion` | all | |
+| `logical` | a logical key (`cyber.vendor_product/Apache`) | none | records filed at or below it |
+| `entity` | an entity id | none | events in which it takes part |
+| `limit` | 1–500 | 50 (400 outside) | items returned |
+| `from`, `to`, `source`, `type` | shared filters | | |
+
+**Returns** `{ "total", "items" }` like `/map/points`: one `_source` per record. `q=log4j`:
+```json
+{ "total": 3,
+  "items": [ { "id": "ent:kev-product:apache/log4j2", "kind": "entity", "type": "Product", "name": "Log4j2", ... },
+             { "id": "evt:kev:CVE-2021-44228", "kind": "event", "type": "CYB.VULN.KNOWN_EXPLOITED",
+               "source": "src:cisa:kev", "title": "Apache Log4j2 Remote Code Execution Vulnerability",
+               "body": "Apache Log4j2 contains a vulnerability where JNDI features ...", "time_start": "2021-12-10T00:00:00Z",
+               "logical_prefixes": ["cyber.vendor_product", "cyber.vendor_product/Apache", "cyber.vendor_product/Apache/Log4j2"],
+               "entities": ["ent:kev-vendor:apache", "ent:kev-product:apache/log4j2", "ent:cve:CVE-2021-44228"], ... },
+             { "id": "evt:kev:CVE-2021-45046", ... } ] }
+```
+Order: with `q`, the best match first (Elasticsearch's score); semantic, the nearest first; without `q`, the newest
+`time_start` first (records without one, such as entities, last).
+
+**Three modes, three bodies** (route `ReadController.cs:106`):
+
+1. Words (`SearchRepository.SearchWordsAsync`, `SearchRepository.cs:174`). Each word must be found as the start
+   of a word in `name`, `title` or `body` (`phrase_prefix` cuts the text into words the way the index does, so
+   "log4j" finds "Log4j2"), or as the start of the `id`:
+   ```bash
+   curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
+     "size": 50,
+     "query": { "bool": { "filter": [],
+       "must": [ { "bool": { "should": [
+         { "multi_match": { "query": "log4j", "type": "phrase_prefix", "fields": ["name", "title", "body"] } },
+         { "prefix": { "id": { "value": "log4j", "case_insensitive": true } } } ] } } ] } },
+     "collapse": { "field": "id" },
+     "aggs": { "records": { "cardinality": { "field": "id" } } } }'
+   ```
+   (`must` holds one `should` block per word, so every word must match; `filter` holds the filters.)
+2. Meaning (`SearchMeaningAsync`, `SearchRepository.cs:197`). The API asks the embedder for the question's vector
+   (`curl -s localhost:8090/embed -H 'content-type: application/json' -d '{"texts":["remote code execution"],"model":"search"}'`),
+   then:
+   ```json
+   { "size": 50,
+     "knn": { "field": "text_vector", "query_vector": [ 512 numbers ], "k": 50, "num_candidates": 500, "filter": [] },
+     "collapse": { "field": "id" },
+     "aggs": { "records": { "cardinality": { "field": "id" } } } }
+   ```
+   *knn* compares the question's vector with the stored ones: it looks at the 500 best candidates and keeps the `k`
+   nearest. The filters go inside `knn.filter`, so they apply before the nearest are chosen. A question with no known
+   word answers `{"total": 0, "items": []}`.
+3. No `q` (`ListAsync`, `SearchRepository.cs:160`, as `/map/points`), sorted
+   `[{"time_start": {"order": "desc", "missing": "_last"}}, {"state": "desc"}]`.
+
+`logical` adds `{"term": {"logical_prefixes": "<key>"}}`, `entity` adds `{"term": {"entities": "<id>"}}` to the filters.
+
+**Counts**: `total` = distinct records that match (cardinality of `id`; an estimate above about 3,000). In meaning
+mode only the `k` nearest match, so `total` ≤ `limit` (there is no "all that match" by meaning).
+
+**Checked** (13 Oct, sample):
+
+| Request | API `total` / items | Independent |
+| --- | --- | --- |
+| `q=log4j` | 3 / 3 (Log4j2, CVE-2021-44228, CVE-2021-45046) | by hand (every word the start of a word in name/title/body, or of the id): 3 |
+| `q=remote code execution&semantic=true` | 50 / 50, all distinct; first: "Microsoft Office Remote Code Execution Vulnerability" | k = 50 |
+| `entity=ent:kev-product:apache/log4j2` | 2 / 2 | ES `_count` 2; by hand 2 |
+| `logical=cyber.vendor_product/Apache` | 41 / 41 | ES `_count` 41; by hand 41 |
+| no `q`, `limit=3` | 7,771 / 3 | **by hand 7,786 distinct ids** (7,819 documents): the default cardinality is 0.2 % low above 3,000; with `"precision_threshold": 40000` it gives 7,786 exactly (§13) |
+
+**Limits at full scale**: `q=CVE-2021-44228` finds the CVE entity (`ent:cve:CVE-2021-44228`, by name) and the records
+whose text mentions it, but not `evt:kev:CVE-2021-44228` itself: its text never repeats its id, and the id does not
+start with "CVE". A *leading wildcard* on `id` (`*CVE-2021-44228*`) would find it but reads every id in the index
+(slow with millions). Better fix if needed: the indexer adds the id's last part to the searchable text. A short word
+expands to at most 50 indexed words (`phrase_prefix`'s `max_expansions`), so "a" finds only some of the words starting
+with "a". `num_candidates` 500 bounds the meaning search: at millions of vectors it is approximate (a near document can
+be missed).

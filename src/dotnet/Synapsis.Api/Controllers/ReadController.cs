@@ -99,6 +99,52 @@ public sealed class ReadController : ControllerBase
         return Ok(await _searchRepository.LogicalAsync(filters, node));
     }
 
+    /// <summary>
+    /// GET /search: with q, every word as a prefix in name, title, body or id (or, with semantic=true, the nearest by
+    /// meaning); without q, the filtered list, newest time_start first. One item per record, at most limit (50, max 500).
+    /// </summary>
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(string? q, DateTime? from, DateTime? to, [FromQuery] string[]? source, [FromQuery] string[]? type,
+        string? kind, string? logical, string? entity, bool semantic = false, int limit = 50)
+    {
+        if (limit < 1 || limit > 500)
+        {
+            return Problem(statusCode: 400, detail: "limit must be 1 to 500.");
+        }
+        List<JsonObject> filters = SearchRepository.Filters(from, to, source, type, kind);
+        if (!string.IsNullOrEmpty(logical))
+        {
+            filters.Add(new JsonObject { ["term"] = new JsonObject { ["logical_prefixes"] = logical } });
+        }
+        if (!string.IsNullOrEmpty(entity))
+        {
+            filters.Add(new JsonObject { ["term"] = new JsonObject { ["entities"] = entity } });
+        }
+        if (string.IsNullOrWhiteSpace(q))
+        {
+            if (semantic)
+            {
+                return Problem(statusCode: 400, detail: "semantic=true needs q.");
+            }
+            JsonArray newestFirst = new JsonArray(new JsonObject { ["time_start"] = new JsonObject { ["order"] = "desc", ["missing"] = "_last" } }, new JsonObject { ["state"] = "desc" });
+            return Ok(await _searchRepository.ListAsync(filters, newestFirst, limit));
+        }
+        if (!semantic)
+        {
+            return Ok(await _searchRepository.SearchWordsAsync(filters, q, limit));
+        }
+        (float[]? vector, string? refusal) = await _embedderClient.EmbedAsync(q, HttpContext.RequestAborted);
+        if (refusal != null)
+        {
+            return Problem(statusCode: 400, detail: refusal);
+        }
+        if (vector == null)
+        {
+            return Ok(new JsonObject { ["total"] = 0, ["items"] = new JsonArray() });
+        }
+        return Ok(await _searchRepository.SearchMeaningAsync(filters, vector, limit));
+    }
+
     /// <summary>"minLon,minLat,maxLon,maxLat" as four numbers in range; null when it is not.</summary>
     private static double[]? ParseBox(string text)
     {
