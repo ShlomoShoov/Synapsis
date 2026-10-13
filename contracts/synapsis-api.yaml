@@ -126,7 +126,8 @@ paths:
         participant (the entities taking part in an event, with their roles). The filters keep the events through which
         things connect; relations follow as_of only. Without group, the first page (limit) of every group; with group,
         that group from cursor. Clicking a connected entity asks again with its id. No connections: connections is empty
-        and no_connections_reason says why. The full record is GET /records/{id}.
+        and no_connections_reason says why. The full record is GET /records/{id}. No record with the id at as_of:
+        404; a group the record does not have (under these filters): 400.
         Example: /analyze/graph?id=evt:gtd:197001060001
       parameters:
         - {name: id, in: query, required: true, schema: {type: string}, description: 'The record id, such as "ent:kev-product:apache/log4j2".'}

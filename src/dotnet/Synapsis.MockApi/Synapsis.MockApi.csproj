@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- Synapsis.MockApi: the read mock. It answers the Analyze routes (GET /analyze/map, GET /analyze/point) with the
+       same parameters and answers as Synapsis.Api (its own copies of the classes), computed in memory from a sample of
+       real records (Sample/records.json). The UI builds against it; later the UI and the real API are compared with it. -->
+  <ItemGroup>
+    <!-- The record classes and their reader, and the H3 cells (LatticeKeys), the same as the real index. -->
+    <ProjectReference Include="../Synapsis.Data/Synapsis.Data.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The sample travels with the mock: copied next to it. -->
+    <None Update="Sample/records.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
