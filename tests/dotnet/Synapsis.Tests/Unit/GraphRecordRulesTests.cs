@@ -9,9 +9,9 @@ namespace Synapsis.Tests.Unit;
 /// <summary>Checks which event participants make a useful graph connection.</summary>
 public sealed class GraphRecordRulesTests
 {
-    /// <summary>An event with two roles for one entity does not connect entities.</summary>
+    /// <summary>An event with one entity (two roles) becomes a node since 13 Oct: an FDIC failure and its bank.</summary>
     [Fact]
-    public void One_distinct_entity_does_not_create_an_event_node()
+    public void One_distinct_entity_creates_an_event_node()
     {
         EventRecord record = new EventRecord
         {
@@ -22,7 +22,42 @@ public sealed class GraphRecordRulesTests
             }
         };
 
+        Assert.Equal(2, GraphRecordRules.ParticipantsOfConnectingEvent(record).Count);
+    }
+
+    /// <summary>An event with no participant (an earthquake) does not become a node by itself.</summary>
+    [Fact]
+    public void No_participant_does_not_create_an_event_node()
+    {
+        Assert.Empty(GraphRecordRules.ParticipantsOfConnectingEvent(new EventRecord { Type = "GEO.EARTHQUAKE" }));
+    }
+
+    /// <summary>A type kept out of the graph (EPSS scores) does not become a node, even with a participant.</summary>
+    [Fact]
+    public void Kept_out_type_does_not_create_an_event_node()
+    {
+        EventRecord record = new EventRecord
+        {
+            Type = "CYB.VULN.EPSS_SCORE",
+            Participants = new List<Participant> { new Participant { Entity = "ent:cve:CVE-2021-44228", Role = "subject" } }
+        };
+
         Assert.Empty(GraphRecordRules.ParticipantsOfConnectingEvent(record));
+    }
+
+    /// <summary>A conclusion's targets are grouped by the label of their prefix, each once; other ids are left out.</summary>
+    [Fact]
+    public void Conclusion_targets_are_grouped_by_label()
+    {
+        Dictionary<string, List<string>> targets = GraphRecordRules.TargetsByLabel(new List<string>
+        {
+            "evt:usgs:a", "ent:h3:83225bfffffffff", "evt:usgs:a", "con:engine:b", "subject:h3:83225bfffffffff", "rel:x:c"
+        });
+
+        Assert.Equal(new List<string> { "evt:usgs:a" }, targets["Event"]);
+        Assert.Equal(new List<string> { "ent:h3:83225bfffffffff" }, targets["Entity"]);
+        Assert.Equal(new List<string> { "con:engine:b" }, targets["Conclusion"]);
+        Assert.Equal(3, targets.Count);
     }
 
     /// <summary>Repeated identical participants become one graph edge.</summary>

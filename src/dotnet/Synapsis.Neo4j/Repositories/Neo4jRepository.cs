@@ -128,7 +128,7 @@ public sealed class Neo4jRepository
         await LinkLateAboutAsync(transaction, record.To, "Entity");
     }
 
-    /// <summary>Writes a conclusion and links targets already present in the graph.</summary>
+    /// <summary>Writes a conclusion and links its about and premise targets, creating the ones not in the graph yet.</summary>
     private static async Task StoreConclusionAsync(IAsyncQueryRunner transaction, ConclusionRecord record)
     {
         DateTime knownAt = record.KnownAt!.Value.UtcDateTime;
@@ -141,25 +141,37 @@ public sealed class Neo4jRepository
             confidence = record.Confidence, known_at = knownAt, title = record.Text?.Title,
             about = record.About, premises = record.Premises
         });
-        await LinkAboutAsync(transaction, record, "Entity");
-        await LinkAboutAsync(transaction, record, "Event");
+        await LinkAboutAsync(transaction, record);
         await LinkPremisesAsync(transaction, record);
     }
 
-    /// <summary>Links a conclusion to existing about targets of the chosen label.</summary>
-    private static async Task LinkAboutAsync(IAsyncQueryRunner transaction, ConclusionRecord record, string label)
+    /// <summary>
+    /// Links a conclusion to its about targets, one statement per label (the label comes from the id prefix; ids with
+    /// none, such as "subject:h3:...", are skipped). MERGE, not MATCH: a target not in the graph yet is created holding
+    /// only its id, and a later record with that id MERGEs into the same node and fills it.
+    /// </summary>
+    private static async Task LinkAboutAsync(IAsyncQueryRunner transaction, ConclusionRecord record)
     {
-        string statement = "MATCH (c:Conclusion {id: $id}) MATCH (target:" + label + ") " +
-            "WHERE target.id IN $targets MERGE (c)-[r:ABOUT]->(target) SET r.known_at = $known_at";
-        await RunAsync(transaction, statement, new { id = record.Id, targets = record.About, known_at = record.KnownAt!.Value.UtcDateTime });
+        foreach (KeyValuePair<string, List<string>> targets in GraphRecordRules.TargetsByLabel(record.About))
+        {
+            string statement = "MATCH (c:Conclusion {id: $id}) UNWIND $targets AS target_id " +
+                "MERGE (target:" + targets.Key + " {id: target_id}) MERGE (c)-[r:ABOUT]->(target) SET r.known_at = $known_at";
+            await RunAsync(transaction, statement, new { id = record.Id, targets = targets.Value, known_at = record.KnownAt!.Value.UtcDateTime });
+        }
     }
 
-    /// <summary>Links a conclusion to existing premise events.</summary>
+    /// <summary>
+    /// Links a conclusion to its premises, the same way as its about targets: any record id (an earthquake with no
+    /// participant stays a node holding only its id; its details come from /records/{id}).
+    /// </summary>
     private static async Task LinkPremisesAsync(IAsyncQueryRunner transaction, ConclusionRecord record)
     {
-        string statement = "MATCH (c:Conclusion {id: $id}) MATCH (target:Event) " +
-            "WHERE target.id IN $targets MERGE (c)-[r:PREMISE]->(target) SET r.known_at = $known_at";
-        await RunAsync(transaction, statement, new { id = record.Id, targets = record.Premises, known_at = record.KnownAt!.Value.UtcDateTime });
+        foreach (KeyValuePair<string, List<string>> targets in GraphRecordRules.TargetsByLabel(record.Premises))
+        {
+            string statement = "MATCH (c:Conclusion {id: $id}) UNWIND $targets AS target_id " +
+                "MERGE (target:" + targets.Key + " {id: target_id}) MERGE (c)-[r:PREMISE]->(target) SET r.known_at = $known_at";
+            await RunAsync(transaction, statement, new { id = record.Id, targets = targets.Value, known_at = record.KnownAt!.Value.UtcDateTime });
+        }
     }
 
     /// <summary>Connects earlier conclusions that list a node in about.</summary>
