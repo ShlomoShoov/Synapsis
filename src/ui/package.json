@@ -2,7 +2,7 @@
   "name": "synapsis-ui",
   "private": true,
   "version": "0.1.0",
-  "description": "The Synapsis web client: the home page today, the knowledge engine's instruments later.",
+  "description": "The Synapsis web client: the home page and Observe today, the knowledge engine's instruments later.",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -21,6 +21,7 @@
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource-variable/newsreader": "^5.3.0",
+    "@fontsource-variable/playfair-display": "^5.3.0",
     "@fontsource/fragment-mono": "^5.3.0",
     "d3-array": "^3.2.4",
     "d3-format": "^3.1.2",

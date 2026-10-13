@@ -1,0 +1,4 @@
+# Typefaces licensed for local use only (Anthropic Serif, The Seasons): never committed. See src/fonts/fonts.ts.
+src/fonts/*.woff2
+src/fonts/*.woff
+src/fonts/*.otf

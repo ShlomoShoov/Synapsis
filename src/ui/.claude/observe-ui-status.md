@@ -10,7 +10,7 @@ no backend or core code was touched.
 
 | Part | State | Notes |
 |---|---|---|
-| Home → Observe link | Done | `pages/HomePage.tsx`: the three areas; Observe opens `/observe` (lazy route in `router.ts`). |
+| Home → Observe link | Done | The site header (`site/Header.tsx`) and the home page's contents (`home/Overview.tsx`) lead to `/observe` (lazy route in `router.ts`). |
 | Page shell | Done | Night theme, sidebar (sections, nested anchors, data mode Live/Simulated, service health, time zone Local/UTC, shortcuts), keys 1/2/3, `[`, `?`. |
 | 01 Live flow (3D) | Done | three.js scene: sources around the API core, arcs per batch (written/refused), live from Elasticsearch, time travel (1 h–30 d bar, replay ×1…×21600, step, return to live). |
 | 02 Metrics | Done | 8 panels, filters in the URL, compare with previous period, auto refresh, Customize (order, width, visibility). |
