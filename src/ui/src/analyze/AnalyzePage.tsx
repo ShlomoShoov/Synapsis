@@ -14,12 +14,15 @@
  */
 import '@fontsource-variable/instrument-sans/wght.css';
 import '@fontsource/fragment-mono/400.css';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { DimensionSwitch, type Dimension } from './DimensionSwitch';
 import { EventsKey } from './map/EventsKey';
 import { GlobeMap, type Camera, type GlobeController, type MapLook } from './map/GlobeMap';
+import { PanelFrame } from './lib/PanelFrame';
 import { MapControls } from './map/MapControls';
+import { emptySet } from './map/lights';
+import { marksOfLayer } from './map/marks';
 import { useEvents } from './map/useEvents';
 import { requestOf } from './map/viewport';
 import { fetchCatalog } from './api/client';
@@ -69,11 +72,23 @@ export function AnalyzePage() {
     sources: viewFilter.sources,
     types: viewFilter.types,
   };
+  // The conclusions are their own layer of glyphs (the filter's toggle); "Conclusions" as the kind shows them alone.
+  const [conclusionsOn, setConclusionsOn] = useState(true);
+  const eventsShown = viewFilter.kind !== 'conclusion';
+  const marksShown =
+    viewFilter.kind === 'conclusion' || (viewFilter.kind === null && conclusionsOn);
   const {
     answer: events,
     pending,
     error,
-  } = useEvents(filters, request, viewFilter.kind ?? undefined);
+  } = useEvents(filters, eventsShown ? request : null, viewFilter.kind ?? undefined);
+  const conclusions = useEvents(filters, marksShown ? request : null, 'conclusion');
+  const conclusionLayer = marksShown ? conclusions.answer?.layer : undefined;
+  const marks = useMemo(
+    () => (conclusionLayer ? marksOfLayer(conclusionLayer) : null),
+    [conclusionLayer],
+  );
+  const [noLights] = useState(() => emptySet(0));
   const catalog = useLatest('catalog', (signal) => fetchCatalog(signal));
   const [searching, setSearching] = useState(false);
   const live = useLive(timeWindow, (time) => controller?.setLive(time));
@@ -167,7 +182,8 @@ export function AnalyzePage() {
     <div className={styles.page} data-object={focus ? '' : undefined}>
       <GlobeMap
         initialView={initialView}
-        lights={events?.lights ?? null}
+        lights={eventsShown ? (events?.lights ?? null) : noLights}
+        marks={marks}
         onLookChange={setLook}
         onPick={(id, item) =>
           setTrail([
@@ -252,8 +268,20 @@ export function AnalyzePage() {
           onChange={setViewFilter}
           catalog={catalog.answer}
           onMap={onMap}
+          conclusionsOn={conclusionsOn}
+          onConclusionsOn={setConclusionsOn}
         />
-        {onMap ? <EventsKey events={events} /> : <div ref={setKeySlot} />}
+        <PanelFrame name="key" label="the key" width={290}>
+          {onMap ? (
+            <EventsKey
+              events={eventsShown ? events : undefined}
+              eventsHidden={!eventsShown}
+              conclusions={conclusionLayer}
+            />
+          ) : (
+            <div ref={setKeySlot} />
+          )}
+        </PanelFrame>
       </div>
 
       <div className={styles.right} data-object={focus ? '' : undefined}>
@@ -266,7 +294,7 @@ export function AnalyzePage() {
             now={now}
             live={live}
             status={
-              pending ? (
+              pending || conclusions.pending ? (
                 <span className={styles.reading}>reading</span>
               ) : events ? (
                 `${events.layer.events.toLocaleString('en')} shown`

@@ -191,6 +191,7 @@ export function GraphView({
               className={styles.label}
               data-focus={id === focus.id || undefined}
               data-opened={node.total !== undefined || undefined}
+              data-conclusion={node.kind === 'conclusion' || undefined}
             >
               <span>{node.label}</span>
             </div>
@@ -205,6 +206,9 @@ export function GraphView({
             style={{ color: group.color }}
           >
             {group.title}
+            {(group.linkType === 'ABOUT' || group.linkType === 'PREMISE') && (
+              <code>{group.linkType}</code>
+            )}
             <b>{group.count.toLocaleString('en')}</b>
           </div>
         ))}

@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react';
 import { analyzeApiUrl } from '../config';
 import { clearLog, useQueryLog, type QueryRecord } from '../api/queryLog';
+import { PanelFrame } from '../lib/PanelFrame';
 import { sizeOf, tokensOf, trimmed } from './jsonView';
 import styles from './QueryPanel.module.css';
 
@@ -35,51 +36,53 @@ export function QueryPanel() {
   }
 
   return (
-    <aside className={styles.panel} aria-label="Queries sent to the API">
-      <header className={styles.header}>
-        <span className={styles.title}>Queries</span>
-        <span className={styles.base} title="The API these queries go to (VITE_ANALYZE_API_URL)">
-          {analyzeApiUrl}
-        </span>
-        <button type="button" className={styles.small} onClick={clearLog}>
-          Clear
-        </button>
-        <button
-          type="button"
-          className={styles.close}
-          onClick={() => setOpen(false)}
-          aria-label="Fold the query panel"
-          aria-expanded
-        >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M12.5 5 7.5 10l5 5" />
-          </svg>
-        </button>
-      </header>
+    <PanelFrame name="queries" label="the query panel" width={460} minWidth={300} fill>
+      <aside className={styles.panel} aria-label="Queries sent to the API">
+        <header className={styles.header}>
+          <span className={styles.title}>Queries</span>
+          <span className={styles.base} title="The API these queries go to (VITE_ANALYZE_API_URL)">
+            {analyzeApiUrl}
+          </span>
+          <button type="button" className={styles.small} onClick={clearLog}>
+            Clear
+          </button>
+          <button
+            type="button"
+            className={styles.close}
+            onClick={() => setOpen(false)}
+            aria-label="Fold the query panel"
+            aria-expanded
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M12.5 5 7.5 10l5 5" />
+            </svg>
+          </button>
+        </header>
 
-      <ol className={styles.list}>
-        {log.length === 0 && <li className={styles.empty}>No query yet.</li>}
-        {log.map((record) => (
-          <li key={record.id}>
-            <button
-              type="button"
-              className={styles.entry}
-              aria-pressed={record.id === chosen?.id}
-              onClick={() => setChosenId(record.id)}
-            >
-              <span className={styles.state} data-state={record.state}>
-                {stateOf(record)}
-              </span>
-              <span className={styles.route}>{record.route.replace('GET ', '')}</span>
-              <span className={styles.summary}>{summaryOf(record)}</span>
-              <span className={styles.ms}>{timeOf(record)}</span>
-            </button>
-          </li>
-        ))}
-      </ol>
+        <ol className={styles.list}>
+          {log.length === 0 && <li className={styles.empty}>No query yet.</li>}
+          {log.map((record) => (
+            <li key={record.id}>
+              <button
+                type="button"
+                className={styles.entry}
+                aria-pressed={record.id === chosen?.id}
+                onClick={() => setChosenId(record.id)}
+              >
+                <span className={styles.state} data-state={record.state}>
+                  {stateOf(record)}
+                </span>
+                <span className={styles.route}>{record.route.replace('GET ', '')}</span>
+                <span className={styles.summary}>{summaryOf(record)}</span>
+                <span className={styles.ms}>{timeOf(record)}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
 
-      {chosen && <QueryDetail record={chosen} />}
-    </aside>
+        {chosen && <QueryDetail record={chosen} />}
+      </aside>
+    </PanelFrame>
   );
 }
 

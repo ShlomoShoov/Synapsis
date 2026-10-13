@@ -334,3 +334,18 @@
 .goes[data-goes='map'] {
   color: var(--accent-soft);
 }
+
+/* A conclusion: its glyph for the dot, and a line with its badge and key numbers. */
+.result > svg:first-child {
+  grid-area: dot;
+  margin-left: -2px;
+}
+
+.conclusion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  grid-column: 2;
+  margin-top: 4px;
+}

@@ -3,7 +3,7 @@
 .key {
   display: grid;
   gap: 10px;
-  width: 290px;
+  width: var(--panel-width, 290px);
   padding: 14px 16px;
   border-radius: 16px;
   background: var(--glass);
@@ -91,4 +91,15 @@
 .quiet {
   margin: 0;
   color: var(--text-3);
+}
+
+/* The conclusions drawn, under the events. */
+.conclusions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--glass-edge);
+}
+
+.conclusions .categories svg {
+  justify-self: center;
 }

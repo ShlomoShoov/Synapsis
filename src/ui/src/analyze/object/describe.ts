@@ -4,6 +4,7 @@
  */
 import type { Item, LngLat, RecordKind } from '../api/model';
 import type { SilRecord, WireGraphNode } from '../api/contract';
+import { conclusionTypeOf } from '../conclusion/conclusion';
 import { categoryOf } from '../map/palette';
 
 const monthNames = [
@@ -106,7 +107,11 @@ export function familyOf(kind: RecordKind, type: string): { family: string; colo
     const category = categoryOf(type);
     return { family: category.name, color: category.color };
   }
-  const family = type ? typeWords(type) : kind === 'entity' ? 'Entity' : 'Conclusion';
+  if (kind === 'conclusion') {
+    const style = conclusionTypeOf(type);
+    return { family: style.name, color: style.color };
+  }
+  const family = type ? typeWords(type) : 'Entity';
   return { family, color: kindColors[kind] };
 }
 

@@ -10,6 +10,7 @@ import type { WireCatalogEntry } from '../api/contract';
 import { ApiError } from '../api/http';
 import type { Item, RecordKind } from '../api/model';
 import { useLatest } from '../lib/useLatest';
+import { ConclusionBadge, RowMark } from '../conclusion/ConclusionBadge';
 import { formatTime, headingOfItem, sourceName, typeWords, words } from '../object/describe';
 import type { ViewFilter } from '../filter/viewFilter';
 import { fromDayInput } from '../time/window';
@@ -298,7 +299,7 @@ function Result({ item, onClick }: { item: Item; onClick: () => void }) {
   const goes = item.place?.point ? 'map' : item.logical.length > 0 ? 'tree' : 'details';
   return (
     <button type="button" className={styles.result} onClick={onClick}>
-      <i style={{ background: heading.color, boxShadow: `0 0 8px ${heading.color}` }} />
+      <RowMark item={item} color={heading.color} />
       <span className={styles.label}>{heading.title}</span>
       <span className={styles.detail}>
         {[
@@ -310,6 +311,11 @@ function Result({ item, onClick }: { item: Item; onClick: () => void }) {
           .filter(Boolean)
           .join(' · ')}
       </span>
+      {item.kind === 'conclusion' && (
+        <span className={styles.conclusion}>
+          <ConclusionBadge item={item} />
+        </span>
+      )}
       <span className={styles.goes} data-goes={goes}>
         {goes === 'map' ? 'On the map' : goes === 'tree' ? 'In the tree' : 'Details'}
       </span>

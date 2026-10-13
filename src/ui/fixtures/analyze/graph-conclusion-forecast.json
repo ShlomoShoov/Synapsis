@@ -1,0 +1,91 @@
+{
+  "center": {
+    "id": "con:engine:forecast:84bcf59ffffffff:1989-02",
+    "labels": [
+      "Conclusion"
+    ],
+    "type": "forecast",
+    "predicate": "expected_count",
+    "about": [
+      "ent:h3:84bcf59ffffffff"
+    ],
+    "premises": [
+      "evt:ucdp:14054",
+      "con:engine:spark:84bc1b7ffffffff:1989-01",
+      "evt:ucdp:13364"
+    ],
+    "confidence": 70,
+    "known_at": "1989-02-01T00:00:00Z"
+  },
+  "total": 4,
+  "links": [
+    {
+      "type": "ABOUT",
+      "from": "con:engine:forecast:84bcf59ffffffff:1989-02",
+      "to": "ent:h3:84bcf59ffffffff",
+      "properties": {
+        "known_at": "1989-02-01T00:00:00Z"
+      },
+      "node": {
+        "id": "ent:h3:84bcf59ffffffff",
+        "labels": [
+          "Entity"
+        ]
+      }
+    },
+    {
+      "type": "PREMISE",
+      "from": "con:engine:forecast:84bcf59ffffffff:1989-02",
+      "to": "evt:ucdp:14054",
+      "properties": {
+        "known_at": "1989-02-01T00:00:00Z"
+      },
+      "node": {
+        "id": "evt:ucdp:14054",
+        "labels": [
+          "Event"
+        ],
+        "type": "SEC.CONFLICT.NON_STATE",
+        "source": "src:ucdp:ged",
+        "time_start": "1989-01-01T00:00:00Z",
+        "known_at": "1989-10-31T00:00:00Z"
+      }
+    },
+    {
+      "type": "PREMISE",
+      "from": "con:engine:forecast:84bcf59ffffffff:1989-02",
+      "to": "evt:ucdp:13364",
+      "properties": {
+        "known_at": "1989-02-01T00:00:00Z"
+      },
+      "node": {
+        "id": "evt:ucdp:13364",
+        "labels": [
+          "Event"
+        ],
+        "type": "SEC.CONFLICT.NON_STATE",
+        "source": "src:ucdp:ged",
+        "time_start": "1989-01-01T00:00:00Z",
+        "known_at": "1989-10-31T00:00:00Z"
+      }
+    },
+    {
+      "type": "PREMISE",
+      "from": "con:engine:forecast:84bcf59ffffffff:1989-02",
+      "to": "con:engine:spark:84bc1b7ffffffff:1989-01",
+      "properties": {
+        "known_at": "1989-02-01T00:00:00Z"
+      },
+      "node": {
+        "id": "con:engine:spark:84bc1b7ffffffff:1989-01",
+        "labels": [
+          "Conclusion"
+        ],
+        "type": "spark",
+        "predicate": "spark",
+        "confidence": 80,
+        "known_at": "1989-02-01T00:00:00Z"
+      }
+    }
+  ]
+}

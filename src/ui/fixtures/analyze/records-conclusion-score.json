@@ -1,0 +1,53 @@
+[
+  {
+    "source": "src:synapsis:engine",
+    "state": 1,
+    "known_at": "1990-01-01T00:00:00Z",
+    "received_at": "2026-10-13T21:40:00.000Z",
+    "batch_id": "engine-fixture",
+    "producer": "engine:synapsis",
+    "record": {
+      "kind": "conclusion",
+      "id": "con:engine:forecast_score:ucdp-ged:1989",
+      "type": "forecast_score",
+      "source": "src:synapsis:engine",
+      "known_at": "1990-01-01T00:00:00Z",
+      "about": [
+        "ent:logical:sec.conflict/ucdp"
+      ],
+      "statement": {
+        "predicate": "forecast_score",
+        "value": {
+          "events": 12,
+          "captured_model": 7,
+          "captured_routine": 4,
+          "k": 50,
+          "auc_model": 0.81,
+          "auc_routine": 0.74
+        }
+      },
+      "premises": [
+        "con:engine:forecast:84bcf59ffffffff:1989-02"
+      ],
+      "method": {
+        "by": "src:synapsis:engine",
+        "name": "score.capture_top_k",
+        "version": "1.0"
+      },
+      "confidence": 90,
+      "text": {
+        "title": "Forecasts of 1989 conflict: the model captured 7 of 12 new outbreaks in its top 50, the routine 4.",
+        "lang": "en"
+      },
+      "attributes": {
+        "period_start": "1989-01-01T00:00:00Z",
+        "period_end": "1990-01-01T00:00:00Z",
+        "period_precision": "year",
+        "params": {
+          "k": 50,
+          "outbreak": "first event in 12 months"
+        }
+      }
+    }
+  }
+]

@@ -1,8 +1,10 @@
 /**
  * The development mode without the stores (VITE_ANALYZE_FIXTURES=1): the read API answered from the real answers saved
- * in fixtures/analyze/ (its README gives the request behind each file). Nothing here is made up:
+ * in fixtures/analyze/ (its README gives the request behind each file). Nothing here is made up but the conclusions
+ * (written by hand from the engine's contract while the stack was reloaded; the README says so):
  *
- * - /map/cells and /map/points are answered over map-points-world.json (every event with a point in the sample), with
+ * - /map/cells and /map/points are answered over map-points-world.json (every event with a point in the sample) and
+ *   map-points-conclusions.json (conclusions written by hand from the engine's contract, see the README), with
  *   the API's own filters (bbox, from, to, source, type, kind, limit), so the map works in any window and place.
  * - /graph, /records, /logical and /search answer with the saved file of that exact request; the filters are not
  *   applied to them.
@@ -26,12 +28,15 @@ const graphs: Record<string, string> = {
   'evt:ucdp:7578': 'graph-event-ucdp-7578',
   'ent:kev-vendor:microsoft': 'graph-hub-microsoft',
   'evt:gtd:197000000001': 'graph-not-found-gtd-197000000001',
+  'con:engine:forecast:84bcf59ffffffff:1989-02': 'graph-conclusion-forecast',
 };
 
 const records: Record<string, string> = {
   'evt:kev:CVE-2021-44228': 'records-cve-2021-44228',
   'ent:kev-product:apache/log4j2': 'records-log4j2',
   'evt:ucdp:7578': 'records-ucdp-7578',
+  'con:engine:forecast:84bcf59ffffffff:1989-02': 'records-conclusion-forecast',
+  'con:engine:forecast_score:ucdp-ged:1989': 'records-conclusion-score',
 };
 
 const logical: Record<string, string> = {
@@ -48,6 +53,7 @@ const searches: [Record<string, string>, string][] = [
   [{ entity: 'ent:kev-product:apache/log4j2' }, 'search-entity-log4j2'],
   [{ logical: 'cyber.vendor_product/Apache' }, 'search-logical-apache'],
   [{ kind: 'entity' }, 'search-kind-entity'],
+  [{ kind: 'conclusion' }, 'search-kind-conclusion'],
 ];
 
 /** A short wait, so loading states show as they will with the real API. */
@@ -120,13 +126,15 @@ function sameRequest(a: Record<string, string>, b: Record<string, string>): bool
 /** The world's events that match the map's question (its filters and box). */
 async function matching(params: URLSearchParams): Promise<WireDoc[]> {
   const world = (await load('map-points-world')) as WireList;
+  // The conclusions were written by hand (the README says so): the map answers them the same way.
+  const conclusions = (await load('map-points-conclusions')) as WireList;
   const from = params.get('from') ? Date.parse(params.get('from')!) : null;
   const to = params.get('to') ? Date.parse(params.get('to')!) : null;
   const sources = params.getAll('source');
   const types = params.getAll('type');
   const kind = params.get('kind') ?? 'event';
   const box = params.get('bbox')?.split(',').map(Number);
-  return world.items.filter((doc) => {
+  return [...world.items, ...conclusions.items].filter((doc) => {
     const start = doc.time_start ? Date.parse(doc.time_start) : null;
     if (doc.kind !== kind) return false;
     if (from !== null && (start === null || start < from)) return false;

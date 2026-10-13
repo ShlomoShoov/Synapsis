@@ -30,3 +30,15 @@ records (millions), so never rely on these sizes: always use `total`, `records.v
 | records-log4j2.json | `GET /records/ent:kev-product:apache/log4j2` |
 | records-ucdp-7578.json | `GET /records/evt:ucdp:7578` |
 | catalog.json | `GET /catalog` (every source and type: the values for the source and type filters) |
+
+**Conclusions (written by hand, 13 Oct 2026 night)**: the stack was being reloaded, so these follow the engine's
+contract (EMERGENCY.md §12, "Conclusions in the read routes") with made-up numbers on real cells of the sample. Replace
+them with saved answers once the API has conclusions.
+
+| File | Request |
+| --- | --- |
+| map-points-conclusions.json | the map routes with `kind=conclusion` (answered over it like map-points-world.json) |
+| search-kind-conclusion.json | `GET /search?kind=conclusion` |
+| records-conclusion-forecast.json | `GET /records/con:engine:forecast:84bcf59ffffffff:1989-02` |
+| records-conclusion-score.json | `GET /records/con:engine:forecast_score:ucdp-ged:1989` |
+| graph-conclusion-forecast.json | `GET /graph?id=con:engine:forecast:84bcf59ffffffff:1989-02` (ABOUT the cell, PREMISE events and a spark) |
