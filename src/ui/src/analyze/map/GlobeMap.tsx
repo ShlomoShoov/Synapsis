@@ -332,12 +332,11 @@ function hoverOf(feature: MapGeoJSONFeature, x: number, y: number): Hover {
   }
   const start = String(properties.start ?? '');
   const day = start ? formatMoment(Date.parse(start)) : '';
-  return {
-    x,
-    y,
-    title: String(properties.label),
-    detail: [properties.type, day].filter(Boolean).join(' · '),
-  };
+  const label = String(properties.label);
+  const type = String(properties.type);
+  // A generated label already begins with the type ("type · where · what"): it is not said twice.
+  const detail = [label.startsWith(type) ? '' : type, day].filter(Boolean).join(' · ');
+  return { x, y, title: label, detail };
 }
 
 function easeInOut(t: number): number {
