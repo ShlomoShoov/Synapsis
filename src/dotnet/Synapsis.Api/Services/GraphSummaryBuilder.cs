@@ -15,6 +15,17 @@ public static class GraphSummaryBuilder
 {
     private const int BodyLength = 140;
 
+    /// <summary>Lists the entities named by a conclusion so MongoDB can resolve their display names.</summary>
+    internal static List<string> AboutEntityIds(IReadOnlyList<StoredRecord> statements)
+    {
+        List<string> ids = new List<string>();
+        if (MostReliable(statements).Record is ConclusionRecord conclusion)
+        {
+            foreach (string about in conclusion.About) ids.Add(about);
+        }
+        return ids;
+    }
+
     /// <summary>Creates the display fields from the most reliable statement and includes every selected source.</summary>
     public static RecordSummary Build(IReadOnlyList<StoredRecord> statements, IReadOnlyDictionary<string, string> entityNames)
     {

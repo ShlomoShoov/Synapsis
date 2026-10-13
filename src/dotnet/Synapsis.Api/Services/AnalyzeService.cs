@@ -58,6 +58,7 @@ public sealed class AnalyzeService
 
         // 3. Verify candidates in one batched Mongo read and build flat summaries.
         List<string> candidateIds = CandidateIds(candidates);
+        candidateIds.AddRange(GraphSummaryBuilder.AboutEntityIds(centerStatements));
         Dictionary<string, List<StoredRecord>> statementsById = await _recordRepository.AsOfManyAsync(candidateIds, asOf);
         Dictionary<string, string> entityNames = EntityNames(centerStatements, statementsById, request.Id!);
         Dictionary<string, RecordSummary> summaries = Summaries(statementsById, entityNames);
@@ -65,7 +66,7 @@ public sealed class AnalyzeService
         summaries[center.Id] = center;
 
         // 4. Group, order, and page candidates; an unknown group is a request error.
-        List<ConnectionGroup> allGroups = BuildGroups(candidates, summaries, request);
+        List<ConnectionGroup> allGroups = BuildGroups(candidates, summaries);
         if (request.Group != null && !HasGroup(allGroups, request.Group))
         {
             throw new ArgumentException("group '" + request.Group + "' is not one of this record's connection groups.", "group");
@@ -140,7 +141,7 @@ public sealed class AnalyzeService
     }
 
     /// <summary>Builds the relation, together, event, and participant groups in the agreed order.</summary>
-    private static List<ConnectionGroup> BuildGroups(IReadOnlyList<GraphConnectionCandidate> candidates, IReadOnlyDictionary<string, RecordSummary> summaries, GraphRequest request)
+    private static List<ConnectionGroup> BuildGroups(IReadOnlyList<GraphConnectionCandidate> candidates, IReadOnlyDictionary<string, RecordSummary> summaries)
     {
         List<ConnectionGroup> groups = new List<ConnectionGroup>();
         groups.AddRange(RelationGroups(candidates, summaries));

@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MongoDB.Bson;
 using Synapsis.Api.Models.Dto;
+using Synapsis.Api.Services;
+using Synapsis.Data.Models.Entities;
 using Xunit;
 
 namespace Synapsis.Tests.Unit;
@@ -10,6 +13,34 @@ namespace Synapsis.Tests.Unit;
 /// <summary>Checks the established flat JSON contract of a graph answer.</summary>
 public sealed class GraphAnswerContractTests
 {
+    /// <summary>A conclusion statement uses a known entity name and leaves an unknown subject as its id.</summary>
+    [Fact]
+    public void Conclusion_statement_uses_known_entity_name()
+    {
+        const string conclusionId = "con:test:1";
+        const string entityId = "ent:test:apache";
+        const string unknownId = "ent:test:unknown";
+        DateTime knownAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        StoredRecord statement = new StoredRecord
+        {
+            Key = conclusionId + "|src:test|1", RecordId = conclusionId, Source = "src:test",
+            Kind = "conclusion", Type = "TEST.CONCLUSION", State = 1, KnownAt = knownAt,
+            Record = new BsonDocument
+            {
+                ["kind"] = "conclusion", ["id"] = conclusionId, ["type"] = "TEST.CONCLUSION",
+                ["source"] = "src:test", ["known_at"] = new BsonDateTime(knownAt),
+                ["about"] = new BsonArray { entityId, unknownId },
+                ["statement"] = new BsonDocument { ["predicate"] = "in_logical_space", ["object"] = "cyber.product_class/LIBRARY" }
+            }
+        };
+        Dictionary<string, string> names = new Dictionary<string, string> { [entityId] = "Apache" };
+
+        RecordSummary summary = GraphSummaryBuilder.Build(new List<StoredRecord> { statement }, names);
+
+        Assert.Equal("Apache, ent:test:unknown: in_logical_space cyber.product_class/LIBRARY", summary.Label);
+        Assert.Equal("statement", summary.LabelFrom);
+    }
+
     /// <summary>Connection items stay flat and nullable fields are omitted from the serialized response.</summary>
     [Fact]
     public void Graph_answer_uses_flat_snake_case_fields_and_omits_nulls()

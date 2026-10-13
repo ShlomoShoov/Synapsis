@@ -308,6 +308,39 @@ public sealed class GraphQueryIntegrationTests
         Assert.Equal("subject", item.Role);
     }
 
+    /// <summary>A conclusion loads known about entities for its statement label at the requested time.</summary>
+    [Fact]
+    public async Task Graph_conclusion_label_uses_known_about_entity_name()
+    {
+        if (!MongoConfigured()) return;
+        MongoContext mongo = new MongoContext(MongoOptions());
+        await using Neo4jContext neo4j = new Neo4jContext(new Neo4jOptions
+        {
+            Url = "bolt://127.0.0.1:1", Database = "neo4j"
+        });
+        string conclusionId = NewId("con");
+        string entityId = NewId("ent");
+        string missingId = NewId("ent");
+        BsonDocument conclusion = new BsonDocument
+        {
+            ["kind"] = "conclusion", ["id"] = conclusionId, ["type"] = "TEST.CONCLUSION",
+            ["source"] = "src:test", ["reliability"] = 80, ["known_at"] = new BsonDateTime(KnownAt),
+            ["about"] = new BsonArray { entityId, missingId },
+            ["statement"] = new BsonDocument { ["predicate"] = "in_logical_space", ["object"] = "LIBRARY" }
+        };
+        await mongo.Records.InsertManyAsync(new List<StoredRecord>
+        {
+            Stored(conclusionId, "src:test", 1, KnownAt, conclusion),
+            Stored(entityId, "src:test", 1, KnownAt, EntityJson(entityId, "Apache"))
+        });
+
+        GraphAnswer answer = await Service(mongo, neo4j).GraphAsync(new GraphRequest { Id = conclusionId });
+
+        Assert.Equal("Apache, " + missingId + ": in_logical_space LIBRARY", answer.Center.Label);
+        Assert.Equal("statement", answer.Center.LabelFrom);
+        Assert.Empty(answer.Connections);
+    }
+
     /// <summary>Returns true when isolated MongoDB integration settings were supplied.</summary>
     private static bool MongoConfigured()
     {
