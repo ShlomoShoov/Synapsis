@@ -37,7 +37,8 @@ export function AnalyzePage() {
   const [controller, setController] = useState<GlobeController | null>(null);
 
   const request = look ? requestOf(look.zoom, look.bounds) : null;
-  const filters = { from: timeWindow.from, to: timeWindow.to, asOf };
+  // The read API has no as_of (EMERGENCY.md §12): the control stays, the map reads what is known now.
+  const filters = { from: timeWindow.from, to: timeWindow.to };
   const { answer: events, pending, error } = useEvents(filters, request);
   const live = useLive(timeWindow, (time) => controller?.setLive(time));
 

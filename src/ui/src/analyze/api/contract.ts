@@ -1,95 +1,91 @@
 /**
- * The answers of the Analyze routes exactly as they arrive (contracts/synapsis-api.yaml, components.schemas): snake_case,
- * fields with a null value left out. Only adapt.ts reads these; the rest of Analyze uses the model (model.ts), so a
- * change of shape on the wire changes adapt.ts and this file only.
+ * The answers of the read API exactly as they arrive (EMERGENCY.md §12): the stores' own objects, passed through.
+ * Elasticsearch documents (`_source`, snake_case, a field the record does not have is absent), Elasticsearch buckets,
+ * Neo4j nodes and links. Only adapt.ts reads the map's answers; the rest of Analyze uses the model (model.ts).
  */
 
 export type WireKind = 'entity' | 'event' | 'conclusion';
 
-export interface WireMeasure {
-  name?: string;
-  value?: number;
-  unit?: string;
-}
-
-export interface WireEntityLabel {
+/** One search document as Elasticsearch stores it: one state of one record. */
+export interface WireDoc {
   id: string;
-  label: string;
-}
-
-/** RecordSummary: one record, enough to draw it and show a popup. */
-export interface WireRecordSummary {
-  id: string;
+  record_key: string;
+  state: number;
   kind: WireKind;
   type: string;
-  sources: string[];
+  source: string;
   known_at: string;
-  label: string;
-  label_from: 'name' | 'title' | 'body' | 'statement' | 'generated';
+  name?: string;
+  title?: string;
+  body?: string;
   time_start?: string;
-  time_end?: string;
   time_precision?: string;
+  week?: string;
   /** [longitude, latitude] */
-  point?: [number, number];
-  uncertainty_km?: number;
+  location?: [number, number];
+  h3_r2?: string;
+  h3_r3?: string;
+  h3_r4?: string;
+  h3_r5?: string;
   country?: string;
   subdivision?: string;
-  area_name?: string;
-  logical?: string[];
-  measures?: WireMeasure[];
-  participants?: WireEntityLabel[];
+  /** Every prefix of every logical path: "cyber.vendor_product", "cyber.vendor_product/Apache", ... */
+  logical_prefixes?: string[];
+  /** Each measure's values, by name: { "magnitude": [5.6] }. */
+  measures?: Record<string, number[]>;
+  /** The ids of the entities that take part. */
+  entities?: string[];
 }
 
-export interface WireMapCell {
-  cell: string;
-  resolution: number;
-  count: number;
-  /** [longitude, latitude] */
-  center: [number, number];
-  boundary: [number, number][];
-}
-
-export interface WireOmittedCount {
-  reason: 'no_point' | 'too_imprecise' | string;
-  count: number;
-  message: string;
-}
-
-/** GET /analyze/map: only the list of the chosen layer is filled. */
-export interface WireMapAnswer {
-  as_of: string;
-  layer: 'points' | 'cells';
-  resolution?: number;
-  events: number;
+/** GET /map/points and GET /search: one document per record; total = distinct records that match (all of them). */
+export interface WireList {
   total: number;
-  next?: string;
-  omitted?: WireOmittedCount[];
-  points?: WireRecordSummary[];
-  cells?: WireMapCell[];
+  items: WireDoc[];
 }
 
-export interface WireConnectedRecord extends WireRecordSummary {
-  role?: string;
-  direction?: 'out' | 'in';
-  shared_events?: number;
-}
-
-export interface WireConnectionGroup {
+/** One Elasticsearch bucket: a key, its documents (states), its distinct records. */
+export interface WireBucket {
   key: string;
-  kind: 'relation' | 'together' | 'event' | 'participant' | string;
-  type?: string;
-  label: string;
-  count: number;
-  next?: string;
-  items: WireConnectedRecord[];
+  doc_count: number;
+  records: { value: number };
 }
 
-/** GET /analyze/graph */
-export interface WireGraphAnswer {
-  as_of: string;
-  center: WireRecordSummary;
-  connections: WireConnectionGroup[];
-  no_connections_reason?: string;
+/** GET /map/cells: the cells (key = H3 cell id), the most records first. */
+export interface WireCells {
+  /** Distinct records in all the cells. */
+  records: number;
+  /** Documents in cells beyond the ones returned (0 = nothing cut). */
+  sum_other_doc_count: number;
+  buckets: WireBucket[];
+}
+
+/** GET /logical: one level of the tree (key = the full path). */
+export interface WireLogical {
+  sum_other_doc_count: number;
+  buckets: WireBucket[];
+}
+
+/** A Neo4j node: its properties as stored, plus its labels (Entity, Event or Conclusion). */
+export interface WireGraphNode {
+  id: string;
+  labels: string[];
+  [property: string]: unknown;
+}
+
+/** A Neo4j link (PARTICIPATES, RELATED, ABOUT, PREMISE) and the node at its other end. */
+export interface WireGraphLink {
+  type: string;
+  from: string;
+  to: string;
+  properties: Record<string, unknown>;
+  node: WireGraphNode;
+}
+
+/** GET /graph: total = all the node's links; links holds at most the limit. */
+export interface WireGraph {
+  center: WireGraphNode;
+  total: number;
+  links: WireGraphLink[];
 }
 
 /** GET /records/{id}: one per source. `record` is the record exactly as it arrived (SIL 1.2). */

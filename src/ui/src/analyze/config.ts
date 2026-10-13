@@ -1,15 +1,11 @@
 /**
- * Where Analyze reads from. One address for the three reading routes (contracts/synapsis-api.yaml):
- * GET /analyze/map, GET /analyze/graph and GET /records/{id}.
- *
- * The mock (Synapsis.MockApi, http://localhost:8081) and the real API answer the same routes with the same shapes, so
- * switching is one change: set VITE_ANALYZE_API_URL when starting the dev server or building, for example
- * `VITE_ANALYZE_API_URL=http://localhost:8080 npm run dev`. Without it, Analyze reads the mock.
+ * Where Analyze reads from: the read API (EMERGENCY.md §12), GET /map/cells, /map/points, /search, /logical, /graph and
+ * /records/{id}. Set VITE_ANALYZE_API_URL when starting the dev server or building to read another address.
  */
 
 /** The base address of the Analyze routes, without a trailing slash. */
 export const analyzeApiUrl: string = trimSlash(
-  import.meta.env.VITE_ANALYZE_API_URL ?? 'http://localhost:8081',
+  import.meta.env.VITE_ANALYZE_API_URL ?? 'http://localhost:8080',
 );
 
 /** How long a request may take before it counts as failed. */

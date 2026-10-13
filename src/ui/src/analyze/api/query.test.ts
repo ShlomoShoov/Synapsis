@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { bboxParam, filterParams, graphQuery, isoOf, mapQuery, recordPath } from './query';
+import {
+  bboxParam,
+  cellsQuery,
+  filterParams,
+  graphQuery,
+  isoOf,
+  logicalQuery,
+  pointsQuery,
+  recordPath,
+  resolutionOf,
+  searchQuery,
+} from './query';
 
 const day = (text: string) => Date.parse(`${text}T00:00:00Z`);
 
@@ -14,39 +25,46 @@ describe('filterParams', () => {
   it('repeats a list filter, never joins it', () => {
     const params = filterParams({
       types: ['SEC.ATTACK.BOMBING', 'GEO.EARTHQUAKE'],
-      countries: ['US'],
+      sources: ['src:usgs:comcat'],
     });
     expect(params.getAll('type')).toEqual(['SEC.ATTACK.BOMBING', 'GEO.EARTHQUAKE']);
-    expect(params.toString()).toBe('type=SEC.ATTACK.BOMBING&type=GEO.EARTHQUAKE&country=US');
+    expect(params.toString()).toBe(
+      'source=src%3Ausgs%3Acomcat&type=SEC.ATTACK.BOMBING&type=GEO.EARTHQUAKE',
+    );
   });
 
   it('sends the times and leaves out what is not set', () => {
-    const params = filterParams({ from: day('1970-01-01'), to: day('1970-04-01'), q: '  ' });
+    const params = filterParams({ from: day('1970-01-01'), to: day('1970-04-01') });
     expect(params.toString()).toBe('from=1970-01-01T00%3A00%3A00Z&to=1970-04-01T00%3A00%3A00Z');
   });
+});
 
-  it('encodes ids that hold slashes as query values', () => {
-    const params = filterParams({ entities: ['ent:kev-product:apache/log4j2'] });
-    expect(params.toString()).toBe('entity=ent%3Akev-product%3Aapache%2Flog4j2');
+describe('resolutionOf', () => {
+  it('maps the zoom to the H3 resolution', () => {
+    expect([0, 3.9, 4, 5.9, 6, 7.9, 8, 14].map(resolutionOf)).toEqual([2, 2, 3, 3, 4, 4, 5, 5]);
   });
 });
 
-describe('mapQuery', () => {
-  it('adds the box and the zoom, and the layer only when not auto', () => {
-    const query = mapQuery(
-      { from: day('1970-01-01') },
-      { zoom: 4, bbox: { west: -125, south: 24, east: -66, north: 50 } },
+describe('cellsQuery and pointsQuery', () => {
+  it('add the resolution or the box and the limit', () => {
+    const box = { west: 170, south: 45, east: -170, north: 55 };
+    expect(cellsQuery({}, 3, box)).toBe('resolution=3&bbox=170%2C45%2C-170%2C55');
+    expect(cellsQuery({ from: day('1965-01-01') }, 2)).toBe(
+      'from=1965-01-01T00%3A00%3A00Z&resolution=2',
     );
-    expect(query).toBe('from=1970-01-01T00%3A00%3A00Z&bbox=-125%2C24%2C-66%2C50&zoom=4');
-    expect(mapQuery({}, { zoom: 2, layer: 'cells' })).toBe('zoom=2&layer=cells');
+    expect(pointsQuery({}, box, 5000)).toBe('bbox=170%2C45%2C-170%2C55&limit=5000');
   });
 });
 
-describe('graphQuery', () => {
-  it('puts the id first, then the filters and the page', () => {
-    expect(
-      graphQuery('evt:gtd:197001060001', { asOf: day('2026-10-13') }, { group: 'event:X' }),
-    ).toBe('id=evt%3Agtd%3A197001060001&as_of=2026-10-13T00%3A00%3A00Z&group=event%3AX');
+describe('searchQuery, logicalQuery and graphQuery', () => {
+  it('send only what is set, ids as query values', () => {
+    expect(searchQuery({}, { q: ' log4j ', semantic: false })).toBe('q=log4j');
+    expect(searchQuery({}, { entity: 'ent:kev-product:apache/log4j2', limit: 20 })).toBe(
+      'entity=ent%3Akev-product%3Aapache%2Flog4j2&limit=20',
+    );
+    expect(logicalQuery({}, 'cyber.vendor_product')).toBe('node=cyber.vendor_product');
+    expect(logicalQuery({})).toBe('');
+    expect(graphQuery('evt:kev:CVE-2021-44228')).toBe('id=evt%3Akev%3ACVE-2021-44228');
   });
 });
 
@@ -54,9 +72,6 @@ describe('recordPath', () => {
   it('keeps the slashes of the id in the path and encodes the rest', () => {
     expect(recordPath('ent:kev-product:apache/log4j2')).toBe(
       '/records/ent%3Akev-product%3Aapache/log4j2',
-    );
-    expect(recordPath('evt:kev:CVE-2021-44228', day('2026-10-13'), 'src:cisa:kev')).toBe(
-      '/records/evt%3Akev%3ACVE-2021-44228?as_of=2026-10-13T00%3A00%3A00Z&source=src%3Acisa%3Akev',
     );
   });
 });

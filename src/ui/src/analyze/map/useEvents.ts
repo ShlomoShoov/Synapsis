@@ -1,17 +1,18 @@
 /**
  * useEvents: the events of the time window in view, as lights.
  *
- * The map asks for the events themselves (layer=points, up to 5,000), so every light has its type's colour. When more
- * events match than one answer holds, it asks for hexagons instead and draws their density as warm lights, which grow
- * with the count; zooming in brings back the events one by one.
+ * The map first asks how many records are in view, per H3 cell at the zoom's resolution (GET /map/cells). When they
+ * are 5,000 or fewer, it asks for the events themselves (GET /map/points), so every light has its type's colour and
+ * no point is ever cut. Otherwise it draws the cells' density as warm lights, which grow with the count; zooming in
+ * brings back the events one by one.
  */
-import { fetchMapLayer } from '../api/client';
+import { fetchCells, fetchPoints } from '../api/client';
 import type { MapLayer } from '../api/model';
-import { type Filters, type MapView, mapQuery } from '../api/query';
+import { type Filters, type MapView, cellsQuery, resolutionOf, wholeEarth } from '../api/query';
 import { useLatest } from '../lib/useLatest';
 import { type LightSet, lightsOfCells, lightsOfPoints } from './lights';
 
-/** The most events drawn one by one. */
+/** The most events drawn one by one (the API's largest page of points). */
 export const mostPoints = 5000;
 
 export interface Events {
@@ -21,14 +22,20 @@ export interface Events {
 }
 
 export function useEvents(filters: Filters, view: MapView | null) {
-  const pointsView: MapView | null = view && { ...view, layer: 'points', limit: mostPoints };
-  const key = pointsView ? mapQuery(filters, pointsView) : null;
+  const resolution = view ? resolutionOf(view.zoom) : 2;
+  const key = view ? cellsQuery(filters, resolution, view.bbox) : null;
   return useLatest<Events>(key, async (signal) => {
-    const points = await fetchMapLayer(filters, pointsView!, signal);
-    if (!points.next) {
-      return { layer: points, lights: lightsOfPoints(points.points) };
+    // 1. The records in view, per cell.
+    const cells = await fetchCells(filters, resolution, view!.bbox, signal);
+
+    // 2. Few enough: the points themselves. A point too imprecise for a cell is not in the cells' sum, so a list of
+    //    points that was cut after all (total above the items) gives way to the cells.
+    if (cells.events <= mostPoints) {
+      const points = await fetchPoints(filters, view!.bbox ?? wholeEarth, mostPoints, signal);
+      if (points.total <= points.points.length) {
+        return { layer: points, lights: lightsOfPoints(points.points) };
+      }
     }
-    const cells = await fetchMapLayer(filters, { ...view!, layer: 'cells' }, signal);
     return { layer: cells, lights: lightsOfCells(cells.cells) };
   });
 }

@@ -1,6 +1,6 @@
 /**
- * What Analyze works with: the answers of the three routes, in the client's own words (adapt.ts makes them from the
- * wire). Times stay ISO strings in UTC, as they arrive.
+ * What Analyze works with: the map's answers in the client's own words (adapt.ts makes them from the wire). Times
+ * stay ISO strings in UTC, as they arrive.
  */
 
 export type RecordKind = 'entity' | 'event' | 'conclusion';
@@ -75,17 +75,16 @@ export interface Omitted {
   message: string;
 }
 
-/** GET /analyze/map: one layer of the map, either points or cells. */
+/** One layer of the map, either points (GET /map/points) or cells (GET /map/cells). */
 export interface MapLayer {
-  asOf: string;
   layer: 'points' | 'cells';
+  /** The H3 resolution of the cells. */
   resolution?: number;
-  /** The matching events drawn, in all the points or cells. */
+  /** The records drawn, in all the points or cells. */
   events: number;
-  /** All the points or cells, not only this page. */
+  /** All the points (records) or all the cells. */
   total: number;
-  /** The cursor of the next page; absent on the last one. */
-  next?: string;
+  /** Matching records not drawn, and why (the API no longer counts these: always empty for now). */
   omitted: Omitted[];
   points: Item[];
   cells: Cell[];

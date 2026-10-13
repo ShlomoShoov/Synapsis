@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react';
 
 export interface QueryRecord {
   id: number;
-  /** "GET /analyze/map" */
+  /** "GET /map/cells" */
   route: string;
   /** The parameters in the order they were sent (a list filter appears once per value). */
   params: [string, string][];
@@ -71,7 +71,7 @@ export function useQueryLog(): QueryRecord[] {
   );
 }
 
-/** "GET /analyze/map" and the parameters, from an address. */
+/** "GET /map/cells" and the parameters, from an address. */
 export function describe(url: string): { route: string; params: [string, string][] } {
   const parsed = new URL(url, 'http://localhost');
   return {

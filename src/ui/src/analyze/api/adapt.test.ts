@@ -1,83 +1,103 @@
 import { describe, expect, it } from 'vitest';
-import { itemOf, mapLayerOf } from './adapt';
-import type { WireMapAnswer, WireRecordSummary } from './contract';
+import { cellsLayerOf, itemOf, labelOf, pointsLayerOf } from './adapt';
+import type { WireCells, WireDoc } from './contract';
 
-const event: WireRecordSummary = {
-  id: 'evt:gtd:197001060001',
+const quake: WireDoc = {
+  id: 'evt:usgs:ushis2739',
+  record_key: 'evt:usgs:ushis2739|src:usgs:comcat',
+  state: 1,
   kind: 'event',
-  type: 'SEC.ATTACK.BOMBING',
-  sources: ['src:start:gtd'],
-  known_at: '2026-10-12T17:45:05Z',
-  label: 'Bombing · Denver',
-  label_from: 'generated',
-  time_start: '1970-01-06T00:00:00Z',
-  time_precision: 'day',
-  point: [-104.99, 39.74],
-  uncertainty_km: 5,
-  country: 'US',
-  subdivision: 'US-CO',
-  measures: [{ name: 'killed', value: 0 }, { name: 'broken' }],
-  participants: [{ id: 'ent:gtd-group:x', label: 'X' }],
+  type: 'GEO.EARTHQUAKE',
+  source: 'src:usgs:comcat',
+  known_at: '1965-01-30T05:37:21Z',
+  time_start: '1965-01-30T04:37:21Z',
+  time_precision: 'second',
+  location: [-179.67, 51.68],
+  h3_r2: '82225ffffffffff',
+  logical_prefixes: [],
+  measures: { magnitude: [5.6], depth_km: [88] },
+  entities: [],
 };
 
 describe('itemOf', () => {
-  it('gathers the time and the place, and keeps only whole measures', () => {
-    const item = itemOf(event);
-    expect(item.time).toEqual({ start: '1970-01-06T00:00:00Z', end: undefined, precision: 'day' });
+  it('reads the time, the point and every measure value of a document', () => {
+    const item = itemOf(quake);
+    expect(item.sources).toEqual(['src:usgs:comcat']);
+    expect(item.time).toEqual({ start: '1965-01-30T04:37:21Z', precision: 'second' });
     expect(item.place).toEqual({
-      point: [-104.99, 39.74],
-      uncertaintyKm: 5,
-      country: 'US',
-      subdivision: 'US-CO',
-      areaName: undefined,
+      point: [-179.67, 51.68],
+      country: undefined,
+      subdivision: undefined,
     });
-    expect(item.measures).toEqual([{ name: 'killed', value: 0, unit: undefined }]);
-    expect(item.logical).toEqual([]);
+    expect(item.measures).toEqual([
+      { name: 'magnitude', value: 5.6 },
+      { name: 'depth_km', value: 88 },
+    ]);
+    expect(item.label).toBe('GEO.EARTHQUAKE');
+    expect(item.labelFrom).toBe('generated');
+  });
+
+  it('keeps only the deepest logical paths and lists the participants by id', () => {
+    const item = itemOf({
+      ...quake,
+      kind: 'event',
+      logical_prefixes: [
+        'cyber.vendor_product',
+        'cyber.vendor_product/Apache',
+        'cyber.vendor_product/Apache/Log4j2',
+      ],
+      entities: ['ent:kev-product:apache/log4j2'],
+    });
+    expect(item.logical).toEqual(['cyber.vendor_product/Apache/Log4j2']);
+    expect(item.participants).toEqual([
+      { id: 'ent:kev-product:apache/log4j2', label: 'ent:kev-product:apache/log4j2' },
+    ]);
   });
 
   it('gives an entity no time and no place', () => {
-    const item = itemOf({
-      id: 'ent:kev-vendor:apache',
-      kind: 'entity',
-      type: 'Vendor',
-      sources: ['src:cisa:kev'],
-      known_at: '2026-10-01T00:00:00Z',
-      label: 'Apache',
-      label_from: 'name',
-    });
+    const { time_start: _time, location: _location, ...rest } = quake;
+    const item = itemOf({ ...rest, kind: 'entity', type: 'Vendor', name: 'Apache' });
     expect(item.time).toBeUndefined();
     expect(item.place).toBeUndefined();
-    expect(item.participants).toEqual([]);
+    expect(item.label).toBe('Apache');
   });
 });
 
-describe('mapLayerOf', () => {
-  it('reads a layer of cells and fills the missing lists', () => {
-    const wire: WireMapAnswer = {
-      as_of: '2026-10-13T09:11:20Z',
-      layer: 'cells',
-      resolution: 2,
-      events: 26,
-      total: 1,
-      cells: [
-        {
-          cell: '822a17fffffffff',
-          resolution: 2,
-          count: 26,
-          center: [-73.78, 40.86],
-          boundary: [[-73, 42]],
-        },
-      ],
+describe('labelOf', () => {
+  it('prefers the name, then the title, then the start of the body, then the type and where', () => {
+    expect(labelOf({ ...quake, title: 'A title' })).toEqual(['A title', 'title']);
+    expect(labelOf({ ...quake, body: `${'word '.repeat(40)}end` })[0]).toMatch(/…$/);
+    expect(labelOf({ ...quake, country: 'US' })).toEqual(['GEO.EARTHQUAKE · US', 'generated']);
+  });
+});
+
+describe('cellsLayerOf', () => {
+  it('draws each bucket as a hexagon with its records, and sums the records', () => {
+    const wire: WireCells = {
+      records: 29,
+      sum_other_doc_count: 0,
+      buckets: [{ key: '822db7fffffffff', doc_count: 29, records: { value: 29 } }],
     };
-    const layer = mapLayerOf(wire);
-    expect(layer.cells[0]).toEqual({
-      id: '822a17fffffffff',
-      resolution: 2,
-      count: 26,
-      center: [-73.78, 40.86],
-      boundary: [[-73, 42]],
-    });
-    expect(layer.points).toEqual([]);
-    expect(layer.omitted).toEqual([]);
+    const layer = cellsLayerOf(wire, 2);
+    const [cell] = layer.cells;
+    expect(layer.layer).toBe('cells');
+    expect(layer.events).toBe(29);
+    expect(layer.total).toBe(1);
+    expect(cell?.id).toBe('822db7fffffffff');
+    expect(cell?.count).toBe(29);
+    expect(cell?.boundary).toHaveLength(6);
+    // The centre the server's H3 library gave for this cell (rounded to 4 decimals): [34.9954, 32.3309].
+    expect(cell?.center[0]).toBeCloseTo(34.9954, 3);
+    expect(cell?.center[1]).toBeCloseTo(32.3309, 3);
+  });
+});
+
+describe('pointsLayerOf', () => {
+  it('keeps the total of all matching records next to the items', () => {
+    const layer = pointsLayerOf({ total: 683, items: [quake] });
+    expect(layer.layer).toBe('points');
+    expect(layer.events).toBe(1);
+    expect(layer.total).toBe(683);
+    expect(layer.points[0]?.id).toBe('evt:usgs:ushis2739');
   });
 });

@@ -172,6 +172,15 @@ UI in development (from `src/ui`, no Node needed):
 - **Stage 2.3**: `GET /graph` (§12): one Cypher statement. Ytshak's `/analyze/graph` is still there until Stage 3.
 - **Stage 2.4**: `GET /logical` (§12).
 - **Stage 2.5**: `GET /search` (§12): words, meaning, or the filtered list. The `api` service now gets the embedder's address (`Embedder__Url`) and waits for it. **Stage 2 done.**
+- **Stage 4**: the UI's Analyze reads the new routes (the look is unchanged). Files: `analyze/config.ts` (default
+  8080), `analyze/api/contract.ts`, `adapt.ts`, `client.ts`, `query.ts`, `model.ts`, `analyze/map/useEvents.ts`, `AnalyzePage.tsx`
+  (no `as_of` sent: the API has none; the "seen as of" control stays but does nothing for the map), and their tests.
+  New dependency: `h3-js` ^4.2.1. Checked in Docker: `npm install`, `build`, `lint` (0 warnings), `test` 112 of 112,
+  Prettier clean. In the browser (dev server 5173, API 8080), `/analyze?from=1965-01-01&to=1965-04-01`: points
+  draw (163 events, `/map/cells` then `/map/points`, both 200, no console error). Cells draw too: with the threshold
+  set to 50 for the check, 56 records in view gave the warm cell lights and the "each light gathers..." key. The
+  threshold is back at 5,000. The sample never holds more than 5,000 records in view, so cells appear only with full
+  data.
 - **Stage 3**: deleted every old read class, the mock and their tests (list below). The `/analyze/*` routes are gone. Build: 0 warnings.
 
 **Deleted in Stage 3** (lines per file):
@@ -264,7 +273,28 @@ Elasticsearch, and the projector writes nodes and links to Neo4j → the read ro
 - *collapse on id*: Elasticsearch keeps one hit per record id (the first by the sort), so a record with 3 states is
   listed once.
 
-**Which UI file calls which route**: filled in by Stage 4.
+**Which UI file calls which route** (`src/ui/src/`):
+
+| UI file | Route |
+| --- | --- |
+| `analyze/api/client.ts` | Every read route, one function each: `fetchCells` → `/map/cells`, `fetchPoints` → `/map/points`, `fetchSearch` → `/search`, `fetchLogical` → `/logical`, `fetchGraph` → `/graph`, `fetchRecord` → `/records/{id}`. The queries are built in `analyze/api/query.ts`; the answers' shapes are in `analyze/api/contract.ts`; `analyze/api/adapt.ts` turns documents and buckets into the map's items and hexagons. |
+| `analyze/map/useEvents.ts` | Calls `fetchCells`, then `fetchPoints` (the map) |
+| `analyze/config.ts` | The API address: `VITE_ANALYZE_API_URL`, default `http://localhost:8080` |
+| `observe/config.ts`, `observe/data/*` | Observe: Elasticsearch `synapsis-ingest-log` directly (port 9200, `/es` in development), and the API's `GET /health` and `GET /catalog` |
+
+Search, the tree, the graph and the record panel have their functions in `client.ts` but no screen yet (§14).
+
+**How the map chooses cells or points** (`analyze/map/useEvents.ts`):
+1. The resolution comes from the zoom: 0–3 → 2, 4–5 → 3, 6–7 → 4, 8 and above → 5 (`resolutionOf`, `analyze/api/query.ts`).
+   Below zoom 3 the map asks about the whole Earth (no bbox). From zoom 3 up it sends the box in view, widened by half
+   on each side and snapped to a grid so a small pan asks the same question (`analyze/map/viewport.ts`).
+2. It asks `/map/cells` and adds up `records.value` over the cells: the records in view.
+3. 5,000 or fewer: it asks `/map/points` for the same box (the whole Earth when there is none), limit 5,000. If the
+   points come back cut (`total` above the number of items; possible because points too imprecise for a cell are not
+   in the cells' sum), it keeps the cells. Otherwise it draws the points.
+4. More than 5,000: it draws the cells. Each hexagon's centre and corners come from its key with h3-js
+   (`cellToLatLng`, `cellToBoundary`, in `adapt.ts`); the count shown is `records.value`.
+Answers are kept in memory (160 questions), so going back to a view draws at once.
 
 ## 12. The read API, explained
 

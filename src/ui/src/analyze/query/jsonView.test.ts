@@ -40,12 +40,12 @@ describe('tokensOf', () => {
 
 describe('the query log', () => {
   it('reads the route and every parameter, a repeated one once per value', () => {
-    expect(describeUrl('http://localhost:8081/analyze/map?type=A&type=B&zoom=2')).toEqual({
-      route: 'GET /analyze/map',
+    expect(describeUrl('http://localhost:8080/map/cells?type=A&type=B&resolution=2')).toEqual({
+      route: 'GET /map/cells',
       params: [
         ['type', 'A'],
         ['type', 'B'],
-        ['zoom', '2'],
+        ['resolution', '2'],
       ],
     });
   });

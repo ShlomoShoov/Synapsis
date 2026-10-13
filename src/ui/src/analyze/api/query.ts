@@ -1,41 +1,22 @@
 /**
- * The questions Analyze asks, as query strings (contracts/synapsis-api.yaml, components.parameters).
+ * The questions Analyze asks the read API (EMERGENCY.md §12), as query strings.
  *
- * - A list filter repeats its parameter (type=A&type=B): any of its values matches; different filters must all match.
+ * - The shared filters are from, to (on the event's start, `to` excluded), source and type (repeated: any value
+ *   matches).
  * - Ids travel as query values (id=, entity=), encoded by URLSearchParams, because some contain "/". GET /records/{id}
  *   is the exception: the id is the path, "/" included.
  * - Times are sent as UTC date-times ("2026-10-13T00:00:00Z").
- *
- * Every filter the API knows has its place in `Filters`, so a filter chosen in the details (a type, a country, a
- * participant...) only has to be added to it.
  */
 import type { RecordKind } from './model';
 
-/** The filters shared by the map and the graph. Each is optional; an empty list means no filter. */
+/** The filters every Elasticsearch route takes. Each is optional; an empty list means no filter. */
 export interface Filters {
-  /** What was known by then (ms since 1970, UTC); none = now. */
-  asOf?: number;
-  /** Events that start at or after this moment (ms). */
+  /** Events that start at or after this moment (ms since 1970, UTC). */
   from?: number;
   /** Events that start before this moment (ms). */
   to?: number;
-  /** Keywords. */
-  q?: string;
-  kinds?: RecordKind[];
   types?: string[];
   sources?: string[];
-  /** H3 cells (resolution 2 to 5). */
-  cells?: string[];
-  /** ISO 3166-1 alpha-2 codes. */
-  countries?: string[];
-  /** ISO 3166-2 codes. */
-  subdivisions?: string[];
-  /** Logical nodes, such as "cyber.vendor_product/Apache". */
-  logical?: string[];
-  /** Entity ids: events in which one of them takes part. */
-  entities?: string[];
-  /** "name:op:value", such as "magnitude:gte:5.5"; all must hold. */
-  measures?: string[];
 }
 
 /** A box on the map, in degrees. A west edge east of the east edge crosses the 180th meridian. */
@@ -46,15 +27,21 @@ export interface BBox {
   north: number;
 }
 
-/** What the map asks besides the filters. */
+/** What the map looks at: its zoom (it picks the H3 resolution) and the box in view (none = the whole Earth). */
 export interface MapView {
-  /** The map's zoom (0 to 22). */
   zoom: number;
-  /** The box in view; none = the whole Earth. */
   bbox?: BBox;
-  layer?: 'auto' | 'points' | 'cells';
-  limit?: number;
-  cursor?: string;
+}
+
+/** The whole Earth, for /map/points when the map asks about everything. */
+export const wholeEarth: BBox = { west: -180, south: -90, east: 180, north: 90 };
+
+/** The H3 resolution for a zoom: 0-3 → 2 (edge about 158 km), 4-5 → 3 (60 km), 6-7 → 4 (23 km), 8 and more → 5 (8.5 km). */
+export function resolutionOf(zoom: number): number {
+  if (zoom < 4) return 2;
+  if (zoom < 6) return 3;
+  if (zoom < 8) return 4;
+  return 5;
 }
 
 /** A moment as the API reads it: UTC, whole seconds. */
@@ -65,53 +52,77 @@ export function isoOf(ms: number): string {
 /** The shared filters as query parameters, in a stable order. */
 export function filterParams(filters: Filters): URLSearchParams {
   const params = new URLSearchParams();
-  if (filters.asOf !== undefined) params.set('as_of', isoOf(filters.asOf));
   if (filters.from !== undefined) params.set('from', isoOf(filters.from));
   if (filters.to !== undefined) params.set('to', isoOf(filters.to));
-  if (filters.q?.trim()) params.set('q', filters.q.trim());
-  const lists: [string, string[] | undefined][] = [
-    ['kind', filters.kinds],
-    ['type', filters.types],
-    ['source', filters.sources],
-    ['cell', filters.cells],
-    ['country', filters.countries],
-    ['subdivision', filters.subdivisions],
-    ['logical', filters.logical],
-    ['entity', filters.entities],
-    ['measure', filters.measures],
-  ];
-  for (const [name, values] of lists) {
-    for (const value of values ?? []) {
-      params.append(name, value);
-    }
-  }
+  for (const value of filters.sources ?? []) params.append('source', value);
+  for (const value of filters.types ?? []) params.append('type', value);
   return params;
 }
 
-/** The query of GET /analyze/map. */
-export function mapQuery(filters: Filters, view: MapView): string {
+/** The query of GET /map/cells. */
+export function cellsQuery(
+  filters: Filters,
+  resolution: number,
+  bbox?: BBox,
+  kind?: RecordKind,
+): string {
   const params = filterParams(filters);
-  if (view.bbox) params.set('bbox', bboxParam(view.bbox));
-  params.set('zoom', String(Math.round(view.zoom * 100) / 100));
-  if (view.layer && view.layer !== 'auto') params.set('layer', view.layer);
-  if (view.limit !== undefined) params.set('limit', String(view.limit));
-  if (view.cursor) params.set('cursor', view.cursor);
+  params.set('resolution', String(resolution));
+  if (bbox) params.set('bbox', bboxParam(bbox));
+  if (kind) params.set('kind', kind);
   return params.toString();
 }
 
-/** The query of GET /analyze/graph. */
-export function graphQuery(
-  id: string,
+/** The query of GET /map/points (the box is required). */
+export function pointsQuery(
   filters: Filters,
-  page: { group?: string; limit?: number; cursor?: string } = {},
+  bbox: BBox,
+  limit?: number,
+  kind?: RecordKind,
 ): string {
+  const params = filterParams(filters);
+  params.set('bbox', bboxParam(bbox));
+  if (limit !== undefined) params.set('limit', String(limit));
+  if (kind) params.set('kind', kind);
+  return params.toString();
+}
+
+/** What GET /search takes besides the shared filters. */
+export interface SearchAsk {
+  q?: string;
+  /** By meaning (needs q). */
+  semantic?: boolean;
+  kind?: RecordKind;
+  /** A logical key, such as "cyber.vendor_product/Apache". */
+  logical?: string;
+  /** An entity id: the events it takes part in. */
+  entity?: string;
+  limit?: number;
+}
+
+/** The query of GET /search. */
+export function searchQuery(filters: Filters, ask: SearchAsk): string {
+  const params = filterParams(filters);
+  if (ask.q?.trim()) params.set('q', ask.q.trim());
+  if (ask.semantic) params.set('semantic', 'true');
+  if (ask.kind) params.set('kind', ask.kind);
+  if (ask.logical) params.set('logical', ask.logical);
+  if (ask.entity) params.set('entity', ask.entity);
+  if (ask.limit !== undefined) params.set('limit', String(ask.limit));
+  return params.toString();
+}
+
+/** The query of GET /logical: the children of node, or the top level. */
+export function logicalQuery(filters: Filters, node?: string): string {
+  const params = filterParams(filters);
+  if (node) params.set('node', node);
+  return params.toString();
+}
+
+/** The query of GET /graph. */
+export function graphQuery(id: string, limit?: number): string {
   const params = new URLSearchParams({ id });
-  for (const [name, value] of filterParams(filters)) {
-    params.append(name, value);
-  }
-  if (page.group) params.set('group', page.group);
-  if (page.limit !== undefined) params.set('limit', String(page.limit));
-  if (page.cursor) params.set('cursor', page.cursor);
+  if (limit !== undefined) params.set('limit', String(limit));
   return params.toString();
 }
 
