@@ -890,3 +890,21 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
     view's filter. Results as the API ranks them, "N of M", re-orderable (newest, oldest, name: only the ones
     received). A click on a result: on the map when it has a place, else in the tree when it is filed there; its
     details and graph are always open in the panel.
+- **Conclusions and resizable panels (13 Oct night, branch `ui/conclusions`)**. No new route or query: everything
+  comes from `/map/points`, `/map/cells`, `/search` and `/graph` with `kind=conclusion`, `/records/{id}` and
+  `/catalog`. `analyze/conclusion/conclusion.ts` gives each type one glyph and colour (spark star, forecast diamond,
+  joint anomaly triangle, similar pattern hourglass, calibrated estimate square, forecast score pentagon,
+  classification cross, others an octagon), used everywhere. *Map*: conclusions are their own MapLibre symbol layer
+  over the round event lights (`map/marks.ts`, a second `useEvents(..., 'conclusion')`), hollow diamonds when there
+  are too many (cells); hover gives the title, key numbers and "said ... about ..."; a click opens it. The filter has
+  "Conclusions on the map" (on by default); the kind "Conclusions" shows them alone; the key counts them by type.
+  *Lists* (search, tree): the glyph, "conclusion · <type>" and the key numbers. *Panel* (`ConclusionCard`, at the top
+  of a conclusion's details): the statement and every number, a forecast's parts as one bar (routine + self +
+  neighbours = expected) with its 80% band, a similar pattern's band, a calibrated estimate's poll − bias =
+  corrected, "Said on <known_at> about <period>" (and how long before the period began), the premises (each opens),
+  the method and its parameters, and for a forecast score the model against the routine. *Graph*: conclusion nodes
+  are diamonds and their names are marked; the ABOUT and PREMISE groups carry the link's name. *Left panels*
+  (`lib/PanelFrame.tsx`): Queries, Filters and the key (map and graph) resize by their right edge (drag, arrow keys,
+  double-click resets; the width is kept in the browser) and maximise to the whole screen with the button on that
+  edge (Esc or the button restores). Fixtures: the conclusions are written by hand (the stack was being reloaded;
+  `fixtures/analyze/README.md` says so). Not yet checked against the live API.
