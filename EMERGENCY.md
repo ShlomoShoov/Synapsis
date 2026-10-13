@@ -245,6 +245,51 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   (§12, `/search`). Until then `q=CVE-2021-44228` still misses `evt:kev:CVE-2021-44228`. Tests: 119 of 120 (the old
   Neo4j-password setup test). The 23 check requests still give identical answers on the live index.
 - **Final round, 3**: no `precision_threshold` (decided); counts above 3,000 stay estimates (§13, row 1).
+- **Conclusions in the read routes (13 Oct, branch `feat/conclusions-in-read-routes`, not merged)**: a conclusion sent
+  through `POST /ingest` now shows on the map, by entity, by date and in the graph, through the existing routes (§12,
+  "Conclusions in the read routes"). No route, project, class, option, dependency or mapping changed. Live only after
+  tonight's load from empty stores (documents already indexed and nodes already projected are not redone).
+
+  | File:line | What | Why |
+  | --- | --- | --- |
+  | `src/dotnet/Synapsis.Data/Services/LatticeKeys.cs:4` | `using H3.Extensions;` | for `GetParentForResolution` |
+  | `LatticeKeys.cs:45-74` | new `CellCentreAndParents(cell)`: the cell's centre `[lon, lat]` and the cell named at resolutions 2–5 (itself at its own resolution, its parents at the coarser ones, nothing finer); null when the text is not a valid H3 cell | a conclusion about a cell gets a point and the `h3_r*` fields, from the same H3 library as events |
+  | `src/dotnet/Synapsis.Elasticsearch/Services/SearchDocumentMapper.cs:1,3` | `using System;`, `using System.Text.Json;` | for the new methods |
+  | `SearchDocumentMapper.cs:17-18` | `CellPrefixes`: `ent:h3:` and `subject:h3:` | the two ways about can name a cell |
+  | `SearchDocumentMapper.cs:44-46` | step 2's comment says what a conclusion adds | the comment matched the old code |
+  | `SearchDocumentMapper.cs:61-64` | the `ConclusionRecord` case calls the four methods below | the goal |
+  | `SearchDocumentMapper.cs:169` `AddAbout` | `entities` ← every id in about, each once; the first valid cell → `location` (its centre) and `h3_r2..h3_r5` | `/search?entity=`, `/map/points`, `/map/cells` |
+  | `SearchDocumentMapper.cs:205` `AddPeriod` | `time_start` ← `attributes.period_start` (an ISO time, without an offset read as UTC), else `known_at`; `time_precision` ← `attributes.period_precision`, else `day`; `week` through `LatticeKeys.Week` | `from`/`to` on every route |
+  | `SearchDocumentMapper.cs:231` `AddStatementMeasures` | `measures` ← each numeric field of `statement.value` (a bare number → `value`) and `confidence`; other fields left out (through the existing `AddMeasures`) | the UI shows the numbers; the mapping already takes any `measures.*` as a double |
+  | `SearchDocumentMapper.cs:257` `AddLogical` | `logical_prefixes` ← `LatticeKeys.LogicalPrefixes(attributes.logical)` when given; the path ends at its first step that is not text | `/logical`, `/search?logical=` |
+  | `src/dotnet/Synapsis.Neo4j/Services/GraphRecordRules.cs:7-10` | class summary | the rule changed |
+  | `GraphRecordRules.cs:13-17` | `TypesKeptOut` = { `CYB.VULN.EPSS_SCORE` } | about 12 M monthly scores would become nodes |
+  | `GraphRecordRules.cs:19-23` | `LabelByPrefix`: `evt:` Event, `ent:` Entity, `con:` Conclusion | the label of a node created from an id alone |
+  | `GraphRecordRules.cs:25-35` | `ParticipantsOfConnectingEvent`: summary; a type kept out answers empty | |
+  | `GraphRecordRules.cs:52-53` | `entities.Count < 2` → `< 1` | an event with one participant (an FDIC report or failure and its bank) becomes a node linked to it |
+  | `GraphRecordRules.cs:60-87` | new `TargetsByLabel(ids)`: the ids grouped by that label, each once; other ids (`rel:`, `subject:...`) left out | one statement per label in the repository |
+  | `src/dotnet/Synapsis.Neo4j/Repositories/Neo4jRepository.cs:131` | `StoreConclusionAsync` summary | |
+  | `Neo4jRepository.cs:144` | one `LinkAboutAsync` call (was one per label, Entity and Event) | the label now comes from each id |
+  | `Neo4jRepository.cs:148-161` `LinkAboutAsync`, `:163-175` `LinkPremisesAsync` | `UNWIND` the targets of each label and `MERGE` the target by id (was `MATCH`); premises may now be any record id (was Event only) | a conclusion links to targets not in the graph yet (an earthquake has no participant, so it was never a node); the record with that id later `MERGE`s into the same node and fills it |
+  | `tests/dotnet/Synapsis.Tests/Unit/GraphRecordRulesTests.cs` | the one-entity test now expects a node; new: no participant, a type kept out, `TargetsByLabel` | the rule changed |
+  | `tests/dotnet/Synapsis.Tests/Integration/Neo4jRepositoryTests.cs` | the one-participant test now expects a node; the late-targets test expects 2 links at once and the entity filled later; new: a kept-out type, an earthquake premise as an id-only node | the rule changed |
+  | `tests/dotnet/Synapsis.Tests/Unit/SearchDocumentMapperTests.cs` (new, force-added: the folder is git-ignored) | 9 tests of the mapper rules and `CellCentreAndParents` | |
+
+  `LinkLateAboutAsync` and `LinkLatePremisesAsync` are unchanged: a known risk (§13, row 14).
+  **Checked** (13 Oct) in a cloud sandbox, not on the machine with the sample: `dotnet build` 0 warnings; tests 27 of
+  27, including the 11 Neo4j integration tests against a Neo4j 5.26 container. Core stack up from empty stores
+  (UI not started); replayed the 2,024 records of 12 Oct kept in git (the deleted mock's `records.json`: KEV, USGS,
+  GTD, UCDP, EPSS, HN, the KEV classes). There is no FDIC data in that sandbox, so (b) used three test records shaped
+  like FDIC's (`ent:fdic-test:cert-1`, a report and a failure, no measures). Results: `/map/points?bbox=170,45,-170,55&kind=conclusion`
+  → 1 item, location `[174.62, 51.39]` (the centre of `8316edfffffffff`), measures observed/expected/s/confidence;
+  `/map/cells?resolution=2&kind=conclusion` → `8216effffffffff`, 1 record; `/search?kind=conclusion&from=1965-02-01&to=1965-02-08`
+  → 1; `/search?entity=ent:fdic-test:cert-1` → the conclusion and both events; `/graph` of the spark → 1 ABOUT (the
+  cell) + 5 PREMISE; `/graph` of the bank → ABOUT from the conclusion, PARTICIPATES to the failure and the report;
+  `/graph` of a premise earthquake → 200 (its id only, and the PREMISE link); the same batches again → `unchanged`, no
+  new document. EPSS events stay out of the graph (0 nodes). `/search?entity=ent:kev-product:apache/log4j2` → 3 (the
+  KEV class conclusion is now listed). Run twice, the second time from empty stores on the final code: the same
+  answers, no warning from the indexer or the projector. **To do on the sample**: send (b) about a real FDIC bank
+  with a failure.
 
 ## 11. How the system looks now
 
@@ -637,6 +682,43 @@ MongoDB is re-sent as `unchanged` and never indexed again. Before `up --build`:
 `docker compose -f deploy/core/compose.yml down && docker volume rm synapsis-core_mongo-data synapsis-core_es-data synapsis-core_kafka-data synapsis-core_neo4j-data`
 (keep `synapsis-core_models`, the embedder's weights).
 
+### Conclusions in the read routes
+
+The engine writes conclusions through `POST /ingest` like any record; no route is added. **The contract** (what the
+indexer and the projector read):
+- `about`: record ids, and/or a map cell as `ent:h3:<cell>` (also `subject:h3:<cell>`).
+- `statement.value`: an object of named numbers, such as `{"expected": 0.032, "observed": 85, "rank": 3, "of": 1257}`,
+  or a bare number.
+- `attributes.period_start` / `attributes.period_end` (ISO date-times), optional `attributes.period_precision`: the
+  period the conclusion speaks about. (`period_end` is kept in the record; the index has no field for it.)
+- optional `attributes.logical` = `{"space": "...", "path": ["..."]}` for a logical subject.
+
+**What its search document gets** (`SearchDocumentMapper`, the `ConclusionRecord` case): `entities` = every id in
+`about`; from the first valid cell, `location` = the cell's centre and `h3_r2..h3_r5` = the cell and its parents
+(none finer than the cell); `time_start` = `period_start`, else `known_at`; `time_precision` = `period_precision`,
+else `day`; `week`; `measures` = each number of `statement.value` (a bare number as `value`) and `confidence`;
+`logical_prefixes` from `attributes.logical`.
+
+**What each route now shows**:
+
+| Route | A conclusion appears when |
+| --- | --- |
+| `/map/points?kind=conclusion` | its about names a cell (at the cell's centre) |
+| `/map/cells?kind=conclusion` | its about names a cell of that resolution or finer |
+| `/search?kind=conclusion&from=&to=` (and `from`/`to` on every route) | its period starts in the window (no period: its `known_at`) |
+| `/search?entity=<id>` | the id is in its about (the KEV classes too: `entity=ent:kev-product:apache/log4j2` gives 3 after the load, not 2) |
+| `/logical`, `/search?logical=` | it has `attributes.logical` |
+| `/graph?id=<conclusion>` | always: ABOUT to each `ent:`/`evt:`/`con:` id of its about, PREMISE to each premise, even when that record is not in the graph (the node holds only its id until the record arrives; the UI reads details from `/records/{id}`) |
+| `/graph?id=<record>` | the record is in its about or premises: an earthquake that is a premise answers 200, not 404 |
+
+**The projector also changed**: an event becomes a node when it has at least one participant (was two), except
+`CYB.VULN.EPSS_SCORE`. FDIC reports and failures are now nodes linked to their bank, so "bank flagged → bank failed"
+shows in `/graph?id=<bank>`. GTD attacks with one actor, HN posts and NVD events (one participant, the CVE) become
+nodes too.
+
+**Side effect**: every conclusion now has a `time_start`, so the KEV classes (`known_at` 2 Oct 2026) sort near the top
+of `/search` without `q` (newest first) and fall in any window that holds that date.
+
 **Limits at full scale**: a short word
 expands to at most 50 indexed words (`phrase_prefix`'s `max_expansions`), so "a" finds only some of the words starting
 with "a". `num_candidates` 500 bounds the meaning search: at millions of vectors it is approximate (a near document can
@@ -661,6 +743,7 @@ Every read query, judged at millions of documents. "Fix" is what to change tomor
 | 11 | **States, not records** | Filters match any state of a record. A record whose older state matches `from`/`to`/`type` but whose latest state does not is still counted and listed (collapse shows its latest matching state). Rare: states change for revised data (UCDP, NVD scores). | Index only the latest state (the indexer deletes the older document), or add `"state"` filtering. A data-policy decision. |
 | 12 | **The embedder** | `/search?semantic=true` needs the `embedder` service (the API waits for it at start-up). If it stops, semantic search answers 500; word search keeps working. | — |
 | 13 | **Time filters on entities** | `from`/`to` drop every record without `time_start` (all entities): a search with a time window never lists entities. | The UI sends `from`/`to` to `/search` only when it wants events. |
+| 14 | **Projector: late links** (`Neo4jRepository.LinkLateAboutAsync`, `LinkLatePremisesAsync`; known risk, left as it is) | On every entity, event, participant and relation write, each runs `MATCH (c:Conclusion) WHERE $id IN c.about` (or `c.premises`): a scan of every Conclusion node, because a list property has no index. Cheap with the sample's 63 conclusions; once the engine has written tens of thousands, every write of the full load pays for that scan and the projector falls behind. | Remove both calls: since a conclusion now `MERGE`s its targets (§12, "Conclusions in the read routes"), every link they would add already exists. |
 
 ## 14. Prompt for the UI agent
 

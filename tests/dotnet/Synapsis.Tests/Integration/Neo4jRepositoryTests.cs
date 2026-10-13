@@ -64,14 +64,28 @@ public sealed class Neo4jRepositoryTests
         Assert.Equal("day", await TextAsync("MATCH (n:Event {id: $id}) RETURN n.precision AS value", id));
     }
 
-    /// <summary>An event with one participant is not projected.</summary>
+    /// <summary>An event with one participant is projected since 13 Oct (an FDIC failure and its bank).</summary>
     [Fact]
-    public async Task One_participant_event_stays_out_of_the_graph()
+    public async Task One_participant_event_enters_the_graph()
     {
         if (!Configured()) return;
         string id = NewId("evt");
         EventRecord record = Event(id, NewId("ent"), NewId("ent"));
         record.Participants.RemoveAt(1);
+        await StoreAsync(record);
+
+        Assert.Equal(1, await CountAsync("MATCH (n:Event {id: $id}) RETURN count(n) AS count", id));
+        Assert.Equal(1, await CountAsync("MATCH (:Entity)-[r:PARTICIPATES]->(n:Event {id: $id}) RETURN count(r) AS count", id));
+    }
+
+    /// <summary>An event of a type kept out of the graph (EPSS scores) is not projected, even with a participant.</summary>
+    [Fact]
+    public async Task Kept_out_event_type_stays_out_of_the_graph()
+    {
+        if (!Configured()) return;
+        string id = NewId("evt");
+        EventRecord record = Event(id, NewId("ent"), NewId("ent"));
+        record.Type = "CYB.VULN.EPSS_SCORE";
         await StoreAsync(record);
 
         Assert.Equal(0, await CountAsync("MATCH (n:Event {id: $id}) RETURN count(n) AS count", id));
@@ -95,7 +109,10 @@ public sealed class Neo4jRepositoryTests
         Assert.Equal("Named later", await TextAsync("MATCH (n:Entity {id: $id}) RETURN n.name AS value", from));
     }
 
-    /// <summary>A conclusion retains missing targets and links them when they arrive.</summary>
+    /// <summary>
+    /// A conclusion links its targets at once, creating the missing ones as nodes holding only their id (a subject key
+    /// has no node); the records that arrive later fill the same nodes, with no second link.
+    /// </summary>
     [Fact]
     public async Task Conclusion_links_targets_that_arrive_later()
     {
@@ -111,12 +128,36 @@ public sealed class Neo4jRepositoryTests
             Statement = new Statement { Predicate = "anomaly" }, Confidence = 80
         };
         await StoreAsync(record);
-        Assert.Equal(0, await CountAsync("MATCH (c:Conclusion {id: $id})-[r:ABOUT|PREMISE]->() RETURN count(r) AS count", id));
+        Assert.Equal(2, await CountAsync("MATCH (c:Conclusion {id: $id})-[r:ABOUT|PREMISE]->() RETURN count(r) AS count", id));
 
         await StoreAsync(Entity(entityId, "Target"));
         await StoreAsync(Event(eventId, NewId("ent"), NewId("ent")));
         Assert.Equal(1, await CountAsync("MATCH (c:Conclusion {id: $id})-[r:ABOUT]->(:Entity) RETURN count(r) AS count", id));
         Assert.Equal(1, await CountAsync("MATCH (c:Conclusion {id: $id})-[r:PREMISE]->(:Event) RETURN count(r) AS count", id));
+        Assert.Equal(1, await CountAsync("MATCH (n:Entity {id: $id}) RETURN count(n) AS count", entityId));
+        Assert.Equal("Target", await TextAsync("MATCH (n:Entity {id: $id}) RETURN n.name AS value", entityId));
+    }
+
+    /// <summary>A premise event with no participant (an earthquake) still becomes a node, holding only its id.</summary>
+    [Fact]
+    public async Task Conclusion_premise_without_participants_is_a_node()
+    {
+        if (!Configured()) return;
+        string id = NewId("con");
+        string eventId = NewId("evt");
+        EventRecord earthquake = Event(eventId, NewId("ent"), NewId("ent"));
+        earthquake.Participants.Clear();
+        await StoreAsync(earthquake);
+        await StoreAsync(new ConclusionRecord
+        {
+            Id = id, Type = "spark", Source = "src:test", KnownAt = KnownAt,
+            About = new List<string> { "ent:h3:83225bfffffffff" }, Premises = new List<string> { eventId },
+            Statement = new Statement { Predicate = "anomaly" }
+        });
+
+        Assert.Equal(1, await CountAsync("MATCH (c:Conclusion {id: $id})-[r:PREMISE]->(:Event) RETURN count(r) AS count", id));
+        Assert.Equal(1, await CountAsync("MATCH (c:Conclusion {id: $id})-[r:ABOUT]->(:Entity {id: 'ent:h3:83225bfffffffff'}) RETURN count(r) AS count", id));
+        Assert.Equal(1, await CountAsync("MATCH (n:Event {id: $id}) RETURN size(keys(n)) AS count", eventId));
     }
 
     /// <summary>A conclusion links existing targets and remains one node after a duplicate write.</summary>

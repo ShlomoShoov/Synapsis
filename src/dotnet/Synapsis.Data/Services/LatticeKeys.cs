@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using H3;
+using H3.Extensions;
 using H3.Model;
 using NetTopologySuite.Geometries;
 using Synapsis.Data.Models.Records;
@@ -39,6 +40,36 @@ public static class LatticeKeys
         // 2. The record's point is [longitude, latitude]; a Coordinate is (x: longitude, y: latitude), in degrees.
         LatLng latLng = LatLng.FromCoordinate(new Coordinate(point[0], point[1]));
         return H3Index.FromLatLng(latLng, resolution).ToString();
+    }
+
+    /// <summary>
+    /// The centre of an H3 cell, [longitude, latitude] like a record's point, and the cell named at resolutions 2 to 5:
+    /// itself at its own resolution, its parent at each coarser one, nothing finer. Null when the text is not an H3
+    /// cell. For a conclusion about a map cell (the indexer places it there).
+    /// </summary>
+    public static (List<double> Centre, Dictionary<int, string> Cells)? CellCentreAndParents(string cell)
+    {
+        // 1. Only a valid cell: a text that is not hexadecimal reads as 0, which is not one.
+        H3Index index = new H3Index(cell);
+        if (!index.IsValidCell)
+        {
+            return null;
+        }
+
+        // 2. The centre; a Coordinate is (x: longitude, y: latitude), in degrees.
+        Coordinate centre = index.ToLatLng().ToCoordinate();
+        List<double> point = new List<double> { centre.X, centre.Y };
+
+        // 3. The cell and its parents, at the resolutions the index keeps (2 to 5) that are not finer than the cell.
+        Dictionary<int, string> cells = new Dictionary<int, string>();
+        foreach (int resolution in EdgeKm.Keys)
+        {
+            if (resolution <= index.Resolution)
+            {
+                cells[resolution] = index.GetParentForResolution(resolution).ToString();
+            }
+        }
+        return (point, cells);
     }
 
     /// <summary>
