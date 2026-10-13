@@ -29,7 +29,7 @@ the repo). Update this file whenever a task is done or a decision changes. Keep 
 | Elasticsearch | Running: `synapsis-records` 7,819 docs, `synapsis-ingest-log` 31. |
 | Neo4j, Kafka | Running (healthy). |
 | `dotnet build` of the solution | Succeeds, 0 warnings (with the uncommitted work below). |
-| `/analyze/map` cells layer (Elasticsearch) | **Built, not committed**, on branch `ui/analyze`. |
+| `/analyze/map` cells layer (Elasticsearch) | Committed and merged into `dev` (Stage 1, 16:15). Replaced in Stage 2 by `/map/cells`. |
 | `/analyze/map` points layer | Answers 501. |
 | `/analyze/graph` | **Built by Ytshak** on `origin/feature/analyze-graph-endpoint` (commit `dbe71c8`, 15:12): Neo4j (relations, events, entities that appear together) + MongoDB (verifying the records, building summaries), grouped and paged. About 830 lines of code + 1,050 lines of tests. Merges cleanly with `ui/analyze` HEAD; it will conflict only with the uncommitted `AnalyzeService.cs`. Not yet run against the stack. |
 | Read mock `Synapsis.MockApi` (port 8081) | Running. **To be deleted** (§7). |
@@ -158,3 +158,10 @@ UI in development (from `src/ui`, no Node needed):
 - `CORE_NEO4J_PASSWORD` must be set in `deploy/core/.env`, or the stack will not start.
 - The indexer needs the embedder (it vectorises text); it starts with the core stack.
 - The sample's sources each sit in their own era: always open the map with a story preset, never "now".
+
+## 10. API agent: stage log
+- **Stage 1 (16:15)**: branch `emergency/minimal-api` = the carried work (map cells, this file, removed docs) +
+  `origin/ui/analyze` (`c4144c6`) + `origin/feature/analyze-graph-endpoint` (`dbe71c8`) + `origin/dev`; one conflict
+  (`AnalyzeService.cs`) resolved. Merged into `dev` and pushed. Core stack up and healthy (setup, api 8080, relay,
+  indexer, projector, embedder, ui 1897). ES `synapsis-records`: 7,819 documents, 7,771 distinct ids. Neo4j: 5,539
+  nodes; relationships PARTICIPATES 5,673, RELATED 787, ABOUT 198, PREMISE 198.
