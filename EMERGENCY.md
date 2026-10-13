@@ -291,6 +291,32 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   answers, no warning from the indexer or the projector. **To do on the sample**: send (b) about a real FDIC bank
   with a failure.
 
+### Engine agent: stage log (branch `feat/engine`)
+- **Stage A**: `src/python/synapsis_engine/` (service `engine`, profile `engine`; run with
+  `docker compose -f deploy/core/compose.yml --profile engine run --rm --no-deps engine backfill|verify|coverage`).
+  Reads the first state of every event from MongoDB into DuckDB (volume `engine-data`), picks each source's shape from
+  the data (measurement / occurrence, subject, bucket, lag = p99 of known_at after the bucket's end), fits M3 on the
+  first 60% of buckets (pins in `engine.yaml` for USGS, UCDP, GTD), and writes sparks, forecasts (top 20 per bucket,
+  last 52 buckets and demo dates) and `forecast_score` through `POST /ingest` as `src:synapsis:engine`. An event counts
+  only if it was known when its bucket closed (end + lag); the model card is frozen when the calibration span closes.
+  `verify` on the sample: same maths 0 difference, determinism (same sha256, second POST all unchanged), no hindsight
+  (truncated reruns identical), placebo, pipeline counts, coverage: all pass; golden values pending the full load.
+  UCDP's lag is pinned to 4 weeks (its measured p99 follows month-long events). New conclusion type `forecast_score`.
+- **Stage B**: measurements: per subject and measure, the change against its own previous 52 changes (robust z,
+  spark at |z| >= 4 within the 0.5% budget). FDIC lenses (A run risk, B credit stress): robust z over all banks of the
+  quarter, joint = the minimum, top 50 per lens and quarter as `joint_anomaly`, year-end scores when the failures
+  cover the year after. On the sample: **SVB rank 5 of 4,683, joint z 3.60** (golden), Signature 324 (golden).
+- **Stage C**: the source-bias routine (elections), as `case_f6_elections.py` ("routine_bias+prior_blend"):
+  `calibrated_estimate` per state and election {poll, bias, corrected, probability}, and a `forecast_score` per
+  election {mae, winners, of, brier, brier_market}. Dated no earlier than the first result of the year (the election
+  day is read from the results). The sample has no `POL.ELECTION.RESULT` yet: pending; tested on synthetic data.
+- **Stage D**: similar patterns: the 10 nearest past 8-bucket windows of the same source (log counts: shape, then half
+  the level), only windows whose next 8 buckets were known at the issue, continued and rescaled; `similar_pattern` at
+  each spark and on the demo dates. Per source, the MAE of the next-8 total against the routine and M3 run forward
+  is in the per-source `forecast_score` and in the report, which says per source whether patterns beat them.
+  **After the full load**: `backfill` (stops above 200,000 records without `--force`), then `verify`; the report
+  (`/data/engine-report.md` in the volume, copy in `src/python/synapsis_engine/engine-report.md`) fills the goldens.
+
 ## 11. How the system looks now
 
 **Services and ports** (`docker compose -f deploy/core/compose.yml up -d --build --wait`):
