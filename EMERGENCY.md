@@ -177,16 +177,6 @@ UI in development (from `src/ui`, no Node needed):
 - **Stage 2.3**: `GET /graph` (§12): one Cypher statement. Ytshak's `/analyze/graph` is still there until Stage 3.
 - **Stage 2.4**: `GET /logical` (§12).
 - **Stage 2.5**: `GET /search` (§12): words, meaning, or the filtered list. The `api` service now gets the embedder's address (`Embedder__Url`) and waits for it. **Stage 2 done.**
-- **Stage 4**: the UI's Analyze reads the new routes (the look is unchanged). Files: `analyze/config.ts` (default
-  8080), `analyze/api/contract.ts`, `adapt.ts`, `client.ts`, `query.ts`, `model.ts`, `analyze/map/useEvents.ts`, `AnalyzePage.tsx`
-  (no `as_of` sent: the API has none; the "seen as of" control stays but does nothing for the map), and their tests.
-  New dependency: `h3-js` ^4.2.1. Checked in Docker: `npm install`, `build`, `lint` (0 warnings), `test` 112 of 112,
-  Prettier clean. In the browser (dev server 5173, API 8080), `/analyze?from=1965-01-01&to=1965-04-01`: points
-  draw (163 events, `/map/cells` then `/map/points`, both 200, no console error). Cells draw too: with the threshold
-  set to 50 for the check, 56 records in view gave the warm cell lights and the "each light gathers..." key. The
-  threshold is back at 5,000. The sample never holds more than 5,000 records in view, so cells appear only with full
-  data.
-- **Stage 5**: the full-data review (§13) and the rule at the top of this file. Nothing in the code changed.
 - **Stage 3**: deleted every old read class, the mock and their tests (list below). The `/analyze/*` routes are gone. Build: 0 warnings.
 
 **Deleted in Stage 3** (lines per file):
@@ -233,6 +223,18 @@ Side effect found and fixed: Ytshak's branch commits files under `tests/dotnet/`
 merge replaced the local `Synapsis.Tests.csproj` with his. The local tests lost `Mvc.Testing`, `Data`,
 `Elasticsearch` and `Setup`. They are restored, the file is committed, and `dotnet test` gives 115 of 116. The one
 failure is the setup test, which connects to Neo4j without the password (it failed before too).
+
+- **Stage 4**: the UI's Analyze reads the new routes (the look is unchanged). Files: `analyze/config.ts` (default
+  8080), `analyze/api/contract.ts`, `adapt.ts`, `client.ts`, `query.ts`, `model.ts`, `analyze/map/useEvents.ts`, `AnalyzePage.tsx`
+  (no `as_of` sent: the API has none; the "seen as of" control stays but does nothing for the map), and their tests.
+  New dependency: `h3-js` ^4.2.1. Checked in Docker: `npm install`, `build`, `lint` (0 warnings), `test` 112 of 112,
+  Prettier clean. In the browser (dev server 5173, API 8080), `/analyze?from=1965-01-01&to=1965-04-01`: points
+  draw (163 events, `/map/cells` then `/map/points`, both 200, no console error). Cells draw too: with the threshold
+  set to 50 for the check, 56 records in view gave the warm cell lights and the "each light gathers..." key. The
+  threshold is back at 5,000. The sample never holds more than 5,000 records in view, so cells appear only with full
+  data.
+- **Stage 5**: the full-data review (§13) and the rule at the top of this file. Nothing in the code changed.
+- **Stage 6**: the prompt for the UI agent (§14). The file:line references in §12 are updated after Stage 3's deletions.
 
 ## 11. How the system looks now
 
@@ -308,7 +310,7 @@ Every route below answers on `http://localhost:8080` and passes the store's answ
 (`_source`) and buckets, Neo4j nodes and links. The UI does all the shaping. Code: `src/dotnet/Synapsis.Api/Controllers/ReadController.cs`
 (the routes), `Repositories/SearchRepository.cs` (Elasticsearch), `Repositories/GraphRepository.cs` (Neo4j).
 
-**Shared filters** (Elasticsearch routes, all optional; `SearchRepository.Filters`, `SearchRepository.cs:93`):
+**Shared filters** (Elasticsearch routes, all optional; `SearchRepository.Filters`, `SearchRepository.cs:35`):
 
 | Parameter | Type | Filters |
 | --- | --- | --- |
@@ -341,7 +343,7 @@ A filter on `from`/`to` drops entities (they have no `time_start`). A wrong date
 10,000 returned (0 = nothing cut). No centre or boundary: the UI draws the hexagon from the key with h3-js
 (`cellToBoundary`, `cellToLatLng`).
 
-**Sends to Elasticsearch** (`SearchRepository.MapCellsAsync`, `SearchRepository.cs:136`; the request
+**Sends to Elasticsearch** (`SearchRepository.MapCellsAsync`, `SearchRepository.cs:78`; the request
 `resolution=3&bbox=170,45,-170,55&from=1965-01-01&to=1965-04-01`):
 ```bash
 curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
@@ -396,7 +398,7 @@ Elasticsearch (`_source`; `text_vector` is never in it):
 `total > items.length`, the list was cut: the UI should show cells instead. Fields a record does not have are absent
 (`title`, `name`, `body`, `country`, `h3_r4`...).
 
-**Sends to Elasticsearch** (`SearchRepository.ListAsync`, `SearchRepository.cs:160`; route `ReadController.cs:55`;
+**Sends to Elasticsearch** (`SearchRepository.ListAsync`, `SearchRepository.cs:102`; route `ReadController.cs:55`;
 the request `bbox=170,45,-170,55&from=1965-01-01&to=1965-04-01`):
 ```bash
 curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
@@ -453,8 +455,8 @@ as PREMISE; RELATED links two entities and carries the relation's properties). `
 `total > links.length` the list was cut. Unknown id, or an id that is not `ent:`/`evt:`/`con:` (relations are links,
 not nodes): 404. The UI moves further by calling `/graph?id=` on a neighbour.
 
-**Sends to Neo4j** one statement (`GraphRepository.NeighboursStatement`, `GraphRepository.cs:162`; run by
-`NeighboursAsync`, `GraphRepository.cs:174`; route `ReadController.cs:75`). The label comes from the id's prefix
+**Sends to Neo4j** one statement (`GraphRepository.NeighboursStatement`, `GraphRepository.cs:27`; run by
+`NeighboursAsync`, `GraphRepository.cs:39`; route `ReadController.cs:75`). The label comes from the id's prefix
 (`ent:` Entity, `evt:` Event, `con:` Conclusion), so Neo4j finds the node through its `id` index instead of scanning
 every node:
 ```bash
@@ -503,7 +505,7 @@ documents in children beyond the 1,000 returned (0 = nothing cut). A key with no
 (Changed from the plan, which returned a bare list: the object carries `sum_other_doc_count`, so nothing is cut
 silently.)
 
-**Sends to Elasticsearch** (`SearchRepository.LogicalAsync`, `SearchRepository.cs:223`; route `ReadController.cs:95`;
+**Sends to Elasticsearch** (`SearchRepository.LogicalAsync`, `SearchRepository.cs:165`; route `ReadController.cs:95`;
 the request `node=cyber.vendor_product`):
 ```bash
 curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
@@ -560,7 +562,7 @@ Order: with `q`, the best match first (Elasticsearch's score); semantic, the nea
 
 **Three modes, three bodies** (route `ReadController.cs:106`):
 
-1. Words (`SearchRepository.SearchWordsAsync`, `SearchRepository.cs:174`). Each word must be found as the start
+1. Words (`SearchRepository.SearchWordsAsync`, `SearchRepository.cs:116`). Each word must be found as the start
    of a word in `name`, `title` or `body` (`phrase_prefix` cuts the text into words the way the index does, so
    "log4j" finds "Log4j2"), or as the start of the `id`:
    ```bash
@@ -574,7 +576,7 @@ Order: with `q`, the best match first (Elasticsearch's score); semantic, the nea
      "aggs": { "records": { "cardinality": { "field": "id" } } } }'
    ```
    (`must` holds one `should` block per word, so every word must match; `filter` holds the filters.)
-2. Meaning (`SearchMeaningAsync`, `SearchRepository.cs:197`). The API asks the embedder for the question's vector
+2. Meaning (`SearchMeaningAsync`, `SearchRepository.cs:139`). The API asks the embedder for the question's vector
    (`curl -s localhost:8090/embed -H 'content-type: application/json' -d '{"texts":["remote code execution"],"model":"search"}'`),
    then:
    ```json
@@ -586,7 +588,7 @@ Order: with `q`, the best match first (Elasticsearch's score); semantic, the nea
    *knn* compares the question's vector with the stored ones: it looks at the 500 best candidates and keeps the `k`
    nearest. The filters go inside `knn.filter`, so they apply before the nearest are chosen. A question with no known
    word answers `{"total": 0, "items": []}`.
-3. No `q` (`ListAsync`, `SearchRepository.cs:160`, as `/map/points`), sorted
+3. No `q` (`ListAsync`, `SearchRepository.cs:102`, as `/map/points`), sorted
    `[{"time_start": {"order": "desc", "missing": "_last"}}, {"state": "desc"}]`.
 
 `logical` adds `{"term": {"logical_prefixes": "<key>"}}`, `entity` adds `{"term": {"entities": "<id>"}}` to the filters.
@@ -631,3 +633,74 @@ Every read query, judged at millions of documents. "Fix" is what to change tomor
 | 11 | **States, not records** | Filters match any state of a record. A record whose older state matches `from`/`to`/`type` but whose latest state does not is still counted and listed (collapse shows its latest matching state). Rare: states change for revised data (UCDP, NVD scores). | Index only the latest state (the indexer deletes the older document), or add `"state"` filtering. A data-policy decision. |
 | 12 | **The embedder** | `/search?semantic=true` needs the `embedder` service (the API waits for it at start-up). If it stops, semantic search answers 500; word search keeps working. | — |
 | 13 | **Time filters on entities** | `from`/`to` drop every record without `time_start` (all entities): a search with a time window never lists entities. | The UI sends `from`/`to` to `/search` only when it wants events. |
+
+## 14. Prompt for the UI agent
+
+> You are the UI agent for Synapsis (React + TypeScript, `src/ui/`). Work on `dev` (it holds your `ui/analyze` up to
+> `c4144c6` plus everything below); pull first, commit small, push often. Read `EMERGENCY.md` §0 (emergency rules), §11
+> (the system) and §12 (the read API, explained) before you start; this prompt is enough to begin.
+>
+> **What changed.** The read API is now five routes on `http://localhost:8080`. They pass the stores' answers through,
+> and the UI does all the shaping. The mock (port 8081) and every `/analyze/*` route are deleted. CORS allows
+> `http://localhost:5173` and `http://localhost:1897`. Shared optional filters on every route except `/graph`:
+> `from`, `to` (ISO dates on the event's `time_start`, `to` excluded), `source` and `type` (repeat the parameter for
+> several). There is no `as_of`, `zoom`, `layer` or `cursor`.
+>
+> **The five answers, exactly:**
+> 1. `GET /map/cells?resolution=2..5[&bbox=minLon,minLat,maxLon,maxLat][&kind=event]` →
+>    `{"records": 670, "sum_other_doc_count": 0, "buckets": [{"key": "821e67fffffffff", "doc_count": 64, "records": {"value": 64}}, ...]}`
+>    (`key` = H3 cell; show `records.value`; `sum_other_doc_count` > 0 = cells were cut).
+> 2. `GET /map/points?bbox=...[&kind=event][&limit=1..5000]` → `{"total": 71, "items": [<document>, ...]}`.
+> 3. `GET /search?[q=][&semantic=true][&kind=][&logical=<key>][&entity=<id>][&limit=1..500, default 50]` →
+>    `{"total": 3, "items": [<document>, ...]}`. Words match as prefixes ("log4j" finds "Log4j2"); `semantic=true`
+>    ranks by meaning (`total` ≤ `limit`); no `q` = the filtered list, newest first.
+> 4. `GET /logical[?node=<key>]` → `{"sum_other_doc_count": 0, "buckets": [{"key": "cyber.vendor_product/Microsoft", "doc_count": 389, "records": {"value": 389}}, ...]}`:
+>    one level only (the top-level spaces without `node`; the direct children of `node` with it), at most 1,000.
+> 5. `GET /graph?id=<record id>[&limit=1..1000, default 200]` →
+>    `{"center": {"id": ..., "labels": ["Entity"], ...properties}, "total": 4, "links": [{"type": "PARTICIPATES", "from": <id>, "to": <id>, "properties": {"role": ...}, "node": {"id": ..., "labels": ["Event"], ...}}, ...]}`;
+>    404 for an unknown id.
+>
+> Plus `GET /records/{id}` (unchanged: each source's full record, as stored). A *document* is Elasticsearch's
+> `_source`: `id, kind, type, source, known_at, state`, and when the record has them `name, title, body, time_start,
+> time_precision, location [lon, lat], h3_r2..h3_r5, country, subdivision, logical_prefixes[], measures {name: [values]},
+> entities[]`. Lists hold one document per record; `total` counts distinct records (an estimate within about 1 % above
+> 3,000).
+>
+> **What is already done in `src/ui/src/analyze`** (logic only; the look is unchanged):
+> - `api/contract.ts` has the five shapes.
+> - `api/query.ts` has `cellsQuery`, `pointsQuery`, `searchQuery`, `logicalQuery`, `graphQuery`, `recordPath`, and
+>   `resolutionOf(zoom)`.
+> - `api/client.ts` has `fetchCells`, `fetchPoints`, `fetchSearch`, `fetchLogical`, `fetchGraph` and `fetchRecord`.
+> - `api/adapt.ts` turns documents into `Item`s (label: name, then title, then the start of the body, then
+>   "type · where") and buckets into hexagons with h3-js.
+> - `map/useEvents.ts` chooses the layer. It asks `/map/cells` at the zoom's resolution (0–3 → 2, 4–5 → 3,
+>   6–7 → 4, 8+ → 5; with a bbox from zoom 3 up). Then it asks `/map/points` only when the cells in view hold 5,000
+>   records or fewer, and keeps the cells if the points come back cut.
+> - `config.ts` defaults to `http://localhost:8080`.
+> - The "seen as of" control no longer affects anything (the API has no `as_of`): remove it or leave it, as you judge.
+>
+> **The full-data rule.** From now on everything is tested against all the records (millions: NVD 1.2 M, EPSS 14 M,
+> FDIC, UCDP, GDELT...), not the 8,606-record sample. Never count or aggregate in the browser over a capped list. Always
+> show "N of M" (`items.length` of `total`), and say when a level or the cells were cut (`sum_other_doc_count` > 0).
+> Never ask for an unbounded list. Open a tree level by level. The sample never holds more than 5,000 records in a
+> view, so you will see cells only with full data, or by lowering `mostPoints` in `useEvents.ts` for a moment.
+>
+> **What remains for you, in this order** (cut from the bottom if time runs out):
+> 1. **Story presets** instead of "the last month" (each source sits in its own era): buttons that set the window and
+>    the view: "Rat Islands earthquakes, Feb 1965" (`from=1965-01-25&to=1965-03-01`, Aleutians), "Attacks in the
+>    US, 1970", "Conflict, Jan 1989", "Known exploited vulnerabilities (KEV)" (no points: it opens search with
+>    `source=src:cisa:kev`).
+> 2. **The panel**: a click on a point or a result opens a side panel with `/records/{id}` (the record as stored)
+>    and `/graph?id=` (links grouped in the UI by `type` and by the other node's `labels`, with "N of total"). A click
+>    on a neighbour moves the panel to it.
+> 3. **The search box**: text by default, a toggle for meaning (`semantic=true`); a result list with "N of M"; a
+>    click opens the panel and, when the result has a `location`, flies the map there.
+> 4. **The logical tree**: `/logical` for the top level, `/logical?node=<key>` when a node opens (show
+>    `records.value`); a click on a node lists `/search?logical=<key>`.
+> 5. **Source and type filters**: chips sent as `source=` / `type=` on every call (`Filters` in `api/query.ts`). The
+>    values come from `GET /catalog`.
+>
+> **Checks before every push** (no Node on the host), from `src/ui`:
+> `docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp -v "$PWD":/ui -w /ui node:24.21.0-alpine3.24 sh -c "npm install && npm run build && npm run lint && npm test"`.
+> Dev server: `docker run --rm -it -u $(id -u):$(id -g) -e HOME=/tmp -v "$PWD":/ui -w /ui -p 5173:5173 node:24.21.0-alpine3.24 npm run dev -- --host 0.0.0.0`
+> → `http://localhost:5173/analyze?from=1965-01-01&to=1965-04-01`. Write what you built into EMERGENCY.md.
