@@ -1,0 +1,78 @@
+/* The veiled dawn. Uses the tokens from src/styles.css. Motion is transform and opacity only. */
+
+.horizon {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--paper);
+}
+
+/* The picture blurred into its colour bands (scaled so the blur's soft border stays outside). Fades in. */
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  filter: blur(28px) saturate(1.1);
+  transform: scale(1.15);
+  animation: dawn 1600ms ease-out both;
+}
+
+/* The same picture, larger and blurred, drifting slowly over itself: the bands of colour shift like mist. */
+.mist {
+  position: absolute;
+  inset: -20% -30%;
+  background-size: 100% 100%;
+  filter: blur(40px);
+  opacity: 0.5;
+  mix-blend-mode: soft-light;
+  animation: drift 40s ease-in-out infinite alternate;
+}
+
+/* Where the sun will rise: a warm light that slowly swells and fades. */
+.light {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    75% 30% at 46% 41%,
+    rgb(255 226 206 / 0.95),
+    rgb(255 196 168 / 0.3) 55%,
+    transparent 78%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.2;
+  animation: breathe 9s ease-in-out 1.6s infinite alternate;
+}
+
+/* Grain, as on printed film. */
+.grain {
+  position: absolute;
+  inset: 0;
+  background: var(--texture-grain);
+  background-size: 220px;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+}
+
+@keyframes dawn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(-6%, 2%, 0);
+  }
+  to {
+    transform: translate3d(6%, -2%, 0);
+  }
+}
+
+@keyframes breathe {
+  to {
+    opacity: 0.6;
+  }
+}

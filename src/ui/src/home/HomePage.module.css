@@ -1,0 +1,27 @@
+/* The home page: the paper below the first screen, its column, and the footer. Uses the tokens from src/styles.css. */
+
+.paper {
+  padding: clamp(104px, 12vw, 176px) var(--margin) 0;
+}
+
+/* One centred column for everything on the paper, with room on both sides. */
+.column {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-top: clamp(128px, 15vw, 208px);
+  padding: 28px 0 44px;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+
+.footer i {
+  font-family: var(--font-tagline);
+}

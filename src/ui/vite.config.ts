@@ -10,10 +10,10 @@ export default defineConfig({
   plugins: [react()],
 
   // The local assets folder: everything in assets/ is served as it is, at the site root.
-  // assets/media/home/winter-flock.av1.mp4 is the address /media/home/winter-flock.av1.mp4.
+  // assets/media/home/horizon.jpg is the address /media/home/horizon.jpg.
   publicDir: 'assets',
 
-  // `@/` means `src/`, so imports read the same from any folder: `import { films } from '@/media/films'`.
+  // `@/` means `src/`, so imports read the same from any folder: `import { areas } from '@/site/areas'`.
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
