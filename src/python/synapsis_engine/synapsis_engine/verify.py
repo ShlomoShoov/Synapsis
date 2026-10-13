@@ -319,10 +319,10 @@ def main():
     proofs = f"{sum(ok.values())}/{len(ok)} proofs"
     per_source = collections.Counter(m["source"] for _, m in out)
     for s in sorted(set(per_source) | {r[0] for r in g}):
-        rows = [r[4] for r in g if r[0] == s]
-        res = [str(e) for e in rows]
-        pipeline_log.run("verify", s, per_source.get(s, 0), per_source.get(s, 0), res.count("FAIL"),
-                         f"{proofs}; golden {sum(e.startswith('ok') for e in res)} pass, {res.count('FAIL')} fail, "
-                         f"{res.count('pending')} pending")
+        rows = [r for r in g if r[0] == s]
+        fail = sum(r[4] == "FAIL" for r in rows)
+        pending = sum(r[3] == "pending" for r in rows)
+        pipeline_log.run("verify", s, per_source.get(s, 0), per_source.get(s, 0), fail,
+                         f"{proofs}; golden {len(rows) - fail - pending} pass, {fail} fail, {pending} pending")
     print(text)
     return 0 if all(ok.values()) else 1

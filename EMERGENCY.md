@@ -317,6 +317,24 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   **After the full load**: `backfill` (stops above 200,000 records without `--force`), then `verify`; the report
   (`/data/engine-report.md` in the volume, copy in `src/python/synapsis_engine/engine-report.md`) fills the goldens.
 
+### Operator: the night of 13–14 Oct (agent 2; full log in docs/tonight/night-log.md, not in git)
+- **Engine (merged)**: election estimates are issued at the end of their 30-day poll window (election day 00:00Z
+  from the calendar: the Tuesday after the first Monday of November), from the polls known by then (the feeder dates
+  a poll at field end + 2 days), never from the cycle's results. P(Republican wins) = Φ(corrected / σ), σ = np.std of
+  the previous cycle's errors (2020 for 2024, round 3 test S5); 2020 has no probability. The Brier values (corrected,
+  market, polls alone, their average, on the states with a market) are judged goldens (±0.001).
+- **API**: a number that is not finite (1e400) is refused (E-JSON, its path in the reason).
+- **Graph**: `CYB.VULN.PUBLISHED` and `CYB.VULN.NVD_ASSESSMENT` are kept out (like EPSS); the projector opens no
+  transaction for an event that is not a node.
+- **Relay**: up to 500 messages produced in order without waiting for each one; the resume token is saved once per
+  acknowledged batch (at least once); the change stream leaves out the full document. Measured on 20,000-record
+  bursts: before 84 messages/s, after ≥ 1,000/s (as fast as the API stores). Now the slowest stage is the projector
+  (about 40 records/s on UCDP), then the indexer (about 100–125 documents/s).
+- **Pipeline log** (`contracts/pipeline-log.md`): Setup creates `synapsis-pipeline-log`; relay, indexer and projector
+  write counters every 30 s (`PipelineLog` in Synapsis.Data, plain HttpClient, never blocks); the engine writes one
+  `run` document per source and step. Status: `deploy/scripts/night-status.sh`; load order:
+  `deploy/scripts/night-load.sh rehearsal|A|B|C|all`. `CORE_ES_HEAP=4g` in deploy/core/.env.
+
 ## 11. How the system looks now
 
 **Services and ports** (`docker compose -f deploy/core/compose.yml up -d --build --wait`):
