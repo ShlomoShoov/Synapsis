@@ -38,6 +38,8 @@ the repo). Update this file whenever a task is done or a decision changes. Keep 
 | Engine | **Nothing.** |
 
 ## 3. The minimal API (the target)
+**Superseded by §12 ("The read API, explained"), which describes what is built.** Kept for the history of the plan.
+
 The read API is six routes. List answers share one shape, `{ "total": N, "items": [ ... ] }`. A route never answers
 two different things: one thing per route. Names are plain, with no `/analyze` prefix.
 
@@ -165,3 +167,119 @@ UI in development (from `src/ui`, no Node needed):
   (`AnalyzeService.cs`) resolved. Merged into `dev` and pushed. Core stack up and healthy (setup, api 8080, relay,
   indexer, projector, embedder, ui 1897). ES `synapsis-records`: 7,819 documents, 7,771 distinct ids. Neo4j: 5,539
   nodes; relationships PARTICIPATES 5,673, RELATED 787, ABOUT 198, PREMISE 198.
+- **Stage 2.1**: `GET /map/cells` (§12). CORS also allows the UI dev server, http://localhost:5173.
+
+## 11. How the system looks now
+
+**Services and ports** (`docker compose -f deploy/core/compose.yml up -d --build --wait`):
+
+| Service | Port | What it does |
+| --- | --- | --- |
+| `mongo` | 27017 | MongoDB, the truth: collection `records` (every state of every record), database `synapsis_v2` |
+| `elasticsearch` | 9200 | Search: index `synapsis-records` (one document per state of an entity, event or conclusion; relations are not in it), `synapsis-ingest-log` |
+| `neo4j` | 7474 (browser), 7687 (bolt) | The graph: nodes `Entity`, `Event`, `Conclusion`; links `PARTICIPATES`, `RELATED`, `ABOUT`, `PREMISE` |
+| `kafka` | 9094 (host) | Topic `ingest.accepted`: every new record state |
+| `setup` | — | Creates the indexes, constraints and topic once, then exits |
+| `api` | 8080 | C#: `POST /ingest`, `GET /records/{id}`, `GET /catalog`, `GET /health`, and the read routes of §12 |
+| `kafka-relay` | — | MongoDB change stream → Kafka |
+| `elasticsearch-indexer` | — | Kafka → embedder → Elasticsearch |
+| `neo4j-projector` | — | Kafka → Neo4j |
+| `embedder` | 8090 | Turns text into a vector of 512 numbers (`POST /embed`), for semantic search |
+| `ui` | 1897 | The built UI. Development server: 5173 (see §8) |
+
+**The path of a record**: a feeder sends it (`POST /ingest`) → the API checks it and stores a new state in MongoDB →
+the relay sees the insert (change stream) and puts it on Kafka → the indexer writes a search document to
+Elasticsearch, and the projector writes nodes and links to Neo4j → the read routes (§12) query Elasticsearch and Neo4j
+→ the UI draws the answer.
+
+**Look into each store by hand**:
+- MongoDB: `docker exec -it synapsis-core-mongo-1 mongosh synapsis_v2 --quiet --eval 'db.records.countDocuments()'` (8,606 now)
+- Elasticsearch: `curl -s localhost:9200/synapsis-records/_count` and any `_search` body from §12.
+- Neo4j: `set -a; . deploy/core/.env; set +a; docker exec -it synapsis-core-neo4j-1 cypher-shell -u neo4j -p "$CORE_NEO4J_PASSWORD"`,
+  or the browser at http://localhost:7474.
+- Kafka: `docker exec synapsis-core-kafka-1 /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic ingest.accepted --from-beginning --max-messages 1`
+
+**Words used below**:
+- *document*: one entry in the Elasticsearch index. There is one per **state** of a record (a record re-sent with
+  changed content gets state 2, a second document). So documents ≥ records.
+- *aggregation*: a summary Elasticsearch computes over all matching documents instead of returning them (counts,
+  groups). *terms aggregation*: groups documents by the value of a field; each group is a *bucket* with a `key` (the
+  value) and a `doc_count` (its documents). *cardinality*: the number of distinct values of a field (here `id`, so it
+  counts records, not states). It is exact up to about 3,000 distinct values and an estimate (within about 1 %) above.
+- *H3*: a grid of hexagons covering the Earth, at several sizes (resolutions). Resolution 2 has 5,882 cells with an edge
+  of about 158 km; 3: 60 km; 4: 23 km; 5: 8.5 km. A cell is named by a 15-character id such as `822d57fffffffff`.
+  The indexer writes `h3_r2` ... `h3_r5` only when the point's uncertainty is smaller than the cell's edge.
+- *bbox*: the map's box, `minLon,minLat,maxLon,maxLat`. When `minLon > maxLon` the box crosses the 180th meridian.
+- *knn*: "k nearest neighbours": the k documents whose vectors are closest to the question's vector.
+- *collapse on id*: Elasticsearch keeps one hit per record id (the first by the sort), so a record with 3 states is
+  listed once.
+
+**Which UI file calls which route**: filled in by Stage 4.
+
+## 12. The read API, explained
+
+Every route below answers on `http://localhost:8080` and passes the store's answer through: Elasticsearch documents
+(`_source`) and buckets, Neo4j nodes and links. The UI does all the shaping. Code: `src/dotnet/Synapsis.Api/Controllers/ReadController.cs`
+(the routes), `Repositories/SearchRepository.cs` (Elasticsearch), `Repositories/GraphRepository.cs` (Neo4j).
+
+**Shared filters** (Elasticsearch routes, all optional; `SearchRepository.Filters`, `SearchRepository.cs:93`):
+
+| Parameter | Type | Filters |
+| --- | --- | --- |
+| `from` | date or date-time (`1965-01-01`, `1965-01-01T12:00:00Z`; a date alone is midnight UTC) | `time_start >= from` |
+| `to` | same | `time_start < to` (excluded) |
+| `source` | text, repeatable (`source=a&source=b`) | any of them |
+| `type` | text, repeatable | any of them |
+
+A filter on `from`/`to` drops entities (they have no `time_start`). A wrong date or number answers 400.
+
+### GET /map/cells
+
+**Receives**:
+
+| Parameter | Type | Default | |
+| --- | --- | --- | --- |
+| `resolution` | 2, 3, 4 or 5 | required (400 without it) | the H3 size; the UI chooses it from the zoom |
+| `bbox` | `minLon,minLat,maxLon,maxLat` | none (the whole Earth) | only points inside; across 180° when `minLon > maxLon` |
+| `kind` | `event`, `conclusion`, `entity` | `event` | |
+| `from`, `to`, `source`, `type` | shared filters | | |
+
+**Returns** the cells that hold matching documents, the most records first, at most 10,000:
+```json
+{ "records": 670, "sum_other_doc_count": 0,
+  "buckets": [ { "key": "821e67fffffffff", "doc_count": 64, "records": { "value": 64 } },
+               { "key": "826b6ffffffffff", "doc_count": 46, "records": { "value": 46 } } ] }
+```
+`records` = distinct records in all the cells; each bucket: `key` = the H3 cell, `doc_count` = its documents (states),
+`records.value` = its distinct records (show this one). `sum_other_doc_count` = documents in cells beyond the
+10,000 returned (0 = nothing cut). No centre or boundary: the UI draws the hexagon from the key with h3-js
+(`cellToBoundary`, `cellToLatLng`).
+
+**Sends to Elasticsearch** (`SearchRepository.MapCellsAsync`, `SearchRepository.cs:136`; the request
+`resolution=3&bbox=170,45,-170,55&from=1965-01-01&to=1965-04-01`):
+```bash
+curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
+  "size": 0,
+  "query": { "bool": { "filter": [
+    { "range": { "time_start": { "gte": "1965-01-01T00:00:00Z", "lt": "1965-04-01T00:00:00Z" } } },
+    { "term": { "kind": "event" } },
+    { "geo_bounding_box": { "location": { "top_left": { "lat": 55, "lon": 170 }, "bottom_right": { "lat": 45, "lon": -170 } } } },
+    { "exists": { "field": "h3_r3" } } ] } },
+  "aggs": {
+    "cells": { "terms": { "field": "h3_r3", "size": 10000, "order": { "records": "desc" } },
+               "aggs": { "records": { "cardinality": { "field": "id" } } } },
+    "records": { "cardinality": { "field": "id" } } } }'
+```
+`"size": 0` = return no documents, only the aggregations. `geo_bounding_box` handles the 180th meridian itself: this
+box gives 75 documents, the same as two boxes (170..180 and −180..−170) and the same as a count by hand.
+
+**Counts**: distinct records (`cardinality` of `id`): exact up to about 3,000 per cell, an estimate above.
+
+**Checked** (13 Oct, sample): `resolution=2` → records 670, 179 cells, the cells' records add up to 670; by hand
+(Python over all 7,819 documents: distinct event ids with `h3_r2`) 670 in 179 cells; ES `_count` of the same filter
+670 documents. `resolution=3&bbox=170,45,-170,55&from=1965-01-01&to=1965-04-01` (Rat Islands) → records 71, 15 cells;
+by hand 71 in 15 cells.
+
+**Limits at full scale**: 10,000 cells per answer (resolution 2 has 5,882 on the whole Earth; at 3–5 the UI must send a
+bbox, or `sum_other_doc_count` > 0 says cells were cut). Ordering by `records` sorts every cell of the index's one
+shard: fine at these sizes. Counts above 3,000 per cell are estimates.
