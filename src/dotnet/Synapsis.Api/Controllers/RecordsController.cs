@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Synapsis.Api.Models.Results;
+using Synapsis.Api.Models.Dto;
 using Synapsis.Data.Models.Entities;
 using Synapsis.Api.Repositories;
 using Synapsis.Data.Services;

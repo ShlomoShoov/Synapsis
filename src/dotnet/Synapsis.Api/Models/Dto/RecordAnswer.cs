@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 
-namespace Synapsis.Api.Models.Results;
+namespace Synapsis.Api.Models.Dto;
 
 /// <summary>
 /// One answer of GET /records/{id}: the record as one source stated it, in its latest state known at the date asked.
