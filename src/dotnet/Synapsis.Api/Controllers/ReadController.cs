@@ -51,6 +51,26 @@ public sealed class ReadController : ControllerBase
         return Ok(await _searchRepository.MapCellsAsync(filters, resolution.Value));
     }
 
+    /// <summary>GET /map/points: the matching documents with a point inside the bbox (required), one per record, at most limit (5,000).</summary>
+    [HttpGet("map/points")]
+    public async Task<IActionResult> MapPoints(string? bbox, DateTime? from, DateTime? to,
+        [FromQuery] string[]? source, [FromQuery] string[]? type, string kind = "event", int limit = 5000)
+    {
+        double[]? box = bbox == null ? null : ParseBox(bbox);
+        if (box == null)
+        {
+            return Problem(statusCode: 400, detail: "bbox is required: minLon,minLat,maxLon,maxLat.");
+        }
+        if (limit < 1 || limit > 5000)
+        {
+            return Problem(statusCode: 400, detail: "limit must be 1 to 5000.");
+        }
+        List<JsonObject> filters = SearchRepository.Filters(from, to, source, type, kind);
+        filters.Add(SearchRepository.InsideBox(box));
+        JsonArray latestStateFirst = new JsonArray(new JsonObject { ["state"] = "desc" });
+        return Ok(await _searchRepository.ListAsync(filters, latestStateFirst, limit));
+    }
+
     /// <summary>"minLon,minLat,maxLon,maxLat" as four numbers in range; null when it is not.</summary>
     private static double[]? ParseBox(string text)
     {

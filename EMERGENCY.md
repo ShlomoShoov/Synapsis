@@ -168,6 +168,7 @@ UI in development (from `src/ui`, no Node needed):
   indexer, projector, embedder, ui 1897). ES `synapsis-records`: 7,819 documents, 7,771 distinct ids. Neo4j: 5,539
   nodes; relationships PARTICIPATES 5,673, RELATED 787, ABOUT 198, PREMISE 198.
 - **Stage 2.1**: `GET /map/cells` (§12). CORS also allows the UI dev server, http://localhost:5173.
+- **Stage 2.2**: `GET /map/points` (§12).
 
 ## 11. How the system looks now
 
@@ -283,3 +284,58 @@ by hand 71 in 15 cells.
 **Limits at full scale**: 10,000 cells per answer (resolution 2 has 5,882 on the whole Earth; at 3–5 the UI must send a
 bbox, or `sum_other_doc_count` > 0 says cells were cut). Ordering by `records` sorts every cell of the index's one
 shard: fine at these sizes. Counts above 3,000 per cell are estimates.
+
+### GET /map/points
+
+**Receives**:
+
+| Parameter | Type | Default | |
+| --- | --- | --- | --- |
+| `bbox` | `minLon,minLat,maxLon,maxLat` | required (400 without it) | across 180° when `minLon > maxLon` |
+| `kind` | `event`, `conclusion`, `entity` | `event` | |
+| `limit` | 1–5,000 | 5,000 (400 above) | documents returned |
+| `from`, `to`, `source`, `type` | shared filters | | |
+
+**Returns** the matching documents with a point in the box, one per record (its latest state), as stored in
+Elasticsearch (`_source`; `text_vector` is never in it):
+```json
+{ "total": 71,
+  "items": [ { "id": "evt:usgs:ushis2739", "record_key": "evt:usgs:ushis2739|src:usgs:comcat", "state": 1,
+               "kind": "event", "type": "GEO.EARTHQUAKE", "source": "src:usgs:comcat",
+               "known_at": "1965-01-30T05:37:21Z", "time_start": "1965-01-30T04:37:21Z", "time_precision": "second",
+               "week": "1965-01-25T00:00:00Z", "location": [-179.67, 51.68],
+               "h3_r2": "82225ffffffffff", "h3_r3": "83225bfffffffff", "logical_prefixes": [],
+               "measures": { "magnitude": [5.6], "depth_km": [88.0] }, "entities": [] } ] }
+```
+`total` = distinct records that match (all of them, not only the ones returned); `items` holds at most `limit`. When
+`total > items.length`, the list was cut: the UI should show cells instead. Fields a record does not have are absent
+(`title`, `name`, `body`, `country`, `h3_r4`...).
+
+**Sends to Elasticsearch** (`SearchRepository.ListAsync`, `SearchRepository.cs:160`; route `ReadController.cs:55`;
+the request `bbox=170,45,-170,55&from=1965-01-01&to=1965-04-01`):
+```bash
+curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
+  "size": 5000,
+  "query": { "bool": { "filter": [
+    { "range": { "time_start": { "gte": "1965-01-01T00:00:00Z", "lt": "1965-04-01T00:00:00Z" } } },
+    { "term": { "kind": "event" } },
+    { "geo_bounding_box": { "location": { "top_left": { "lat": 55, "lon": 170 }, "bottom_right": { "lat": 45, "lon": -170 } } } } ] } },
+  "sort": [ { "state": "desc" } ],
+  "collapse": { "field": "id" },
+  "aggs": { "records": { "cardinality": { "field": "id" } } } }'
+```
+`collapse` keeps one document per `id`: the first by the sort, so the latest state. The total comes from the
+`records` aggregation, not from `hits.total`: `hits.total` counts documents (states), and with `collapse` it would not
+match the items (a deliberate change from the plan's `track_total_hits`).
+
+**Counts**: distinct records (cardinality of `id`; exact up to about 3,000, an estimate above).
+
+**Checked** (13 Oct, sample): Rat Islands (the request above) → total 71, 71 items, 71 distinct ids; by hand (Python
+over all documents: events with a location in the box and `time_start` in the window) 71. Whole Earth
+(`bbox=-180,-90,180,90`) → total 683, 683 items; ES `_count` of events with a location 683; by hand 683.
+`limit=10` → total 683, 10 items. No bbox, or `limit=6000` → 400.
+
+**Limits at full scale**: at most 5,000 items per answer, so the UI asks for points only when the cells in view hold
+5,000 records or fewer. `collapse` with a large `size` costs more than a plain search (fine at 5,000). The total above
+3,000 is an estimate, so near 5,000 a few points may be missing from a "complete" list: the UI compares `total` with
+`items.length`.
