@@ -926,3 +926,16 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   double-click resets; the width is kept in the browser) and maximise to the whole screen with the button on that
   edge (Esc or the button restores). Fixtures: the conclusions are written by hand (the stack was being reloaded;
   `fixtures/analyze/README.md` says so). Not yet checked against the live API.
+- **QA on real data, rough cells, Observe Pipeline (14 Oct night, branch `ui/observe-qa`)**. *Rough cells*: a glowing
+  cell zoomed into an empty area. Checked on the live data: the indexer gives an event `h3_rN` only when its place is
+  finer than the cell's edge, so events with an H3 cell fall from 405,672 at r3 to 233,156 at r4 (UCDP placed by
+  province, USGS with a wide uncertainty); near Kandahar 234 UCDP events have an r3 cell and no r4 cell, and the points
+  in view (11,018) are too many, so the map drew r4 cells without them. `analyze/map/rough.ts`: the map also asks
+  `/map/cells` at every coarser resolution in view (up to 3 more requests, cached) and draws what a coarse cell holds
+  beyond its finer cells as a rough light at its centre ("N events placed only roughly here · their source places them
+  to within about 60 km"); the count on the map is now the coarsest one. No API change. *Observe 03 Pipeline*
+  (`observe/pipeline/`): reads `synapsis-ingest-log` and `synapsis-pipeline-log` from Elasticsearch every 30 s: one
+  card per stage (API → relay → indexer → projector → engine): rate now, last 24 h, Kafka lag and the time to catch up
+  at this rate, refused/failed; every source's batches, received, stored, refused, last batch; the engine's last 12
+  runs. Checked: the two queries against the live logs (curl), the parsing by unit tests; not yet seen in a browser
+  (the built UI on 1897 is dev's). Walk on 1897: search "log4j" (3 records), record panel, graph (4 connections) work.
