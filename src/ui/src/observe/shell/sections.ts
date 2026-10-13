@@ -8,7 +8,7 @@
 import type { IconName } from '../ui/Icon';
 
 /** The id of a section. */
-export type SectionId = 'flow' | 'metrics';
+export type SectionId = 'flow' | 'metrics' | 'pipeline';
 
 /** One section. */
 export interface SectionInfo {
@@ -45,5 +45,13 @@ export const sections: readonly SectionInfo[] = [
     icon: 'metrics',
     summary: 'What arrived, what was stored, what was refused.',
     key: '2',
+  },
+  {
+    id: 'pipeline',
+    number: '03',
+    title: 'Pipeline',
+    icon: 'chart',
+    summary: 'Below the API, stage by stage: how fast, how far behind, what failed.',
+    key: '3',
   },
 ];
