@@ -4,6 +4,7 @@
  * still rejects with the browser's AbortError, so callers can tell "cancelled" from "failed" with isAbort().
  */
 import { requestTimeoutMs } from '../config';
+import { logEnd, logStart } from './queryLog';
 
 export type ApiErrorKind = 'unreachable' | 'timeout' | 'http' | 'invalid';
 
@@ -26,8 +27,34 @@ export function isAbort(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError';
 }
 
-/** GET a URL and read the answer as JSON. */
+/** GET a URL and read the answer as JSON. Every request is written to the query log (queryLog.ts). */
 export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const id = logStart(url);
+  const started = performance.now();
+  const elapsed = () => Math.round(performance.now() - started);
+  try {
+    const answer = await fetchJson<T>(url, signal, (status, bytes) =>
+      logEnd(id, { status, bytes }),
+    );
+    logEnd(id, { state: 'done', ms: elapsed(), answer });
+    return answer;
+  } catch (error) {
+    logEnd(id, {
+      state: 'failed',
+      ms: elapsed(),
+      error: isAbort(error)
+        ? 'Cancelled: a newer question replaced it.'
+        : String((error as Error).message),
+    });
+    throw error;
+  }
+}
+
+async function fetchJson<T>(
+  url: string,
+  signal: AbortSignal | undefined,
+  onResponse: (status: number, bytes: number) => void,
+): Promise<T> {
   const timeout = AbortSignal.timeout(requestTimeoutMs);
   const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
   let response: Response;
@@ -46,6 +73,7 @@ export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> 
     );
   }
   const text = await response.text();
+  onResponse(response.status, new TextEncoder().encode(text).length);
   if (!response.ok) {
     throw new ApiError(
       'http',

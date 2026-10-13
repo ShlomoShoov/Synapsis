@@ -1,17 +1,23 @@
 /**
- * Analyze (route /analyze): where the user investigates the data. The globe fills the page; above it, the key (top
- * right), the view buttons (right), and the main timeline, "What happened" (bottom). The time window starts on the last
- * month; ?from=1970-01-01&to=1971-01-01 in the address opens another (the second date excluded), and
- * ?view=35.5,33.4,7 opens the map at a place (longitude, latitude, zoom, and optionally pitch and bearing).
+ * Analyze (route /analyze): where the user investigates the data. The night Earth fills the page in a sky of stars, the
+ * events shine on it as lights coloured by category. Over it: the time card (top right), the key (bottom left), the
+ * query panel (left), and the view buttons (right).
+ *
+ * The address can open a window, a moment of knowledge and a place: ?from=1970-01-01&to=1971-01-01 (the second date
+ * excluded), &as_of=2026-10-01, &view=35.5,33.4,7 (longitude, latitude, zoom, and optionally pitch and bearing).
  */
+import '@fontsource-variable/instrument-sans/wght.css';
+import '@fontsource/fragment-mono/400.css';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { EventsKey } from './map/EventsKey';
 import { GlobeMap, type Camera, type GlobeController, type MapLook } from './map/GlobeMap';
 import { MapControls } from './map/MapControls';
-import { MapLegend } from './map/MapLegend';
-import { useMapLayer } from './map/useMapLayer';
+import { useEvents } from './map/useEvents';
 import { requestOf } from './map/viewport';
-import { Timeline } from './time/Timeline';
+import { QueryPanel } from './query/QueryPanel';
+import { TimeCard } from './time/TimeCard';
+import { useLive } from './time/useLive';
 import { fromDayInput, lastMonth, type TimeWindow } from './time/window';
 import styles from './AnalyzePage.module.css';
 
@@ -22,22 +28,24 @@ export function AnalyzePage() {
   const [timeWindow, setTimeWindow] = useState<TimeWindow>(() =>
     windowFromAddress(searchParams, now),
   );
+  const [asOf, setAsOf] = useState<number | undefined>(
+    () => fromDayInput(searchParams.get('as_of') ?? '') ?? undefined,
+  );
   const [initialView] = useState(() => viewFromAddress(searchParams));
   const [look, setLook] = useState<MapLook | null>(null);
   const [camera, setCamera] = useState({ bearing: 0, pitch: 0 });
   const [controller, setController] = useState<GlobeController | null>(null);
 
   const request = look ? requestOf(look.zoom, look.bounds) : null;
-  const { layer, pending, error } = useMapLayer(
-    { from: timeWindow.from, to: timeWindow.to },
-    request,
-  );
+  const filters = { from: timeWindow.from, to: timeWindow.to, asOf };
+  const { answer: events, pending, error } = useEvents(filters, request);
+  const live = useLive(timeWindow, (time) => controller?.setLive(time));
 
   return (
     <div className={styles.page}>
       <GlobeMap
         initialView={initialView}
-        layer={layer}
+        lights={events?.lights ?? null}
         onLookChange={setLook}
         onCameraChange={setCamera}
         onReady={setController}
@@ -50,8 +58,32 @@ export function AnalyzePage() {
         <span className={styles.area}>Analyze</span>
       </header>
 
-      <div className={styles.side}>
-        <MapLegend layer={layer} />
+      <div className={styles.left}>
+        <QueryPanel />
+        <EventsKey events={events} />
+      </div>
+
+      <div className={styles.right}>
+        <TimeCard
+          window={timeWindow}
+          onWindowChange={setTimeWindow}
+          asOf={asOf}
+          onAsOfChange={setAsOf}
+          now={now}
+          live={live}
+          status={
+            pending ? (
+              <span className={styles.reading}>reading</span>
+            ) : events ? (
+              `${events.layer.events.toLocaleString('en')} shown`
+            ) : null
+          }
+          liveNote={
+            events?.layer.layer === 'cells'
+              ? 'Too many events here to play one by one: zoom in or narrow the window.'
+              : undefined
+          }
+        />
         {error && (
           <p className={styles.error} role="alert">
             {error.message}
@@ -61,21 +93,6 @@ export function AnalyzePage() {
 
       <div className={styles.controls}>
         <MapControls controller={controller} bearing={camera.bearing} pitch={camera.pitch} />
-      </div>
-
-      <div className={styles.bottom}>
-        <Timeline
-          window={timeWindow}
-          onWindowChange={setTimeWindow}
-          now={now}
-          status={
-            pending ? (
-              <span className={styles.loading}>Reading…</span>
-            ) : layer ? (
-              `${layer.events.toLocaleString('en')} on the map`
-            ) : null
-          }
-        />
       </div>
     </div>
   );

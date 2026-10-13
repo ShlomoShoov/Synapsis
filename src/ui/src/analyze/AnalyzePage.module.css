@@ -1,50 +1,100 @@
-/* Analyze: the globe fills the page; the controls float over it on paper. Tokens from src/styles.css. */
+/*
+ * Analyze at night: the Earth in deep space, the controls on dark glass. The names below are Analyze's own; the type
+ * follows Observe's night theme (the serif for the name, the sans for the interface and numbers, the mono for codes,
+ * times and queries).
+ */
 
 .page {
-  --accent: #b5452c; /* the window on the timeline, the needle: the colour of the events */
+  --space: #03050a;
+  --glass: rgb(9 15 26 / 0.62);
+  --glass-edge: rgb(150 190 255 / 0.12);
+  --glass-shadow: 0 0 0 1px var(--glass-edge), 0 24px 60px -20px rgb(0 0 0 / 0.8);
+  --text-1: #eef4ff;
+  --text-2: #b4c3d8;
+  --text-3: #7f90a8;
+  --text-4: #4f5d72;
+  /* The interface's light: the window, the chosen preset, focus. */
+  --accent: #4d8dff;
+  --accent-soft: #8fb6ff;
+  /* LIVE. */
+  --live: #ff3d71;
+  /* "Seen as of" a past day. */
+  --past: #ffc857;
+  --font-sans: 'Instrument Sans Variable', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Fragment Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: var(--paper);
+  color-scheme: dark;
+  background: var(--space);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+.page :focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
 }
 
 .header {
   position: absolute;
-  top: 22px;
-  left: 28px;
+  top: 20px;
+  left: 24px;
   z-index: 2;
   display: flex;
   align-items: baseline;
-  gap: 14px;
+  gap: 12px;
   pointer-events: none;
 }
 
 .brand {
+  font-family: var(--font-serif);
   font-size: 22px;
   letter-spacing: -0.01em;
+  color: var(--text-1);
   text-decoration: none;
   pointer-events: auto;
 }
 
 .area {
+  font-family: var(--font-serif);
   font-size: 22px;
   font-style: italic;
-  color: var(--ink-muted);
+  color: var(--text-3);
 }
 
 .area::before {
   content: '/';
-  margin-right: 14px;
+  margin-right: 12px;
   font-style: normal;
-  color: var(--line);
-  color: rgb(31 28 23 / 0.25);
+  color: var(--text-4);
 }
 
-.side {
+/* The left column: the query tab or panel at the top, the key at the bottom. */
+.left {
   position: absolute;
-  top: 20px;
-  right: 24px;
+  top: 68px;
+  bottom: 18px;
+  left: 18px;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: start;
+  align-items: start;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.left > * {
+  pointer-events: auto;
+}
+
+.right {
+  position: absolute;
+  top: 18px;
+  right: 18px;
   z-index: 2;
   display: grid;
   gap: 10px;
@@ -52,37 +102,30 @@
 }
 
 .error {
-  max-width: 280px;
+  max-width: 388px;
   margin: 0;
   padding: 10px 14px;
   border-radius: 12px;
-  background: #f6e3dc;
-  color: #7a2716;
-  font-size: 14px;
-  box-shadow: 0 0 0 1px rgb(122 39 22 / 0.2);
+  background: rgb(60 10 24 / 0.8);
+  box-shadow: 0 0 0 1px rgb(255 61 113 / 0.4);
+  color: #ffc2d1;
+  font-size: 13px;
 }
 
 .controls {
   position: absolute;
-  right: 24px;
-  bottom: 168px;
+  right: 18px;
+  bottom: 18px;
   z-index: 2;
 }
 
-.bottom {
-  position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 20px;
-  z-index: 2;
-}
-
-.loading {
-  animation: breathe 1.2s ease-in-out infinite alternate;
+.reading::after {
+  content: '…';
+  animation: breathe 0.9s ease-in-out infinite alternate;
 }
 
 @keyframes breathe {
   from {
-    opacity: 0.45;
+    opacity: 0.2;
   }
 }

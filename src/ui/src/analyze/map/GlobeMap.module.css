@@ -1,14 +1,33 @@
-/* The globe fills the page; the hover label follows the pointer. */
+/* The night sky and the globe fill the page; the hover label follows the pointer. */
 
 .stage {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse at 50% 45%,
-    var(--paper) 0%,
-    var(--paper) 55%,
-    color-mix(in srgb, var(--paper-deep) 70%, var(--paper)) 100%
-  );
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 45%, rgb(30 60 120 / 0.22), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 82% 18%, rgb(90 60 160 / 0.12), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 12% 85%, rgb(20 90 140 / 0.1), transparent 70%), var(--space);
+}
+
+.stars {
+  position: absolute;
+  inset: -1300px;
+  will-change: transform;
+  background-repeat: repeat;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.stars[data-near] {
+  opacity: 1;
+  animation: shimmer 7s ease-in-out infinite alternate;
+}
+
+@keyframes shimmer {
+  to {
+    opacity: 0.7;
+  }
 }
 
 .map {
@@ -20,21 +39,20 @@
   outline: none;
 }
 
-/* The map's credits: small and quiet, in the page's type, above the timeline. */
-.map :global(.maplibregl-ctrl-bottom-left) {
-  bottom: 168px;
-  left: 18px;
-}
-
+/* The map's credits: small and quiet, out of the way. */
 .map :global(.maplibregl-ctrl-attrib) {
-  font-family: var(--font-serif);
-  font-size: 11px;
-  background: color-mix(in srgb, var(--paper) 80%, transparent);
-  color: var(--ink-muted);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  background: rgb(4 8 14 / 0.6);
+  color: var(--text-3);
 }
 
 .map :global(.maplibregl-ctrl-attrib a) {
-  color: var(--ink-muted);
+  color: var(--text-3);
+}
+
+.map :global(.maplibregl-ctrl-attrib-button) {
+  filter: invert(0.8);
 }
 
 .hover {
@@ -43,27 +61,41 @@
   left: 0;
   z-index: 3;
   display: grid;
-  gap: 2px;
-  max-width: 320px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  gap: 3px;
+  max-width: 340px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgb(8 14 24 / 0.82);
+  backdrop-filter: blur(14px);
   box-shadow:
-    0 1px 0 var(--line),
-    0 8px 24px rgb(31 28 23 / 0.12);
+    0 0 0 1px var(--glass-edge),
+    0 18px 40px rgb(0 0 0 / 0.5);
   pointer-events: none;
+}
+
+.hoverTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
   line-height: 1.3;
 }
 
-.hover strong {
-  font-weight: 500;
+.hoverTitle i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  translate: 0 -1px;
 }
 
-.hover span {
-  font-size: 12px;
-  color: var(--ink-muted);
-  letter-spacing: 0.02em;
+.hoverLine {
+  padding-left: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
 }
 
 .failure {
@@ -72,5 +104,43 @@
   left: 50%;
   translate: -50% 0;
   margin: 0;
-  color: var(--ink-muted);
+  color: var(--text-2);
+}
+
+/* The air: a blue glow around the globe (behind the map, seen past its rim) and a thin one over its edge. Drawn for a
+   globe of radius 400px centred on the page's top left corner; GlobeMap moves and scales them onto the globe. */
+.glowBehind,
+.glowFront {
+  position: absolute;
+  top: -580px;
+  left: -580px;
+  width: 1160px;
+  height: 1160px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 50% 50%;
+  transition: opacity 400ms;
+  will-change: transform;
+}
+
+.glowBehind {
+  background: radial-gradient(
+    circle closest-side,
+    rgb(70 140 255 / 0.55) 67.6%,
+    rgb(60 120 255 / 0.32) 70%,
+    rgb(40 90 220 / 0.12) 74.5%,
+    rgb(30 70 200 / 0.04) 84.1%,
+    transparent 100%
+  );
+}
+
+.glowFront {
+  background: radial-gradient(
+    circle closest-side,
+    transparent 59.3%,
+    rgb(90 160 255 / 0.07) 65.5%,
+    rgb(120 180 255 / 0.22) 68.6%,
+    transparent 69.2%
+  );
 }

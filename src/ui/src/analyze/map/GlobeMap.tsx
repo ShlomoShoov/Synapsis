@@ -1,34 +1,30 @@
 /**
- * The globe: MapLibre with the basemap (basemap.ts) and the events (layers.ts) above it.
+ * The globe: the night Earth (basemap.ts) in a sky of stars (starfield.ts), with the events as twinkling lights
+ * (LightsLayer.ts) above it.
  *
- * The component owns the map. It reports where the map looks once a move ends (onViewChange) and draws the layer it is
- * given: hexagon columns change height smoothly from one answer to the next, points fade over. Hovering a column or a
- * point names it; clicking a column flies into it, clicking a point picks it (onPick).
+ * The component owns the map. It reports where the map looks once a move ends (onLookChange) and draws the lights it
+ * is given; a new set fades in over the old one. Hovering a light names it; clicking an event picks it (onPick),
+ * clicking a light of many events flies into it. LIVE's playhead goes straight to the lights layer through the
+ * controller, frame by frame, without rendering React.
  */
-import {
-  AttributionControl,
-  Map as MapLibre,
-  setWorkerUrl,
-  type MapGeoJSONFeature,
-} from 'maplibre-gl';
+import { AttributionControl, Map as MapLibre, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { useEffect, useRef, useState } from 'react';
-import type { MapLayer } from '../api/model';
-import { formatMoment } from '../time/window';
 import type { BBox } from '../api/query';
 import { useReducedMotion } from '../lib/useReducedMotion';
-import { basemapStyle, firstLabelLayer, lazySources } from './basemap';
-import {
-  cellLayers,
-  cellSource,
-  pointLayers,
-  pointOpacity,
-  pointSources,
-  type PointSource,
-} from './layers';
-import { blendColumns, columnFeatures, columnsOf, pointFeatures, type Column } from './overlay';
+import { formatMoment } from '../time/window';
+import { basemapStyle, lazySources } from './basemap';
+import type { LightSet } from './lights';
+import { LightsLayer, type LiveTime } from './LightsLayer';
+import { categoryOf, densityColor } from './palette';
+import { nearestLight } from './pick';
+import { starShifts, starTile, tileSizes } from './starfield';
 import styles from './GlobeMap.module.css';
+
+// MapLibre finds its worker by a name it builds at run time, which the bundler cannot see: the worker is bundled
+// here and its address given.
+setWorkerUrl(workerUrl);
 
 /** Where the map looks. bounds is null while the whole Earth is in view. */
 export interface MapLook {
@@ -52,6 +48,8 @@ export interface GlobeController {
   showWholeEarth: () => void;
   /** North up and the camera straight down, keeping the place. */
   resetNorth: () => void;
+  /** LIVE: show the lights by their age at the playhead; null shows them all. */
+  setLive: (live: LiveTime | null) => void;
 }
 
 /** What the hover label shows. */
@@ -59,16 +57,17 @@ interface Hover {
   x: number;
   y: number;
   title: string;
-  detail: string;
+  color: string;
+  lines: string[];
 }
 
 interface GlobeMapProps {
   /** Where the map opens; the whole Earth when not given. */
   initialView?: Camera;
-  /** The events to draw; undefined while the first answer is on its way. */
-  layer: MapLayer | undefined;
+  /** The lights to draw; null while the first answer is on its way. */
+  lights: LightSet | null;
   onLookChange: (look: MapLook) => void;
-  /** A point was clicked. */
+  /** An event was clicked. */
   onPick?: (id: string) => void;
   /** The map's bearing and pitch, for the compass. */
   onCameraChange?: (camera: { bearing: number; pitch: number }) => void;
@@ -76,27 +75,26 @@ interface GlobeMapProps {
   onReady?: (controller: GlobeController) => void;
 }
 
-// MapLibre finds its worker by a name it builds at run time, which the bundler cannot see: the worker is bundled
-// here and its address given.
-setWorkerUrl(workerUrl);
+/** The radius the glow is drawn at (GlobeMap.module.css), scaled to the globe's. */
+const glowRadius = 400;
 
 /** The first view: the whole Earth, Europe, Africa and Asia facing. */
-const firstView: Camera = { center: [24, 24], zoom: 2.05 };
-
-/** How long the columns take to reach a new answer. */
-const morphMs = 650;
+const firstView: Camera = { center: [28, 22], zoom: 2.1 };
 
 export function GlobeMap({
   initialView,
-  layer,
+  lights,
   onLookChange,
   onPick,
   onCameraChange,
   onReady,
 }: GlobeMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapLibre | null>(null);
-  const [ready, setReady] = useState(false);
+  const farRef = useRef<HTMLDivElement>(null);
+  const nearRef = useRef<HTMLDivElement>(null);
+  const behindRef = useRef<HTMLDivElement>(null);
+  const frontRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<LightsLayer | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [hover, setHover] = useState<Hover | null>(null);
   const reducedMotion = useReducedMotion();
@@ -126,12 +124,44 @@ export function GlobeMap({
       attributionControl: false,
       canvasContextAttributes: { antialias: true },
     });
-    mapRef.current = map;
-    map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
-    // The timeline covers the bottom of the page: the Earth's centre sits in the free part above it.
-    map.setPadding({ top: 0, bottom: 150, left: 0, right: 0 });
+    if (import.meta.env.DEV) {
+      // The map in the browser console while developing (and for the screenshot scripts).
+      (window as unknown as { analyzeMap?: MapLibre }).analyzeMap = map;
+    }
+    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+    const layer = new LightsLayer();
+    layerRef.current = layer;
+
+    // The stars: drawn once, then slid as the globe turns.
+    const far = farRef.current;
+    const near = nearRef.current;
+    if (far && near) {
+      far.style.backgroundImage = `url(${starTile(tileSizes.far, 520, 7, false)})`;
+      near.style.backgroundImage = `url(${starTile(tileSizes.near, 70, 11, true)})`;
+    }
+    // The air around the Earth: a blue glow behind its rim and a thinner one over its edge, placed where the globe is.
+    // Stars and glow move by transforms only, so a moving globe repaints nothing but the map.
+    const behind = behindRef.current;
+    const front = frontRef.current;
+    const slideStars = () => {
+      const center = map.getCenter();
+      const shifts = starShifts(center.lng, center.lat);
+      if (far) far.style.transform = shifts.far;
+      if (near) near.style.transform = shifts.near;
+      const disc = globeDisc(map);
+      for (const glow of [behind, front]) {
+        if (!glow) continue;
+        glow.style.opacity = disc ? '1' : '0';
+        if (disc) {
+          glow.style.transform = `translate3d(${disc.x}px, ${disc.y}px, 0) scale(${disc.radius / glowRadius})`;
+        }
+      }
+    };
+    slideStars();
+    map.on('resize', slideStars);
 
     const report = () => callbacks.current.onLookChange(lookOf(map));
+    const loaded = new Set<string>();
     const loadDetail = () => {
       for (const source of lazySources) {
         const geojson = map.getSource(source.id);
@@ -145,29 +175,28 @@ export function GlobeMap({
         }
       }
     };
-    const loaded = new Set<string>();
 
     map.on('load', () => {
-      addEventLayers(map);
-      setReady(true);
+      map.addLayer(layer);
+      slideStars();
       report();
       loadDetail();
       callbacks.current.onReady?.({
-        zoomBy: (delta) => map.easeTo({ zoom: map.getZoom() + delta, duration: 400 }),
+        zoomBy: (delta) => map.easeTo({ zoom: map.getZoom() + delta, duration: 450 }),
         showWholeEarth: () => map.flyTo({ ...firstView, bearing: 0, pitch: 0, duration: 1800 }),
         resetNorth: () => map.easeTo({ bearing: 0, pitch: 0, duration: 600 }),
+        setLive: (live) => layer.setLive(live),
       });
     });
+    map.on('move', slideStars);
     map.on('moveend', () => {
       report();
       loadDetail();
     });
-    map.on('rotate', () =>
-      callbacks.current.onCameraChange?.({ bearing: map.getBearing(), pitch: map.getPitch() }),
-    );
-    map.on('pitch', () =>
-      callbacks.current.onCameraChange?.({ bearing: map.getBearing(), pitch: map.getPitch() }),
-    );
+    const camera = () =>
+      callbacks.current.onCameraChange?.({ bearing: map.getBearing(), pitch: map.getPitch() });
+    map.on('rotate', camera);
+    map.on('pitch', camera);
     map.on('error', (event) => {
       const message = event.error?.message ?? '';
       if (/webgl/i.test(message)) {
@@ -178,96 +207,88 @@ export function GlobeMap({
       }
     });
 
-    // Hover: name what is under the pointer and light it.
-    let lit: { source: string; id: string | number } | null = null;
-    const light = (feature: MapGeoJSONFeature | null) => {
-      if (lit) map.setFeatureState(lit, { hover: false });
-      lit =
-        feature?.id !== undefined && feature ? { source: feature.source, id: feature.id } : null;
-      if (lit) map.setFeatureState(lit, { hover: true });
+    // Hover: the light nearest the pointer, looked for once per frame at most.
+    let frame = 0;
+    let pointer: { x: number; y: number } | null = null;
+    const lightAt = (x: number, y: number) => {
+      const set = layer.shown();
+      if (!set) return -1;
+      const center = map.getCenter();
+      return nearestLight(set.places, x, y, (place) => map.project(place), [
+        center.lng,
+        center.lat,
+      ]);
     };
-    const pickable = () =>
-      ['cells-columns', ...pointSources.map((source) => `${source}-dot`)].filter((id) =>
-        map.getLayer(id),
-      );
+    const look = () => {
+      frame = 0;
+      const set = layer.shown();
+      if (!pointer || !set) return;
+      const index = lightAt(pointer.x, pointer.y);
+      layer.setHover(index);
+      map.getCanvas().style.cursor = index >= 0 ? 'pointer' : '';
+      setHover(index >= 0 ? hoverOf(set, index, pointer.x, pointer.y) : null);
+    };
     map.on('mousemove', (event) => {
-      const [feature] = map.queryRenderedFeatures(event.point, { layers: pickable() });
-      light(feature ?? null);
-      map.getCanvas().style.cursor = feature ? 'pointer' : '';
-      setHover(feature ? hoverOf(feature, event.point.x, event.point.y) : null);
+      pointer = event.point;
+      if (!frame) frame = requestAnimationFrame(look);
     });
+    map.on('movestart', () => setHover(null));
     map.getCanvas().addEventListener('mouseleave', () => {
-      light(null);
+      pointer = null;
+      layer.setHover(-1);
       setHover(null);
     });
     map.on('click', (event) => {
-      const [feature] = map.queryRenderedFeatures(event.point, { layers: pickable() });
-      if (!feature) return;
-      if (feature.source === cellSource) {
-        const center: [number, number] = [
-          Number(feature.properties.lon),
-          Number(feature.properties.lat),
-        ];
-        map.flyTo({ center, zoom: Math.min(map.getZoom() + 2.5, 9), duration: 1400 });
+      const set = layer.shown();
+      const index = lightAt(event.point.x, event.point.y);
+      if (!set || index < 0) return;
+      if (set.items[index]) {
+        callbacks.current.onPick?.(set.ids[index]!);
       } else {
-        callbacks.current.onPick?.(String(feature.properties.id));
+        map.flyTo({
+          center: set.places[index]!,
+          zoom: Math.min(map.getZoom() + 2.5, 9),
+          duration: 1400,
+        });
       }
     });
 
     return () => {
-      mapRef.current = null;
+      cancelAnimationFrame(frame);
+      layerRef.current = null;
       map.remove();
     };
   }, []);
 
-  // Draw each new layer: columns change height, points fade over.
-  const shown = useRef<{ columns: Column[]; pointSource: PointSource | null }>({
-    columns: [],
-    pointSource: null,
-  });
   useEffect(() => {
-    const map = mapRef.current;
-    if (!ready || !map || !layer) return;
-    const scaleMax = layer.cells.reduce((max, cell) => Math.max(max, cell.count), 1);
-    const target = layer.layer === 'cells' ? columnsOf(layer.cells, scaleMax) : [];
-    const from = shown.current.columns;
-    const cells = map.getSource(cellSource) as unknown as { setData: (data: unknown) => void };
+    if (lights) layerRef.current?.setLights(lights);
+  }, [lights]);
 
-    let frame = 0;
-    const started = performance.now();
-    const step = (now: number) => {
-      const t = reducedMotion ? 1 : Math.min(1, (now - started) / morphMs);
-      const columns = blendColumns(from, target, easeInOut(t));
-      shown.current.columns = columns;
-      cells.setData(columnFeatures(columns));
-      if (t < 1) frame = requestAnimationFrame(step);
-    };
-    frame = requestAnimationFrame(step);
-
-    // Points: fill the set not shown, then swap which one is visible.
-    const next: PointSource =
-      shown.current.pointSource === pointSources[0] ? pointSources[1] : pointSources[0];
-    const previous = shown.current.pointSource;
-    (map.getSource(next) as unknown as { setData: (data: unknown) => void }).setData(
-      pointFeatures(layer.layer === 'points' ? layer.points : []),
-    );
-    setPointOpacity(map, next, true);
-    if (previous) setPointOpacity(map, previous, false);
-    shown.current.pointSource = next;
-
-    return () => cancelAnimationFrame(frame);
-  }, [layer, ready, reducedMotion]);
+  useEffect(() => {
+    layerRef.current?.setStill(reducedMotion);
+  }, [reducedMotion]);
 
   return (
     <div className={styles.stage}>
+      <div ref={farRef} className={styles.stars} />
+      <div ref={nearRef} className={styles.stars} data-near="" />
+      <div ref={behindRef} className={styles.glowBehind} />
       <div ref={containerRef} className={styles.map} />
+      <div ref={frontRef} className={styles.glowFront} />
       {hover && (
         <div
           className={styles.hover}
-          style={{ transform: `translate(${hover.x + 14}px, ${hover.y + 14}px)` }}
+          style={{ transform: `translate(${hover.x + 16}px, ${hover.y + 16}px)` }}
         >
-          <strong>{hover.title}</strong>
-          <span>{hover.detail}</span>
+          <span className={styles.hoverTitle}>
+            <i style={{ background: hover.color, boxShadow: `0 0 10px ${hover.color}` }} />
+            {hover.title}
+          </span>
+          {hover.lines.map((line) => (
+            <span key={line} className={styles.hoverLine}>
+              {line}
+            </span>
+          ))}
         </div>
       )}
       {failure && <p className={styles.failure}>{failure}</p>}
@@ -275,23 +296,18 @@ export function GlobeMap({
   );
 }
 
-/** Adds the sources and layers of the events, above the basemap. */
-function addEventLayers(map: MapLibre) {
-  const empty = { type: 'FeatureCollection' as const, features: [] };
-  // Under the labels, so the names of places stay readable over the columns.
-  map.addSource(cellSource, { type: 'geojson', data: empty, promoteId: 'id' });
-  for (const layer of cellLayers()) map.addLayer(layer, firstLabelLayer);
-  for (const source of pointSources) {
-    map.addSource(source, { type: 'geojson', data: empty, promoteId: 'id' });
-    for (const layer of pointLayers(source)) map.addLayer(layer, firstLabelLayer);
-  }
-}
-
-function setPointOpacity(map: MapLibre, source: PointSource, shown: boolean) {
-  const opacity = pointOpacity(shown);
-  map.setPaintProperty(`${source}-halo`, 'circle-opacity', opacity.halo);
-  map.setPaintProperty(`${source}-dot`, 'circle-opacity', opacity.dot);
-  map.setPaintProperty(`${source}-dot`, 'circle-stroke-opacity', opacity.dot);
+/**
+ * Where the globe's disc is on the screen: its centre and radius in pixels (the distance to a point a quarter of the
+ * way round the Earth from the centre of the view). Null once the Earth fills the screen and no rim is in view.
+ */
+function globeDisc(map: MapLibre): { x: number; y: number; radius: number } | null {
+  if (map.getZoom() > 4.5) return null;
+  const center = map.getCenter();
+  const middle = map.project(center);
+  const lat = center.lat > 0 ? center.lat - 89.5 : center.lat + 89.5;
+  const edge = map.project([center.lng, lat]);
+  const radius = Math.hypot(edge.x - middle.x, edge.y - middle.y);
+  return Number.isFinite(radius) && radius > 10 ? { x: middle.x, y: middle.y, radius } : null;
 }
 
 /** Where the map looks: the box in view, or null when it spans (almost) every longitude. */
@@ -319,26 +335,32 @@ function wrapLon(lon: number): number {
   return ((((lon + 180) % 360) + 360) % 360) - 180;
 }
 
-function hoverOf(feature: MapGeoJSONFeature, x: number, y: number): Hover {
-  const properties = feature.properties;
-  if (feature.source === cellSource) {
-    const count = Number(properties.count);
+/** The hover label of a light: an event (what, its category, when, where) or a light of many events. */
+function hoverOf(set: LightSet, index: number, x: number, y: number): Hover {
+  const item = set.items[index];
+  if (!item) {
+    const count = set.counts[index] ?? 0;
     return {
       x,
       y,
-      title: `${count.toLocaleString('en')} ${count === 1 ? 'event' : 'events'}`,
-      detail: 'Click to look closer',
+      title: `${count.toLocaleString('en')} ${count === 1 ? 'event' : 'events'} here`,
+      color: densityColor,
+      lines: ['Click to look closer'],
     };
   }
-  const start = String(properties.start ?? '');
-  const day = start ? formatMoment(Date.parse(start)) : '';
-  const label = String(properties.label);
-  const type = String(properties.type);
+  const category = categoryOf(item.type);
+  const when = item.time?.start ? formatMoment(Date.parse(item.time.start)) : '';
+  const where = item.place?.areaName ?? item.place?.country ?? '';
   // A generated label already begins with the type ("type · where · what"): it is not said twice.
-  const detail = [label.startsWith(type) ? '' : type, day].filter(Boolean).join(' · ');
-  return { x, y, title: label, detail };
-}
-
-function easeInOut(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+  const title =
+    item.labelFrom === 'generated' ? item.label.split(' · ').slice(1).join(' · ') : item.label;
+  return {
+    x,
+    y,
+    title: title || item.label,
+    color: category.color,
+    lines: [`${category.name} · ${item.type}`, [when, where].filter(Boolean).join(' · ')].filter(
+      Boolean,
+    ),
+  };
 }
