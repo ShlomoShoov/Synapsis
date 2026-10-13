@@ -172,21 +172,20 @@ def golden_lenses(cards):
 
 ELECTIONS = [(2020, "mae", 2.56, 0.05), (2020, "winners", 48, 0), (2020, "of", 50, 0), (2020, "mae_polls", 5.60, 0.05),
              (2024, "mae", 2.24, 0.05), (2024, "winners", 37, 0), (2024, "of", 37, 0), (2024, "mae_polls", 3.31, 0.05),
-             (2024, "winners_polls", 34, 0), (2024, "brier", 0.0041, None), (2024, "brier_market", 0.0391, None)]
+             (2024, "winners_polls", 34, 0), (2024, "markets", 35, 0), (2024, "brier", 0.0041, 0.001),
+             (2024, "brier_market", 0.0391, 0.001), (2024, "brier_polls", 0.0457, 0.001), (2024, "brier_avg", 0.0144, 0.001)]
 
 
 def golden_elections(cards):
-    """reference/EXPECTED.md section 5 (the Brier values need the reference's probability model: shown, not judged)."""
+    """reference/EXPECTED.md section 5, the Brier values included (round 3's probability model, test S5)."""
     card = next((c for k, c in cards.items() if k.endswith("|bias")), {})
     got, rows = card.get("elections", {}), []
     for y, k, want, tol in ELECTIONS:
         v = got.get(y, {}).get(k)
         if v is None:
             rows.append(("elections", f"{y} {k}", want, "pending", card.get("skip") or f"no {y} score yet"))
-        elif tol is None:
-            rows.append(("elections", f"{y} {k}", want, round(v, 4), "shown (probability model not in the reference)"))
         else:
-            rows.append(("elections", f"{y} {k}", want, round(v, 3), "ok" if abs(v - want) <= tol else "FAIL"))
+            rows.append(("elections", f"{y} {k}", want, round(v, 4), "ok" if abs(v - want) <= tol else "FAIL"))
     return rows
 
 
