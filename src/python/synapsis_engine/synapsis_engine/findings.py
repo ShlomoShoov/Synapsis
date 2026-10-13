@@ -1,5 +1,6 @@
 """Conclusion builders: ids, titles, statements. Every conclusion is a SIL record sent through POST /ingest."""
 import hashlib
+import math
 import re
 
 import pandas as pd
@@ -22,6 +23,8 @@ def num(x):
     if x is None:
         return None
     x = float(x)
+    if not math.isfinite(x):
+        return None
     if x.is_integer() and abs(x) < 1e15:
         return int(x)
     return float(f"{x:.6g}")
@@ -70,7 +73,7 @@ def conclusion(ctype, src, subject_key, period, known_at, about, value, title, p
     rec = {"kind": "conclusion", "id": f"con:engine:{ctype}:{source_key(src)}:{subject_key}:{period}", "type": ctype,
            "source": config.ENGINE_SOURCE, "reliability": RELIABILITY, "reliability_basis": "model",
            "known_at": iso(known_at), "known_at_basis": "observed", "about": about,
-           "statement": {"predicate": ctype, "value": {k: num(v) for k, v in value.items() if v is not None}},
+           "statement": {"predicate": ctype, "value": {k: n for k, v in value.items() if (n := num(v)) is not None}},
            "premises": sorted(dict.fromkeys(premises))[:50], "method": {"by": "system", "name": method, "version": "1"},
            "confidence": RELIABILITY,
            "attributes": {"period_start": iso(period_start), "period_precision": precision, "params": params,
