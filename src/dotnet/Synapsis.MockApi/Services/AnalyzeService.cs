@@ -14,12 +14,6 @@ namespace Synapsis.MockApi.Services;
 /// </summary>
 public sealed class AnalyzeService
 {
-    /// <summary>Below this zoom the auto layer is cells (hexagons).</summary>
-    private const double CellsBelowZoom = 6;
-
-    /// <summary>Above this many located events the auto layer is cells.</summary>
-    private const int MostPoints = 2000;
-
     private readonly SampleRepository _sampleRepository;
 
     /// <summary>Creates the service over the sample.</summary>
@@ -54,12 +48,8 @@ public sealed class AnalyzeService
             }
         }
 
-        // 3. The layer: hexagons when zoomed out or when there are too many points; otherwise the points.
-        bool tooManyPoints = located.Count > MostPoints;
-        bool asCells = request.Layer == "cells" || (request.Layer == "auto" && (request.Zoom < CellsBelowZoom || tooManyPoints));
-
-        // 4. One page of the layer, and what cannot be drawn.
-        return asCells ? CellsAnswer(request, asOf, located, withoutPoint) : PointsAnswer(request, asOf, located, withoutPoint);
+        // 3. One page of the layer asked for (points or cells), and what cannot be drawn.
+        return request.Layer == "cells" ? CellsAnswer(request, asOf, located, withoutPoint) : PointsAnswer(request, asOf, located, withoutPoint);
     }
 
     /// <summary>GET /analyze/graph: the record as a summary and its connections; null when no record has the id at as_of.</summary>

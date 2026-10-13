@@ -86,13 +86,14 @@ paths:
       summary: "D3 map: the matching events inside the map's box, as H3 hexagons with counts (zoomed out) or as points (zoomed in)."
       description: |
         The map's box is bbox and the time window is from and to; every pan, zoom or new window sends the request again.
-        layer=auto gives cells when zoomed out (zoom below 6) or when more than 2,000 located events match, otherwise
-        points. zoom chooses the cell size: 0-3 resolution 2 (edge about 158 km), 4-5 resolution 3 (60 km), 6-7
+        layer (required) is points or cells. zoom chooses the cell size: 0-3 resolution 2 (edge about 158 km), 4-5 resolution 3 (60 km), 6-7
         resolution 4 (23 km), 8 and more resolution 5 (8.5 km). A point whose uncertainty is not smaller than the cell's
         edge is not put in a cell (omitted: too_imprecise). Matching events with no point (placed by region or
         logically only, or unplaced) are counted in omitted (no_point). Points come oldest first; cells largest count
-        first. Only events are drawn.
-        Example: /analyze/map?bbox=-125,24,-66,50&zoom=4&from=1970-01-01&to=1970-04-01
+        first. Only events are drawn. Events are counted by record id (Elasticsearch's distinct count, approximate on
+        large counts). Cells: one page of at most limit cells and next is null (no paging yet); with a bbox or cell
+        filter, no_point reads 0 (to be solved with the logical places).
+        Example: /analyze/map?bbox=-125,24,-66,50&zoom=4&layer=cells&from=1970-01-01&to=1970-04-01
       parameters:
         - $ref: "#/components/parameters/as_of"
         - $ref: "#/components/parameters/q"
@@ -109,7 +110,7 @@ paths:
         - $ref: "#/components/parameters/entity"
         - $ref: "#/components/parameters/measure"
         - {name: zoom, in: query, required: true, schema: {type: number, minimum: 0, maximum: 22}, description: "The map's zoom."}
-        - {name: layer, in: query, schema: {enum: [auto, points, cells], default: auto}}
+        - {name: layer, in: query, required: true, schema: {enum: [points, cells]}, description: "points (each event) or cells (H3 hexagons with counts)."}
         - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 5000, default: 2000}, description: Points or cells per page.}
         - $ref: "#/components/parameters/cursor"
       responses:

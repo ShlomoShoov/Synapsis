@@ -15,10 +15,11 @@ public sealed class MapRequest : AnalyzeFilters
     [Range(0, 22, ErrorMessage = "zoom must be between 0 and 22.")]
     public double? Zoom { get; set; }
 
-    /// <summary>auto (cells when zoomed out, below zoom 6, or when more than 2,000 located events match; otherwise points), points or cells.</summary>
+    /// <summary>The layer to draw: points (each event) or cells (H3 hexagons with counts). Required.</summary>
     [FromQuery(Name = "layer")]
-    [RegularExpression("^(auto|points|cells)$", ErrorMessage = "layer must be auto, points or cells.")]
-    public string Layer { get; set; } = "auto";
+    [Required(ErrorMessage = "layer is required (points or cells).")]
+    [RegularExpression("^(points|cells)$", ErrorMessage = "layer must be points or cells.")]
+    public string? Layer { get; set; }
 
     /// <summary>The page size: points or cells per answer.</summary>
     [FromQuery(Name = "limit")]

@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Synapsis.Api.Models.Requests;
 using Synapsis.Api.Models.Dto;
+using Synapsis.Api.Models.Results;
 using Synapsis.Api.Repositories;
 
 namespace Synapsis.Api.Services;
@@ -9,7 +11,8 @@ namespace Synapsis.Api.Services;
 /// <summary>
 /// The logic of the Analyze routes: which stores to ask, in what order, and how to shape the answer. Elasticsearch
 /// (SearchRepository) answers the map and the counts, Neo4j (GraphRepository) the connections, MongoDB
-/// (RecordRepository) the participants of an event with their roles. The queries are the next task: until then each method says it is not built.
+/// (RecordRepository) the participants of an event with their roles. The map's cells layer is built; its points layer
+/// and the graph say they are not built yet.
 /// </summary>
 public sealed class AnalyzeService
 {
@@ -26,13 +29,16 @@ public sealed class AnalyzeService
     }
 
     /// <summary>
-    /// GET /analyze/map. The planned flow: 1. choose the layer (cells when zoomed out, below zoom 6, or when more
-    /// than 2,000 located events match the filters; otherwise points); 2. ask Elasticsearch for the page of points or cell
-    /// counts; 3. count what cannot be drawn (no point, too imprecise for the cell); 4. answer with the next cursor.
+    /// GET /analyze/map: the matching events as the layer asked for (ASP.NET has already answered 400 to a missing
+    /// or unknown layer). The service builds no query: it asks SearchRepository and shapes the answer.
     /// </summary>
-    public Task<MapAnswer> MapAsync(MapRequest request)
+    public async Task<MapAnswer> MapAsync(MapRequest request)
     {
-        throw new NotImplementedException("GET /analyze/map is not built yet.");
+        if (request.Layer == "points")
+        {
+            throw new NotImplementedException("The points layer of GET /analyze/map is not built yet.");
+        }
+        return await CellsAsync(request);
     }
 
     /// <summary>
@@ -43,5 +49,46 @@ public sealed class AnalyzeService
     public Task<GraphAnswer> GraphAsync(GraphRequest request)
     {
         throw new NotImplementedException("GET /analyze/graph is not built yet.");
+    }
+
+    /// <summary>The cells layer: the H3 cells at the zoom's resolution with their event counts, the largest first.</summary>
+    private async Task<MapAnswer> CellsAsync(MapRequest request)
+    {
+        // 1. The cell size from the zoom.
+        int resolution = MapLayers.ResolutionFor(request.Zoom ?? 0);
+
+        // 2. Elasticsearch counts the events per cell, and what cannot be drawn.
+        CellCounts counts = await _searchRepository.CellCountsAsync(request, resolution);
+        int withoutPoint = await _searchRepository.CountWithoutPointAsync(request);
+        int tooImprecise = await _searchRepository.CountTooImpreciseAsync(request, resolution);
+
+        // 3. Each cell with its centre and corners; one page of at most limit cells, no next page (no paging yet).
+        List<MapCell> cells = MapLayers.Cells(counts.CountByCell, resolution);
+        return new MapAnswer
+        {
+            AsOf = AsOfOf(request), Layer = "cells", Resolution = resolution, Events = counts.Events, Total = counts.TotalCells,
+            Next = null, Omitted = Omitted(withoutPoint, tooImprecise), Cells = cells,
+        };
+    }
+
+    /// <summary>What matched but cannot be drawn, each count with its reason; only the counts above zero.</summary>
+    private static List<OmittedCount> Omitted(int withoutPoint, int tooImprecise)
+    {
+        List<OmittedCount> omitted = new List<OmittedCount>();
+        if (withoutPoint > 0)
+        {
+            omitted.Add(new OmittedCount { Reason = "no_point", Count = withoutPoint, Message = withoutPoint + " matching events have no point (placed by region or logically only, or unplaced)." });
+        }
+        if (tooImprecise > 0)
+        {
+            omitted.Add(new OmittedCount { Reason = "too_imprecise", Count = tooImprecise, Message = tooImprecise + " matching events are too imprecise for cells of this size." });
+        }
+        return omitted;
+    }
+
+    /// <summary>The as_of of the request in UTC; now when none was given.</summary>
+    private static DateTime AsOfOf(AnalyzeFilters filters)
+    {
+        return filters.AsOf != null ? FilterParser.Utc(filters.AsOf.Value) : DateTime.UtcNow;
     }
 }

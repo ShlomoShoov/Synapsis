@@ -13,7 +13,7 @@ public sealed class MapAnswer
     /// <summary>The as_of used (now when none was given).</summary>
     public DateTime AsOf { get; init; }
 
-    /// <summary>points or cells (auto resolved).</summary>
+    /// <summary>points or cells, as asked.</summary>
     public required string Layer { get; init; }
 
     /// <summary>The H3 resolution of the cells; null for points.</summary>
