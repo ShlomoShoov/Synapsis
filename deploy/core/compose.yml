@@ -101,7 +101,10 @@ services:
     restart: unless-stopped
     environment:                                 # addresses only; names and other settings: sharedsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
-      Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log)
+      Elastic__Url: http://elasticsearch:9200     # the ingestion log (index synapsis-ingest-log); Analyze search
+      Neo4j__Url: bolt://neo4j:7687                # Analyze: the connections of a point
+      Neo4j__Username: ${CORE_NEO4J_USERNAME:-neo4j}
+      Neo4j__Password: ${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
       Api__CorsOrigins__0: http://localhost:1897   # the UI may read the API from the browser
     ports: ["8080:8080"]
     healthcheck:
