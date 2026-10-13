@@ -1,0 +1,336 @@
+/* The search window: a sheet of dark glass, top centre of the free part of the screen. */
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: rgb(2 4 9 / 0.45);
+  animation: fade 200ms ease-out both;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.sheet {
+  position: absolute;
+  top: 70px;
+  left: calc((100% - 424px) / 2);
+  z-index: 5;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(700px, calc(100% - 460px));
+  max-height: calc(100% - 100px);
+  translate: -50% 0;
+  border-radius: 18px;
+  background: rgb(6 11 20 / 0.94);
+  backdrop-filter: blur(24px) saturate(1.3);
+  box-shadow:
+    var(--glass-shadow),
+    0 40px 120px -30px rgb(0 0 0 / 0.9);
+  overflow: hidden;
+  animation: drop 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--glass-edge);
+}
+
+.query {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 6px 0 14px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.05);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+}
+
+.query:focus-within {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 0 24px -8px var(--accent);
+}
+
+.query > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--accent-soft);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.query input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: 400 15px var(--font-sans);
+  color: var(--text-1);
+  outline: none;
+}
+
+.query input::placeholder {
+  color: var(--text-4);
+}
+
+.mode {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 0.04);
+}
+
+.mode button {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: 600 11.5px var(--font-sans);
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.mode button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--text-1);
+}
+
+.go {
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent);
+  font: 600 12.5px var(--font-sans);
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.go:hover {
+  background: color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+.params {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 10px;
+}
+
+.params label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.params .wide {
+  grid-column: span 2;
+}
+
+.params span {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.params select,
+.params input {
+  min-width: 0;
+  height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.05);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  font: 400 12.5px var(--font-sans);
+  color: var(--text-1);
+  color-scheme: dark;
+}
+
+.params input::placeholder {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+.params select:focus,
+.params input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.params option {
+  background: #0b1220;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+  font: 500 12px var(--font-sans);
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.chips code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent-soft);
+}
+
+.results {
+  display: grid;
+  align-content: start;
+  gap: 1px;
+  min-height: 120px;
+  padding: 8px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(150 190 255 / 0.18) transparent;
+}
+
+.count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px 8px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+.count b {
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.count select {
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 0.05);
+  font: 500 11.5px var(--font-sans);
+  color: var(--text-2);
+  color-scheme: dark;
+}
+
+.quiet,
+.failed {
+  margin: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+.quiet {
+  color: var(--text-3);
+}
+
+.failed {
+  background: rgb(255 255 255 / 0.035);
+  color: var(--text-3);
+}
+
+.result {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'dot label goes'
+    '. detail goes';
+  align-items: center;
+  column-gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  animation: drop 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.result:hover {
+  background: rgb(255 255 255 / 0.05);
+}
+
+.result i {
+  grid-area: dot;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.label {
+  grid-area: label;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--text-1);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  grid-area: detail;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goes {
+  grid-area: goes;
+  padding: 3px 8px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  font: 600 10.5px var(--font-sans);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.result:hover .goes {
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.goes[data-goes='map'] {
+  color: var(--accent-soft);
+}

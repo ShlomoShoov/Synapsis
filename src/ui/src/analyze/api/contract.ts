@@ -88,6 +88,13 @@ export interface WireGraph {
   links: WireGraphLink[];
 }
 
+/** GET /catalog: one entry per value of a field (field = source, event_type, entity_type...), with its records. */
+export interface WireCatalogEntry {
+  field: string;
+  value: string;
+  count: number;
+}
+
 /** GET /records/{id}: one per source. `record` is the record exactly as it arrived (SIL 1.2). */
 export interface WireRecordAnswer {
   source: string;

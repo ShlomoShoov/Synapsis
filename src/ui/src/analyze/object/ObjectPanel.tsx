@@ -21,6 +21,7 @@ import {
   sourceName,
   type Heading,
 } from './describe';
+import type { FilterField } from '../filter/viewFilter';
 import { viewOf, type Named, type RecordView } from './record';
 import { current, type Focus, type ObjectAnswers } from './useObject';
 import styles from './ObjectPanel.module.css';
@@ -39,7 +40,11 @@ interface ObjectPanelProps {
   onOpenGraph?: () => void;
   /** Show the record's logical place in the tree. */
   onShowInTree: () => void;
+  /** A field of the record becomes a filter of the view. */
+  onFilter: OnFilter;
 }
+
+type OnFilter = (field: FilterField | 'time', value: string) => void;
 
 /** The rows of a group shown before "All". */
 const firstRows = 5;
@@ -55,6 +60,7 @@ export function ObjectPanel({
   onShowOnMap,
   onOpenGraph,
   onShowInTree,
+  onFilter,
 }: ObjectPanelProps) {
   const focus = trail.at(-1)!;
   const record = current(answers.records)?.[0]?.record;
@@ -117,13 +123,29 @@ export function ObjectPanel({
         <p className={styles.kicker}>
           <i />
           {heading.family}
-          <span>{kindWords[heading.kind]}</span>
+          <button
+            type="button"
+            className={styles.kind}
+            title="Filter the view by this kind"
+            onClick={() => onFilter('kind', heading.kind)}
+          >
+            {kindWords[heading.kind]}
+          </button>
         </p>
         <h2 className={styles.title} key={focus.id}>
           {heading.title}
         </h2>
         <p className={styles.ids}>
-          {heading.type && <code>{heading.type}</code>}
+          {heading.type && (
+            <button
+              type="button"
+              className={styles.typeCode}
+              title="Filter the view by this type"
+              onClick={() => onFilter('type', heading.type)}
+            >
+              {heading.type}
+            </button>
+          )}
           <CopyId id={focus.id} />
         </p>
       </header>
@@ -136,6 +158,7 @@ export function ObjectPanel({
         onShowOnMap={onShowOnMap}
         onOpenGraph={onOpenGraph}
         onShowInTree={onShowInTree}
+        onFilter={onFilter}
       />
     </aside>
   );
@@ -148,6 +171,7 @@ function ObjectBody({
   onShowOnMap,
   onOpenGraph,
   onShowInTree,
+  onFilter,
 }: {
   title: string;
   answers: ObjectAnswers;
@@ -155,6 +179,7 @@ function ObjectBody({
   onShowOnMap: (point: LngLat) => void;
   onOpenGraph?: () => void;
   onShowInTree: () => void;
+  onFilter: OnFilter;
 }) {
   const statements = current(answers.records);
   const [chosen, setChosen] = useState(0);
@@ -180,7 +205,14 @@ function ObjectBody({
           ))}
         </div>
       )}
-      {view && <Facts view={view} onShowOnMap={onShowOnMap} onShowInTree={onShowInTree} />}
+      {view && (
+        <Facts
+          view={view}
+          onShowOnMap={onShowOnMap}
+          onShowInTree={onShowInTree}
+          onFilter={onFilter}
+        />
+      )}
       {view && (view.body || (view.title && view.title !== title)) && (
         <section className={styles.section}>
           <h3 className={styles.heading}>Text</h3>
@@ -263,10 +295,12 @@ function Facts({
   view,
   onShowOnMap,
   onShowInTree,
+  onFilter,
 }: {
   view: RecordView;
   onShowOnMap: (point: LngLat) => void;
   onShowInTree: () => void;
+  onFilter: OnFilter;
 }) {
   return (
     <dl className={styles.facts}>
@@ -274,7 +308,25 @@ function Facts({
         <div key={`${fact.label}-${index}`}>
           <dt>{fact.label}</dt>
           <dd>
-            <span>{fact.value}</span>
+            {fact.filter ? (
+              <button
+                type="button"
+                className={styles.filterable}
+                title={
+                  fact.filter.field === 'time'
+                    ? 'Set the time window to this date'
+                    : `Filter the view by this ${fact.filter.field === 'logical' ? 'place' : fact.filter.field}`
+                }
+                onClick={() => onFilter(fact.filter!.field, fact.filter!.value)}
+              >
+                {fact.value}
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M3.5 4.5h13l-5 6v5l-3-1.5v-3.5z" />
+                </svg>
+              </button>
+            ) : (
+              <span>{fact.value}</span>
+            )}
             {fact.code && <code>{fact.code}</code>}
             {fact.label === 'Point' && view.point && (
               <button

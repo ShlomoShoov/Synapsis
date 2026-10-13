@@ -6,7 +6,8 @@
   z-index: 1;
   display: flex;
   gap: 12px;
-  padding: 116px 0 18px 18px;
+  /* Clear of the filters and the key on the left, and of the object panel on the right. */
+  padding: 70px 436px 18px 320px;
   background:
     radial-gradient(ellipse 50% 45% at 30% 50%, rgb(30 60 120 / 0.18), transparent 70%),
     radial-gradient(ellipse 40% 35% at 70% 20%, rgb(90 60 160 / 0.08), transparent 70%),
@@ -27,11 +28,13 @@
 }
 
 .tree {
-  width: 470px;
+  flex: 1 1 0;
+  max-width: 470px;
 }
 
 .records {
-  width: 400px;
+  flex: 1 1 0;
+  max-width: 420px;
   animation-delay: 60ms;
 }
 

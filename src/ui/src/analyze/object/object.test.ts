@@ -62,7 +62,7 @@ describe('a record laid out', () => {
   it('keeps a text, a logical place, lists and links', () => {
     const view = viewOf(vulnerability);
     expect(view.title).toBe('Apache Log4j2 Remote Code Execution Vulnerability');
-    expect(view.facts.find((fact) => fact.label === 'Filed under')).toEqual({
+    expect(view.facts.find((fact) => fact.label === 'Filed under')).toMatchObject({
       label: 'Filed under',
       value: 'Apache / Log4j2',
       code: 'cyber.vendor_product',

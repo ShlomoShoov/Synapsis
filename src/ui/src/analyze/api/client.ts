@@ -4,9 +4,16 @@
  */
 import { analyzeApiUrl } from '../config';
 import { cellsLayerOf, itemOf, pointsLayerOf } from './adapt';
-import type { WireCells, WireGraph, WireList, WireLogical, WireRecordAnswer } from './contract';
+import type {
+  WireCatalogEntry,
+  WireCells,
+  WireGraph,
+  WireList,
+  WireLogical,
+  WireRecordAnswer,
+} from './contract';
 import { getJson } from './http';
-import type { Item, MapLayer } from './model';
+import type { Item, MapLayer, RecordKind } from './model';
 import { logMemory } from './queryLog';
 import {
   type BBox,
@@ -50,8 +57,9 @@ export async function fetchCells(
   resolution: number,
   bbox: BBox | undefined,
   signal?: AbortSignal,
+  kind?: RecordKind,
 ): Promise<MapLayer> {
-  const url = `${analyzeApiUrl}/map/cells?${cellsQuery(filters, resolution, bbox)}`;
+  const url = `${analyzeApiUrl}/map/cells?${cellsQuery(filters, resolution, bbox, kind)}`;
   return cellsLayerOf(await getKept<WireCells>(url, signal), resolution);
 }
 
@@ -61,8 +69,9 @@ export async function fetchPoints(
   bbox: BBox,
   limit: number,
   signal?: AbortSignal,
+  kind?: RecordKind,
 ): Promise<MapLayer> {
-  const url = `${analyzeApiUrl}/map/points?${pointsQuery(filters, bbox, limit)}`;
+  const url = `${analyzeApiUrl}/map/points?${pointsQuery(filters, bbox, limit, kind)}`;
   return pointsLayerOf(await getKept<WireList>(url, signal));
 }
 
@@ -96,4 +105,9 @@ export function fetchGraph(id: string, limit?: number, signal?: AbortSignal): Pr
 /** GET /records/{id}: each source's statement of the record, as stored. */
 export function fetchRecord(id: string, signal?: AbortSignal): Promise<WireRecordAnswer[]> {
   return getJson<WireRecordAnswer[]>(`${analyzeApiUrl}${recordPath(id)}`, signal);
+}
+
+/** GET /catalog: every source and type, the values the filters offer. */
+export function fetchCatalog(signal?: AbortSignal): Promise<WireCatalogEntry[]> {
+  return getJson<WireCatalogEntry[]>(`${analyzeApiUrl}/catalog`, signal);
 }

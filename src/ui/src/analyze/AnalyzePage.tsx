@@ -4,7 +4,9 @@
  * query panel (left), and the view buttons (right). A click on an event opens it in the object panel (right, under
  * the time card), and marks it on the globe; a click on the map away from the lights, Esc or the panel's close
  * returns to the map alone. The switch at the top shows another dimension over the globe: the graph of the open
- * object's connections (graph/), or the logical tree (logical/), where the open object's place is opened.
+ * object's connections (graph/), or the logical tree (logical/), where the open object's place is opened. Left, above
+ * the key, the filter of the view (filter/): what does not match disappears from every dimension. The search window
+ * (search/, the button at the top or "/") finds records with every parameter of GET /search.
  *
  * The address can open a window, a moment of knowledge and a place: ?from=1970-01-01&to=1971-01-01 (the second date
  * excluded), &as_of=2026-10-01, &view=35.5,33.4,7 (longitude, latitude, zoom, and optionally pitch and bearing), and
@@ -20,7 +22,13 @@ import { GlobeMap, type Camera, type GlobeController, type MapLook } from './map
 import { MapControls } from './map/MapControls';
 import { useEvents } from './map/useEvents';
 import { requestOf } from './map/viewport';
+import { fetchCatalog } from './api/client';
+import type { Item } from './api/model';
+import { FilterCard } from './filter/FilterCard';
+import { noFilter, timeWindowOf, withValue, type FilterField } from './filter/viewFilter';
+import { useLatest } from './lib/useLatest';
 import { LogicalView } from './logical/LogicalView';
+import { SearchSheet } from './search/SearchSheet';
 import { headingOfItem, headingOfRecord } from './object/describe';
 import { ObjectPanel } from './object/ObjectPanel';
 import { current, useObject, type Focus } from './object/useObject';
@@ -53,8 +61,21 @@ export function AnalyzePage() {
 
   const request = look ? requestOf(look.zoom, look.bounds) : null;
   // The read API has no as_of (EMERGENCY.md §12): the control stays, the map reads what is known now.
-  const filters = { from: timeWindow.from, to: timeWindow.to };
-  const { answer: events, pending, error } = useEvents(filters, request);
+  // The view's filter: the map sends source, type and kind with the time card's window.
+  const [viewFilter, setViewFilter] = useState(noFilter);
+  const filters = {
+    from: timeWindow.from,
+    to: timeWindow.to,
+    sources: viewFilter.sources,
+    types: viewFilter.types,
+  };
+  const {
+    answer: events,
+    pending,
+    error,
+  } = useEvents(filters, request, viewFilter.kind ?? undefined);
+  const catalog = useLatest('catalog', (signal) => fetchCatalog(signal));
+  const [searching, setSearching] = useState(false);
   const live = useLive(timeWindow, (time) => controller?.setLive(time));
 
   // The object looked at: the trail of records the investigation went through, the last one shown.
@@ -101,16 +122,46 @@ export function AnalyzePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per object and place
   }, [placeKey, controller, onMap]);
 
-  // Esc returns to the map.
+  // Esc closes the search window, else returns to the map; "/" opens the search window.
   useEffect(() => {
-    if (!focus) return;
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (event.key === 'Escape' && !target?.closest('input, textarea, select')) close();
+      const typing = target?.closest('input, textarea, select');
+      if (event.key === 'Escape' && searching) setSearching(false);
+      else if (event.key === 'Escape' && focus && !typing) close();
+      else if (event.key === '/' && !typing) {
+        event.preventDefault();
+        setSearching(true);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focus]);
+  }, [focus, searching]);
+
+  /** A field of a record becomes a filter of the view (its date, the time card's window). */
+  const filterBy = (field: FilterField | 'time', value: string) => {
+    if (field === 'time') {
+      const window = timeWindowOf(value);
+      if (window) setTimeWindow(window);
+    } else {
+      setViewFilter((current) => withValue(current, field, value));
+    }
+  };
+
+  /** A search result: on the map when it has a place, else in the tree when it is filed; always in the panel. */
+  const goTo = (item: Item) => {
+    setSearching(false);
+    setTrail([
+      {
+        id: item.id,
+        heading: headingOfItem(item),
+        point: item.place?.point,
+        logical: item.logical[0],
+      },
+    ]);
+    if (item.place?.point) setDimension('map');
+    else if (item.logical.length > 0) setDimension('logical');
+  };
 
   return (
     <div className={styles.page} data-object={focus ? '' : undefined}>
@@ -134,6 +185,7 @@ export function AnalyzePage() {
           <GraphView
             trail={trail}
             graph={answers.graph}
+            filter={viewFilter}
             inset={panelInset}
             onOpen={open}
             keySlot={keySlot}
@@ -143,6 +195,8 @@ export function AnalyzePage() {
       )}
       {dimension === 'logical' && (
         <LogicalView
+          key={`${viewFilter.sources.join(',')}|${viewFilter.types.join(',')}`}
+          filters={{ sources: viewFilter.sources, types: viewFilter.types }}
           object={
             focus
               ? {
@@ -155,7 +209,34 @@ export function AnalyzePage() {
           onOpen={open}
         />
       )}
-      <DimensionSwitch value={dimension} onChange={setDimension} hasObject={focus !== null} />
+      <DimensionSwitch
+        value={dimension}
+        onChange={setDimension}
+        hasObject={focus !== null}
+        extra={
+          <button
+            type="button"
+            className={styles.search}
+            onClick={() => setSearching(true)}
+            aria-label="Search (/)"
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="8.5" cy="8.5" r="5" />
+              <path d="m12.5 12.5 4 4" />
+            </svg>
+            Search
+            <kbd>/</kbd>
+          </button>
+        }
+      />
+      {searching && (
+        <SearchSheet
+          start={viewFilter}
+          catalog={catalog.answer}
+          onResult={goTo}
+          onClose={() => setSearching(false)}
+        />
+      )}
 
       <header className={styles.header}>
         <Link className={styles.brand} to="/home">
@@ -166,6 +247,12 @@ export function AnalyzePage() {
 
       <div className={styles.left}>
         <QueryPanel />
+        <FilterCard
+          filter={viewFilter}
+          onChange={setViewFilter}
+          catalog={catalog.answer}
+          onMap={onMap}
+        />
         {onMap ? <EventsKey events={events} /> : <div ref={setKeySlot} />}
       </div>
 
@@ -206,6 +293,7 @@ export function AnalyzePage() {
             onClose={close}
             onOpenGraph={dimension === 'graph' ? undefined : () => setDimension('graph')}
             onShowInTree={() => setDimension('logical')}
+            onFilter={filterBy}
             onShowOnMap={(point) => {
               setDimension('map');
               controller?.reveal(point, panelInset);

@@ -5,6 +5,7 @@
  */
 import type { SilRecord } from '../api/contract';
 import type { LngLat } from '../api/model';
+import type { FilterField } from '../filter/viewFilter';
 import { countryName, formatNumber, formatPoint, formatTime, sourceName, words } from './describe';
 
 /** One line of the facts: a label, the value in words, and the value as sent when it differs. */
@@ -12,6 +13,8 @@ export interface Fact {
   label: string;
   value: string;
   code?: string;
+  /** The filter a click on it adds: a field and its value ("start|end|precision" for a date). */
+  filter?: { field: FilterField | 'time'; value: string };
 }
 
 /** Records this one names: its participants, what a conclusion is about and rests on, a relation's two ends. */
@@ -51,6 +54,10 @@ export function viewOf(record: SilRecord): RecordView {
       label: 'When',
       value: end && end !== start ? `${start} → ${end}` : start,
       code: time.precision,
+      filter: {
+        field: 'time',
+        value: [time.start, time.end ?? '', time.precision ?? 'day'].join('|'),
+      },
     });
   }
   const place = record.place;
@@ -77,6 +84,7 @@ export function viewOf(record: SilRecord): RecordView {
       label: 'Filed under',
       value: place.logical.path.join(' / '),
       code: place.logical.space,
+      filter: { field: 'logical', value: [place.logical.space, ...place.logical.path].join('/') },
     });
   }
   if (place?.unplaced) facts.push({ label: 'Where', value: 'Not placed by its source' });
@@ -103,7 +111,12 @@ export function viewOf(record: SilRecord): RecordView {
   }
   if (record.aliases?.length) facts.push({ label: 'Also named', value: record.aliases.join(', ') });
   if (record.source) {
-    facts.push({ label: 'Source', value: sourceName(record.source), code: record.source });
+    facts.push({
+      label: 'Source',
+      value: sourceName(record.source),
+      code: record.source,
+      filter: { field: 'source', value: record.source },
+    });
   }
   if (record.known_at) {
     facts.push({

@@ -176,8 +176,13 @@
   box-shadow: 0 0 10px 1px var(--family);
 }
 
-.kicker span {
+.kind {
   margin-left: auto;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-transform: inherit;
+  cursor: pointer;
   padding: 2px 7px;
   border-radius: 999px;
   box-shadow: inset 0 0 0 1px var(--glass-edge);
@@ -831,4 +836,49 @@
 
 .openGraph:hover svg:last-child {
   transform: translateX(2px);
+}
+
+/* A value that becomes a filter with a click: a dotted line and a funnel on hover. */
+.filterable,
+.typeCode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.filterable {
+  text-decoration: underline dotted transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color 160ms;
+}
+
+.filterable svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: var(--accent-soft);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 160ms;
+}
+
+.filterable:hover {
+  text-decoration-color: var(--accent-soft);
+}
+
+.filterable:hover svg {
+  opacity: 1;
+}
+
+.typeCode:hover,
+.kind:hover {
+  color: var(--accent-soft);
 }

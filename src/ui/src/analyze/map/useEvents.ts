@@ -7,7 +7,7 @@
  * brings back the events one by one.
  */
 import { fetchCells, fetchPoints } from '../api/client';
-import type { MapLayer } from '../api/model';
+import type { MapLayer, RecordKind } from '../api/model';
 import { type Filters, type MapView, cellsQuery, resolutionOf, wholeEarth } from '../api/query';
 import { useLatest } from '../lib/useLatest';
 import { type LightSet, lightsOfCells, lightsOfPoints } from './lights';
@@ -21,17 +21,18 @@ export interface Events {
   lights: LightSet;
 }
 
-export function useEvents(filters: Filters, view: MapView | null) {
+/** The records of the window in view; `kind` chooses events (the default), conclusions or entities. */
+export function useEvents(filters: Filters, view: MapView | null, kind?: RecordKind) {
   const resolution = view ? resolutionOf(view.zoom) : 2;
-  const key = view ? cellsQuery(filters, resolution, view.bbox) : null;
+  const key = view ? cellsQuery(filters, resolution, view.bbox, kind) : null;
   return useLatest<Events>(key, async (signal) => {
     // 1. The records in view, per cell.
-    const cells = await fetchCells(filters, resolution, view!.bbox, signal);
+    const cells = await fetchCells(filters, resolution, view!.bbox, signal, kind);
 
     // 2. Few enough: the points themselves. A point too imprecise for a cell is not in the cells' sum, so a list of
     //    points that was cut after all (total above the items) gives way to the cells.
     if (cells.events <= mostPoints) {
-      const points = await fetchPoints(filters, view!.bbox ?? wholeEarth, mostPoints, signal);
+      const points = await fetchPoints(filters, view!.bbox ?? wholeEarth, mostPoints, signal, kind);
       if (points.total <= points.points.length) {
         return { layer: points, lights: lightsOfPoints(points.points) };
       }

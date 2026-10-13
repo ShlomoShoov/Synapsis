@@ -16,6 +16,7 @@ import { useReducedMotion } from '../lib/useReducedMotion';
 import controlStyles from '../map/MapControls.module.css';
 import { familyOf, kindColors, kindOfId, words } from '../object/describe';
 import { current, type Focus } from '../object/useObject';
+import { matches, type ViewFilter } from '../filter/viewFilter';
 import { GraphScene } from './GraphScene';
 import { emptyGraph, expand, nodeOf, type GraphNode, type GraphState } from './layout';
 import styles from './GraphView.module.css';
@@ -29,6 +30,8 @@ interface GraphViewProps {
   onOpen: (focus: Focus) => void;
   /** Where the key goes (the left column) and where the view buttons go. */
   keySlot: HTMLElement | null;
+  /** The view's filter: the drawn nodes that do not match disappear (the object and the first node stay). */
+  filter: ViewFilter;
   controlsSlot: HTMLElement | null;
 }
 
@@ -39,7 +42,15 @@ const mostLinks = 1000;
 
 const kindNames = { event: 'Events', entity: 'Entities', conclusion: 'Conclusions' };
 
-export function GraphView({ trail, graph, inset, onOpen, keySlot, controlsSlot }: GraphViewProps) {
+export function GraphView({
+  trail,
+  graph,
+  filter,
+  inset,
+  onOpen,
+  keySlot,
+  controlsSlot,
+}: GraphViewProps) {
   const focus = trail.at(-1)!;
   const [scene, setScene] = useState<GraphScene | null>(null);
   const [state, setState] = useState<GraphState>(emptyGraph);
@@ -113,7 +124,10 @@ export function GraphView({ trail, graph, inset, onOpen, keySlot, controlsSlot }
     });
   }
 
-  const drawn = useMemo(() => shownOf(state, hidden, focus.id), [state, hidden, focus.id]);
+  const drawn = useMemo(
+    () => shownOf(state, hidden, filter, focus.id),
+    [state, hidden, filter, focus.id],
+  );
   const trailIds = useMemo(() => trail.map((step) => step.id), [trail]);
 
   useEffect(() => {
@@ -144,7 +158,9 @@ export function GraphView({ trail, graph, inset, onOpen, keySlot, controlsSlot }
       state.nodes.get(id)?.total !== undefined,
   );
   const groups = [...state.groups.values()].filter(
-    (group) => group.owner === focus.id && drawn.nodes.has(group.owner),
+    (group) =>
+      group.owner === focus.id &&
+      [...drawn.edges].some((id) => state.edges.get(id)?.group === group.key),
   );
   const hovered = hover ? state.nodes.get(hover.id) : undefined;
 
@@ -389,11 +405,14 @@ function GraphKey({
 const eventsColor = 'linear-gradient(135deg, #ff7a45, #a98bff 55%, #3ddcff)';
 
 /** The nodes and links drawn: those of the kinds not hidden; the object and the first node always. */
-function shownOf(state: GraphState, hidden: Set<string>, focusId: string) {
+function shownOf(state: GraphState, hidden: Set<string>, filter: ViewFilter, focusId: string) {
   const nodes = new Set<string>();
   const edges = new Set<string>();
   const kept = (node: GraphNode) =>
-    node.id === focusId || node.id === state.root || !hidden.has(`kind:${node.kind}`);
+    node.id === focusId ||
+    node.id === state.root ||
+    (!hidden.has(`kind:${node.kind}`) &&
+      matches(filter, { kind: node.kind, type: node.type, sources: sourcesOf(node) }));
   for (const edge of state.edges.values()) {
     const owner = state.nodes.get(edge.owner);
     const other = state.nodes.get(edge.other);
@@ -407,6 +426,13 @@ function shownOf(state: GraphState, hidden: Set<string>, focusId: string) {
   if (state.root) nodes.add(state.root);
   if (state.nodes.has(focusId)) nodes.add(focusId);
   return { nodes, edges };
+}
+
+/** A node's sources: an event's source, an entity's list. */
+function sourcesOf(node: GraphNode): string[] {
+  const { source, sources } = node.node;
+  if (typeof source === 'string') return [source];
+  return Array.isArray(sources) ? sources.filter((s): s is string => typeof s === 'string') : [];
 }
 
 function toggled(set: Set<string>, key: string): Set<string> {

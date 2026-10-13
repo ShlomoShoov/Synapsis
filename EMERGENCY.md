@@ -768,3 +768,16 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   the object's own path and chooses its place (from its record's `place.logical`); an object with none says so. A
   click on a record opens it in the object panel; from there Map (it has a point) or Graph. The panel's "Filed under"
   has "Show in the tree". Closing the object keeps the tree; `&dimension=logical` opens it from the address.
+- **Stage 4 (13 Oct)**: **search and filtering**, one action in two modes.
+  - *The filter of the view* (`analyze/filter/`), left above the key (the query log stays above it and folds): the
+    kind of record (Any, Events, Entities, Conclusions), and sources and types from `GET /catalog`, each a chip a click
+    removes. What does not match disappears: the map sends `source`, `type` and `kind` with the time card's window to
+    `/map/cells` and `/map/points` (the only filters those routes take); the tree sends `source` and `type`; the graph
+    hides the drawn nodes that do not match (the object stays). A click on a field in a record's details adds it: the
+    source, the type (under the title), the kind, the logical place, and the date (it sets the time card's window to
+    that day, month or year; the ruler follows).
+  - *The search window* (`analyze/search/`, the Search button beside the switch, or "/"): every parameter of
+    `GET /search` (words or meaning, kind, sources, types, from, to, logical place, entity, how many), starting from the
+    view's filter. Results as the API ranks them, "N of M", re-orderable (newest, oldest, name: only the ones
+    received). A click on a result: on the map when it has a place, else in the tree when it is filed there; its
+    details and graph are always open in the panel.

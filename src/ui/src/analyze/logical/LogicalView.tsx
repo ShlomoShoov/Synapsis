@@ -12,6 +12,7 @@ import { fetchLogical, fetchSearch } from '../api/client';
 import type { WireBucket, WireLogical } from '../api/contract';
 import { ApiError } from '../api/http';
 import type { Item } from '../api/model';
+import type { Filters } from '../api/query';
 import { useLatest } from '../lib/useLatest';
 import { formatTime, headingOfItem, sourceName, typeWords, words } from '../object/describe';
 import type { Focus } from '../object/useObject';
@@ -21,6 +22,8 @@ interface LogicalViewProps {
   /** The open object: its id, its name, and its logical place (null: it has none; undefined: not known yet). */
   object: { id: string; title: string; place: string | null | undefined } | null;
   onOpen: (focus: Focus) => void;
+  /** The view's sources and types, sent with every question (a new filter makes a new tree). */
+  filters: Filters;
 }
 
 type Level = { wire: WireLogical } | { error: Error };
@@ -29,7 +32,7 @@ type Level = { wire: WireLogical } | { error: Error };
 const firstRecords = 50;
 const mostRecords = 500;
 
-export function LogicalView({ object, onOpen }: LogicalViewProps) {
+export function LogicalView({ object, onOpen, filters }: LogicalViewProps) {
   const [levels, setLevels] = useState<Map<string, Level>>(() => new Map());
   const [open, setOpen] = useState<Set<string>>(() => new Set(['']));
   const [chosen, setChosen] = useState<string | null>(null);
@@ -53,7 +56,7 @@ export function LogicalView({ object, onOpen }: LogicalViewProps) {
     for (const key of open) {
       if (asked.current.has(key)) continue;
       asked.current.add(key);
-      fetchLogical({}, key || undefined).then(
+      fetchLogical(filters, key || undefined).then(
         (wire) => setLevels((all) => new Map(all).set(key, { wire })),
         (error: unknown) =>
           setLevels((all) =>
@@ -63,10 +66,11 @@ export function LogicalView({ object, onOpen }: LogicalViewProps) {
           ),
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new filter remakes the view (its key)
   }, [open]);
 
   const records = useLatest(chosen === null ? null : `${chosen}|${limit}`, (signal) =>
-    fetchSearch({}, { logical: chosen!, limit }, signal),
+    fetchSearch(filters, { logical: chosen!, limit }, signal),
   );
 
   const choose = (key: string) => {

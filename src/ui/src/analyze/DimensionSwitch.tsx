@@ -50,33 +50,39 @@ export function DimensionSwitch({
   value,
   onChange,
   hasObject,
+  extra,
 }: {
   value: Dimension;
   onChange: (dimension: Dimension) => void;
   /** An object is open (the graph shows an object's connections). */
   hasObject: boolean;
+  /** Shown beside the switch (the search button). */
+  extra?: React.ReactNode;
 }) {
   return (
-    <nav className={styles.switch} aria-label="Dimension">
-      {dimensions.map((dimension) => (
-        <button
-          key={dimension.id}
-          type="button"
-          aria-pressed={dimension.id === value}
-          disabled={dimension.id === 'graph' && !hasObject}
-          title={
-            dimension.id === 'graph' && !hasObject
-              ? 'Open an object to see its connections'
-              : undefined
-          }
-          onClick={() => onChange(dimension.id)}
-        >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            {dimension.icon}
-          </svg>
-          {dimension.label}
-        </button>
-      ))}
-    </nav>
+    <div className={styles.bar}>
+      <nav className={styles.switch} aria-label="Dimension">
+        {dimensions.map((dimension) => (
+          <button
+            key={dimension.id}
+            type="button"
+            aria-pressed={dimension.id === value}
+            disabled={dimension.id === 'graph' && !hasObject}
+            title={
+              dimension.id === 'graph' && !hasObject
+                ? 'Open an object to see its connections'
+                : undefined
+            }
+            onClick={() => onChange(dimension.id)}
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              {dimension.icon}
+            </svg>
+            {dimension.label}
+          </button>
+        ))}
+      </nav>
+      {extra}
+    </div>
   );
 }

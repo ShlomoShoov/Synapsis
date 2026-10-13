@@ -1,14 +1,20 @@
 /* The dimension switch: a pill of dark glass, top centre of the free part of the screen. */
 
-.switch {
+.bar {
   position: absolute;
   top: 18px;
   left: calc((100% - 424px) / 2);
   z-index: 2;
   display: flex;
+  align-items: center;
+  gap: 10px;
+  translate: -50% 0;
+}
+
+.switch {
+  display: flex;
   gap: 2px;
   padding: 4px;
-  translate: -50% 0;
   border-radius: 999px;
   background: var(--glass);
   backdrop-filter: blur(18px) saturate(1.3);

@@ -62,6 +62,12 @@ export function TimeCard({
   liveNote,
 }: TimeCardProps) {
   const [extent, setExtent] = useState<Extent>(() => extentAround(window, now));
+  // A window chosen elsewhere (a record's date) and out of sight: the ruler moves to it.
+  const [shownWindow, setShownWindow] = useState(window);
+  if (window !== shownWindow) {
+    setShownWindow(window);
+    if (window.from < extent.start || window.to > extent.end) setExtent(extentAround(window, now));
+  }
   const [editing, setEditing] = useState<'from' | 'to' | null>(null);
   const tween = useRef(0);
   const today = lastMonth(now).to - dayMs; // the start of today
