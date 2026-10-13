@@ -1,25 +1,33 @@
 /**
  * Analyze (route /analyze): where the user investigates the data. The night Earth fills the page in a sky of stars, the
  * events shine on it as lights coloured by category. Over it: the time card (top right), the key (bottom left), the
- * query panel (left), and the view buttons (right).
+ * query panel (left), and the view buttons (right). A click on an event opens it in the object panel (right, under
+ * the time card), and marks it on the globe; a click on the map away from the lights, Esc or the panel's close
+ * returns to the map alone.
  *
  * The address can open a window, a moment of knowledge and a place: ?from=1970-01-01&to=1971-01-01 (the second date
  * excluded), &as_of=2026-10-01, &view=35.5,33.4,7 (longitude, latitude, zoom, and optionally pitch and bearing).
  */
 import '@fontsource-variable/instrument-sans/wght.css';
 import '@fontsource/fragment-mono/400.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { EventsKey } from './map/EventsKey';
 import { GlobeMap, type Camera, type GlobeController, type MapLook } from './map/GlobeMap';
 import { MapControls } from './map/MapControls';
 import { useEvents } from './map/useEvents';
 import { requestOf } from './map/viewport';
+import { headingOfItem, headingOfRecord } from './object/describe';
+import { ObjectPanel } from './object/ObjectPanel';
+import { current, useObject, type Focus } from './object/useObject';
 import { QueryPanel } from './query/QueryPanel';
 import { TimeCard } from './time/TimeCard';
 import { useLive } from './time/useLive';
 import { fromDayInput, lastMonth, type TimeWindow } from './time/window';
 import styles from './AnalyzePage.module.css';
+
+/** The width the object panel takes on the right (its width and the gaps around it), kept clear on the globe. */
+const panelInset = 388 + 18 + 18;
 
 export function AnalyzePage() {
   const [searchParams] = useSearchParams();
@@ -42,12 +50,45 @@ export function AnalyzePage() {
   const { answer: events, pending, error } = useEvents(filters, request);
   const live = useLive(timeWindow, (time) => controller?.setLive(time));
 
+  // The object looked at: the trail of records the investigation went through, the last one shown.
+  const [trail, setTrail] = useState<Focus[]>([]);
+  const focus = trail.at(-1) ?? null;
+  const answers = useObject(focus?.id ?? null);
+  const record = current(answers.records)?.[0]?.record;
+  const place = focus?.point ?? record?.place?.point;
+  const color = (record ? headingOfRecord(record) : focus?.heading)?.color ?? '#8fb6ff';
+  const placeKey = focus && place ? `${focus.id}@${place.join(',')}` : null;
+
+  // The globe turns to the object when it is hidden behind the panel or the Earth.
+  useEffect(() => {
+    if (placeKey && place) controller?.reveal(place, panelInset);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per object and place
+  }, [placeKey, controller]);
+
+  // Esc returns to the map.
+  useEffect(() => {
+    if (!focus) return;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.key === 'Escape' && !target?.closest('input, textarea, select')) setTrail([]);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [focus]);
+
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-object={focus ? '' : undefined}>
       <GlobeMap
         initialView={initialView}
         lights={events?.lights ?? null}
         onLookChange={setLook}
+        onPick={(id, item) =>
+          setTrail([
+            { id, heading: item ? headingOfItem(item) : undefined, point: item?.place?.point },
+          ])
+        }
+        onEmptyClick={() => setTrail([])}
+        selected={place ? { place, color } : null}
         onCameraChange={setCamera}
         onReady={setController}
       />
@@ -64,7 +105,7 @@ export function AnalyzePage() {
         <EventsKey events={events} />
       </div>
 
-      <div className={styles.right}>
+      <div className={styles.right} data-object={focus ? '' : undefined}>
         <TimeCard
           window={timeWindow}
           onWindowChange={setTimeWindow}
@@ -89,6 +130,18 @@ export function AnalyzePage() {
           <p className={styles.error} role="alert">
             {error.message}
           </p>
+        )}
+        {focus && (
+          <ObjectPanel
+            trail={trail}
+            answers={answers}
+            onOpen={(next) =>
+              setTrail((steps) => (steps.at(-1)?.id === next.id ? steps : [...steps, next]))
+            }
+            onTrail={(index) => setTrail((steps) => steps.slice(0, index + 1))}
+            onClose={() => setTrail([])}
+            onShowOnMap={(point) => controller?.reveal(point, panelInset)}
+          />
         )}
       </div>
 

@@ -1,6 +1,10 @@
 /**
  * Where Analyze reads from: the read API (EMERGENCY.md §12), GET /map/cells, /map/points, /search, /logical, /graph and
  * /records/{id}. Set VITE_ANALYZE_API_URL when starting the dev server or building to read another address.
+ *
+ * The development mode without the stores: VITE_ANALYZE_FIXTURES=1 answers the read API from fixtures/analyze/
+ * (api/fixtures.ts) instead of the network; the query log shows every question as usual. Without it, the build leaves
+ * the fixtures out.
  */
 
 /** The base address of the Analyze routes, without a trailing slash. */

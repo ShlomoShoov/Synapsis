@@ -732,3 +732,21 @@ Every read query, judged at millions of documents. "Fix" is what to change tomor
 > `docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp -v "$PWD":/ui -w /ui node:24.21.0-alpine3.24 sh -c "npm install && npm run build && npm run lint && npm test"`.
 > Dev server: `docker run --rm -it -u $(id -u):$(id -g) -e HOME=/tmp -v "$PWD":/ui -w /ui -p 5173:5173 node:24.21.0-alpine3.24 npm run dev -- --host 0.0.0.0`
 > → `http://localhost:5173/analyze?from=1965-01-01&to=1965-04-01`. Write what you built into EMERGENCY.md.
+
+## 15. UI agent: Analyze explore (branch `ui/analyze-explore`)
+
+Four stages, each stopped for screenshots and feedback: (1) a click on a point brings up the object, (2) the
+connections graph, (3) the logical dimension, (4) search and filtering. Nothing that existed changes look; only
+additions. Development without the stores: `npm run dev:fixtures` (from `src/ui`; `VITE_ANALYZE_FIXTURES=1`) answers
+the read API from `src/ui/fixtures/analyze/` (`analyze/api/fixtures.ts`): the map routes over `map-points-world.json`
+with the API's own filters, the other routes with the saved file of that exact request, and anything else **501 "not in
+the fixtures"** (never an empty answer). The production build leaves the fixtures out.
+
+- **Stage 1 (13 Oct)**: a click on an event opens the **object panel** (`analyze/object/`), right, under the time card
+  and as wide: the record's family colour, kind, title, type and id; its facts, text, measures, attributes and evidence
+  from `GET /records/{id}` (one tab per source when several), and **the record as each source sent it** (JSON). Its
+  **connections** (`GET /graph?id=`) are divided by kind ("Taking part", "Takes part in", "Conclusions about it",
+  "Product of"...), with "N of total" and a note when the API sent fewer than the node has (the groups then count only
+  those); 404 says "Not in the graph". A click on a connection moves the panel to it (a trail of the records looked at,
+  with back). The globe marks the object with a ring and turns to it when it is hidden; the view buttons step left of
+  the panel. A click on the map away from the lights, Esc, or close returns to the map.

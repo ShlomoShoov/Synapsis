@@ -129,3 +129,22 @@
     opacity: 0.2;
   }
 }
+
+/* An object is open: the right column reaches the bottom (the object panel under the time card), and the view
+   buttons and the map's credits move left of it. */
+.right[data-object] {
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.controls,
+.page :global(.maplibregl-ctrl-bottom-right) {
+  transition: transform 340ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.page[data-object] .controls,
+.page[data-object] :global(.maplibregl-ctrl-bottom-right) {
+  transform: translateX(-406px);
+}

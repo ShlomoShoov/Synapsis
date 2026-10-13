@@ -96,5 +96,46 @@ export interface WireRecordAnswer {
   received_at: string;
   batch_id: string;
   producer: string;
-  record: Record<string, unknown>;
+  record: SilRecord;
+}
+
+/**
+ * A SIL 1.2 record as its source sent it (the `record` of GET /records/{id}). Only the fields Analyze reads are named;
+ * every one is optional here, because the record is passed through as stored and the raw view shows it all.
+ */
+export interface SilRecord {
+  kind?: WireKind | 'relation';
+  id?: string;
+  type?: string;
+  source?: string;
+  reliability?: number;
+  reliability_basis?: string;
+  known_at?: string;
+  known_at_basis?: string;
+  /** An entity's name and other names. */
+  name?: string;
+  aliases?: string[];
+  time?: { start?: string; end?: string; precision?: string };
+  place?: {
+    /** [longitude, latitude] */
+    point?: [number, number];
+    uncertainty_km?: number;
+    admin?: { country?: string; subdivision?: string; name?: string };
+    logical?: { space?: string; path?: string[] };
+    unplaced?: boolean;
+  };
+  participants?: { entity: string; role: string }[];
+  measures?: { name: string; value: number; unit?: string }[];
+  text?: { title?: string; body?: string; lang?: string };
+  attributes?: Record<string, unknown>;
+  evidence?: { url?: string; ref?: string };
+  /** A conclusion: what it is about, what it states, on what, by what method, how sure. */
+  about?: string[];
+  statement?: { predicate?: string; object?: string; value?: unknown };
+  premises?: string[];
+  method?: { by?: string; name?: string; version?: string };
+  confidence?: number;
+  /** A relation's two ends. */
+  from?: string;
+  to?: string;
 }

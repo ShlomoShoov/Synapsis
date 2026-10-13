@@ -7,10 +7,11 @@
  * clicking a light of many events flies into it. LIVE's playhead goes straight to the lights layer through the
  * controller, frame by frame, without rendering React.
  */
-import { AttributionControl, Map as MapLibre, setWorkerUrl } from 'maplibre-gl';
+import { AttributionControl, Map as MapLibre, Marker, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { useEffect, useRef, useState } from 'react';
+import type { Item, LngLat } from '../api/model';
 import type { BBox } from '../api/query';
 import { useReducedMotion } from '../lib/useReducedMotion';
 import { formatMoment } from '../time/window';
@@ -18,7 +19,7 @@ import { basemapStyle, lazySources } from './basemap';
 import type { LightSet } from './lights';
 import { LightsLayer, type LiveTime } from './LightsLayer';
 import { categoryOf, densityColor } from './palette';
-import { nearestLight } from './pick';
+import { nearestLight, unit } from './pick';
 import { starShifts, starTile, tileSizes } from './starfield';
 import styles from './GlobeMap.module.css';
 
@@ -50,6 +51,17 @@ export interface GlobeController {
   resetNorth: () => void;
   /** LIVE: show the lights by their age at the playhead; null shows them all. */
   setLive: (live: LiveTime | null) => void;
+  /**
+   * Brings a place into the free part of the screen (left of a panel `rightInset` pixels wide), turning the globe
+   * only when the place is hidden, behind the Earth, or too near an edge.
+   */
+  reveal: (place: LngLat, rightInset: number) => void;
+}
+
+/** The object being looked at: its place and colour, marked on the globe. */
+export interface Selected {
+  place: LngLat;
+  color: string;
 }
 
 /** What the hover label shows. */
@@ -67,8 +79,12 @@ interface GlobeMapProps {
   /** The lights to draw; null while the first answer is on its way. */
   lights: LightSet | null;
   onLookChange: (look: MapLook) => void;
-  /** An event was clicked. */
-  onPick?: (id: string) => void;
+  /** An event was clicked: its id, and its item. */
+  onPick?: (id: string, item?: Item) => void;
+  /** A click on the map away from any light. */
+  onEmptyClick?: () => void;
+  /** The object being looked at, marked on the globe. */
+  selected?: Selected | null;
   /** The map's bearing and pitch, for the compass. */
   onCameraChange?: (camera: { bearing: number; pitch: number }) => void;
   /** The map is drawn and can be steered. */
@@ -86,6 +102,8 @@ export function GlobeMap({
   lights,
   onLookChange,
   onPick,
+  onEmptyClick,
+  selected,
   onCameraChange,
   onReady,
 }: GlobeMapProps) {
@@ -95,6 +113,7 @@ export function GlobeMap({
   const behindRef = useRef<HTMLDivElement>(null);
   const frontRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<LightsLayer | null>(null);
+  const mapRef = useRef<MapLibre | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [hover, setHover] = useState<Hover | null>(null);
   const reducedMotion = useReducedMotion();
@@ -102,9 +121,9 @@ export function GlobeMap({
   const opening = useRef(initialView);
 
   // The newest callbacks, read by the map's listeners (set after each render, before the map can call them).
-  const callbacks = useRef({ onLookChange, onPick, onCameraChange, onReady });
+  const callbacks = useRef({ onLookChange, onPick, onEmptyClick, onCameraChange, onReady });
   useEffect(() => {
-    callbacks.current = { onLookChange, onPick, onCameraChange, onReady };
+    callbacks.current = { onLookChange, onPick, onEmptyClick, onCameraChange, onReady };
   });
 
   // Create the map once.
@@ -128,6 +147,7 @@ export function GlobeMap({
       // The map in the browser console while developing (and for the screenshot scripts).
       (window as unknown as { analyzeMap?: MapLibre }).analyzeMap = map;
     }
+    mapRef.current = map;
     map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
     const layer = new LightsLayer();
     layerRef.current = layer;
@@ -186,6 +206,7 @@ export function GlobeMap({
         showWholeEarth: () => map.flyTo({ ...firstView, bearing: 0, pitch: 0, duration: 1800 }),
         resetNorth: () => map.easeTo({ bearing: 0, pitch: 0, duration: 600 }),
         setLive: (live) => layer.setLive(live),
+        reveal: (place, rightInset) => reveal(map, place, rightInset),
       });
     });
     map.on('move', slideStars);
@@ -241,9 +262,12 @@ export function GlobeMap({
     map.on('click', (event) => {
       const set = layer.shown();
       const index = lightAt(event.point.x, event.point.y);
-      if (!set || index < 0) return;
+      if (!set || index < 0) {
+        callbacks.current.onEmptyClick?.();
+        return;
+      }
       if (set.items[index]) {
-        callbacks.current.onPick?.(set.ids[index]!);
+        callbacks.current.onPick?.(set.ids[index]!, set.items[index]);
       } else {
         map.flyTo({
           center: set.places[index]!,
@@ -256,6 +280,7 @@ export function GlobeMap({
     return () => {
       cancelAnimationFrame(frame);
       layerRef.current = null;
+      mapRef.current = null;
       map.remove();
     };
   }, []);
@@ -267,6 +292,27 @@ export function GlobeMap({
   useEffect(() => {
     layerRef.current?.setStill(reducedMotion);
   }, [reducedMotion]);
+
+  // The mark on the object being looked at: a ring in its colour, moved from object to object.
+  const markerRef = useRef<Marker | null>(null);
+  const selectedPlace = selected ? selected.place.join(',') : null;
+  const selectedColor = selected?.color;
+  useEffect(() => {
+    const map = mapRef.current;
+    markerRef.current?.remove();
+    markerRef.current = null;
+    if (!map || !selectedPlace || !selectedColor) return;
+    const [lon = 0, lat = 0] = selectedPlace.split(',').map(Number);
+    const element = document.createElement('div');
+    element.className = styles.selected!;
+    element.style.setProperty('--mark', selectedColor);
+    element.innerHTML =
+      '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="13" />' +
+      '<path d="M24 3v6M24 39v6M3 24h6M39 24h6" /></svg>';
+    markerRef.current = new Marker({ element, anchor: 'center', opacityWhenCovered: '0' })
+      .setLngLat([lon, lat])
+      .addTo(map);
+  }, [selectedPlace, selectedColor]);
 
   return (
     <div className={styles.stage}>
@@ -294,6 +340,30 @@ export function GlobeMap({
       {failure && <p className={styles.failure}>{failure}</p>}
     </div>
   );
+}
+
+/** How far from the edges of the free part of the screen a revealed place must be. */
+const revealMarginPx = 90;
+
+/** Turns the globe to a place when it is hidden behind a panel or the Earth, or too near an edge. */
+function reveal(map: MapLibre, place: LngLat, rightInset: number) {
+  const center = map.getCenter();
+  const facing = unit(place).reduce(
+    (sum, value, index) => sum + value * unit([center.lng, center.lat])[index]!,
+    0,
+  );
+  const point = map.project(place);
+  const canvas = map.getCanvas();
+  const width = canvas.clientWidth - rightInset;
+  const height = canvas.clientHeight;
+  const seen =
+    facing > 0.2 &&
+    point.x > revealMarginPx &&
+    point.x < width - revealMarginPx &&
+    point.y > revealMarginPx &&
+    point.y < height - revealMarginPx;
+  if (seen) return;
+  map.easeTo({ center: place, offset: [-rightInset / 2, 0], duration: 1200 });
 }
 
 /**

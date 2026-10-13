@@ -55,6 +55,10 @@ async function fetchJson<T>(
   signal: AbortSignal | undefined,
   onResponse: (status: number, bytes: number) => void,
 ): Promise<T> {
+  // The development mode (config.ts), tested on the setting itself so that the build drops it otherwise.
+  if (import.meta.env.VITE_ANALYZE_FIXTURES === '1') {
+    return fromFixtures<T>(url, signal, onResponse);
+  }
   const timeout = AbortSignal.timeout(requestTimeoutMs);
   const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
   let response: Response;
@@ -86,6 +90,22 @@ async function fetchJson<T>(
   } catch {
     throw new ApiError('invalid', 'The Analyze API sent an answer that is not JSON.');
   }
+}
+
+/** The development mode: the answer saved in fixtures/analyze/ (api/fixtures.ts), read like a network answer. */
+async function fromFixtures<T>(
+  url: string,
+  signal: AbortSignal | undefined,
+  onResponse: (status: number, bytes: number) => void,
+): Promise<T> {
+  const { fixtureAnswer } = await import('./fixtures');
+  const { status, text } = await fixtureAnswer(url);
+  if (signal?.aborted) throw new DOMException('The request was cancelled.', 'AbortError');
+  onResponse(status, new TextEncoder().encode(text).length);
+  if (status !== 200) {
+    throw new ApiError('http', `The Analyze API answered ${status}: ${problemOf(text)}`, status);
+  }
+  return JSON.parse(text) as T;
 }
 
 /** The reason inside an ASP.NET problem answer: its errors (per parameter), its detail, or its title. */
