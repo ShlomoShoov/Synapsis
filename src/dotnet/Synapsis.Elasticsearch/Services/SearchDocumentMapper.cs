@@ -12,6 +12,14 @@ namespace Synapsis.Elasticsearch;
 /// </summary>
 public static class SearchDocumentMapper
 {
+    /// <summary>The id after its prefix and namespace ("evt:kev:CVE-2023-4966" → "CVE-2023-4966"); the whole id when it has fewer than two colons.</summary>
+    public static string IdKeyOf(string id)
+    {
+        int firstColon = id.IndexOf(':');
+        int secondColon = firstColon < 0 ? -1 : id.IndexOf(':', firstColon + 1);
+        return secondColon < 0 ? id : id.Substring(secondColon + 1);
+    }
+
     /// <summary>The search document: the identity from the envelope, then what the record's kind adds.</summary>
     public static SearchDocument Map(StoredRecord stored, SilRecord record)
     {
@@ -19,6 +27,7 @@ public static class SearchDocumentMapper
         SearchDocument document = new SearchDocument
         {
             Id = stored.RecordId,
+            IdKey = IdKeyOf(stored.RecordId),
             RecordKey = StoredRecord.KeyOf(stored.RecordId, stored.Source),
             State = stored.State,
             Kind = stored.Kind,

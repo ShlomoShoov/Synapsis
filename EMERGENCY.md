@@ -240,6 +240,11 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   `SearchRepository.SearchAsync`. No behaviour change: the 23 check requests (§12 and the errors) give byte-identical
   answers before and after; quotes and backslashes in the input answer 200. One message changed: an embedder refusal
   still answers 400, now with "The embedder refused the question." instead of the embedder's own text.
+- **Final round, 2 (a bare id)**: `id_key` in `SearchDocument`, `SearchDocumentMapper` (`IdKeyOf`), the mapping
+  (`CreateRecordsIndexStep`) and the word search. Not re-indexed: live only after tonight's load from empty stores
+  (§12, `/search`). Until then `q=CVE-2021-44228` still misses `evt:kev:CVE-2021-44228`. Tests: 119 of 120 (the old
+  Neo4j-password setup test). The 23 check requests still give identical answers on the live index.
+- **Final round, 3**: no `precision_threshold` (decided); counts above 3,000 stay estimates (§13, row 1).
 
 ## 11. How the system looks now
 
@@ -576,14 +581,16 @@ Order: with `q`, the best match first (Elasticsearch's score); semantic, the nea
 
 1. Words (step 2b, `SearchRepository.cs:167`). Each word must be found as the start
    of a word in `name`, `title` or `body` (`phrase_prefix` cuts the text into words the way the index does, so
-   "log4j" finds "Log4j2"), or as the start of the `id`:
+   "log4j" finds "Log4j2"), or as the start of the `id`, or as the start of `id_key` (the id after its namespace:
+   "CVE-2021-44228" for `evt:kev:CVE-2021-44228`, so a bare id typed in finds the record):
    ```bash
    curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
      "size": 50,
      "query": { "bool": { "filter": [],
        "must": [ { "bool": { "should": [
          { "multi_match": { "query": "log4j", "type": "phrase_prefix", "fields": ["name", "title", "body"] } },
-         { "prefix": { "id": { "value": "log4j", "case_insensitive": true } } } ] } } ] } },
+         { "prefix": { "id": { "value": "log4j", "case_insensitive": true } } },
+         { "prefix": { "id_key": { "value": "log4j", "case_insensitive": true } } } ] } } ] } },
      "collapse": { "field": "id" },
      "aggs": { "records": { "cardinality": { "field": "id" } } } }'
    ```
@@ -618,10 +625,19 @@ mode only the `k` nearest match, so `total` ≤ `limit` (there is no "all that m
 | `logical=cyber.vendor_product/Apache` | 41 / 41 | ES `_count` 41; by hand 41 |
 | no `q`, `limit=3` | 7,771 / 3 | **by hand 7,786 distinct ids** (7,819 documents): the default cardinality is 0.2 % low above 3,000; with `"precision_threshold": 40000` it gives 7,786 exactly (§13) |
 
-**Limits at full scale**: `q=CVE-2021-44228` finds the CVE entity (`ent:cve:CVE-2021-44228`, by name) and the records
-whose text mentions it, but not `evt:kev:CVE-2021-44228` itself: its text never repeats its id, and the id does not
-start with "CVE". A *leading wildcard* on `id` (`*CVE-2021-44228*`) would find it but reads every id in the index
-(slow with millions). Better fix if needed: the indexer adds the id's last part to the searchable text. A short word
+**A bare id (`q=CVE-2021-44228`)**: fixed in the code (final round, item 2). The indexer now writes `id_key` (the id
+after its namespace: `SearchDocumentMapper.IdKeyOf`), the index mapping has it as a keyword, and the word search
+matches it by prefix. **It takes effect only with tonight's full load: until then this case still misses** on the
+live index (it has no `id_key`; the search answers `ent:cve:CVE-2021-44228` and `evt:kev:CVE-2021-45046`, not
+`evt:kev:CVE-2021-44228`). Checked on a scratch copy of the index with `id_key` (deleted after): `CVE-2021-44228` and
+`cve-2021-44228` → 4 records including `evt:kev:CVE-2021-44228` and `evt:epss:CVE-2021-44228-20220201`;
+`CVE-2021-442` → 6; `log4j` → the same 3 as before. **Tonight's load must start from empty stores** for every
+document to get `id_key`: setup creates the index (with `id_key`) only when it does not exist, and a record already in
+MongoDB is re-sent as `unchanged` and never indexed again. Before `up --build`:
+`docker compose -f deploy/core/compose.yml down && docker volume rm synapsis-core_mongo-data synapsis-core_es-data synapsis-core_kafka-data synapsis-core_neo4j-data`
+(keep `synapsis-core_models`, the embedder's weights).
+
+**Limits at full scale**: a short word
 expands to at most 50 indexed words (`phrase_prefix`'s `max_expansions`), so "a" finds only some of the words starting
 with "a". `num_candidates` 500 bounds the meaning search: at millions of vectors it is approximate (a near document can
 be missed).
@@ -632,12 +648,12 @@ Every read query, judged at millions of documents. "Fix" is what to change tomor
 
 | # | Where | What happens at full scale | Fix if needed |
 | --- | --- | --- | --- |
-| 1 | **cardinality** (every `records` / `total`) | Exact up to about 3,000 distinct ids, then an estimate. Measured on the sample: no-`q` search says **7,771**, the true number is **7,786** (0.2 % low). At millions the error stays around 1 %. A total near the UI's 5,000-points limit can be off by a few dozen. | Add `"precision_threshold": 40000` to the top-level totals in `SearchRepository` (`MapCellsAsync`'s `records`, `HitsOf`'s `records`): exact up to 40,000 (checked: 7,786), about 320 kB per count. Not on the per-cell counts (10,000 cells × 320 kB). |
+| 1 | **cardinality** (every `records` / `total`) | Exact up to about 3,000 distinct ids, then an estimate. Measured on the sample: no-`q` search says **7,771**, the true number is **7,786** (0.2 % low). At millions the error stays around 1 %. A total near the UI's 5,000-points limit can be off by a few dozen. | **Decided: no `precision_threshold`** (final round): totals above 3,000 stay estimates. (For the record: `"precision_threshold": 40000` gave 7,786 exactly, about 320 kB per count.) |
 | 2 | `/map/cells` **terms size 10,000** | Resolution 2 has 5,882 cells on the whole Earth: never cut. Resolution 3 has about 41,000, 4 about 288,000, 5 about 2 M: cut without a bbox. The UI sends a bbox from zoom 3 up, so a view holds far fewer cells. `sum_other_doc_count` > 0 says when cells were cut. | The UI shows "cells cut" when `sum_other_doc_count` > 0. |
 | 3 | `/map/cells` **memory** | One cardinality per cell, ordered by it. At resolution 2 with millions of events, about 5,900 counts of up to about 24 kB each, so roughly 140 MB in one request. Elasticsearch has a **1 GB heap** (`CORE_ES_HEAP`); its request circuit breaker trips at 60 % (600 MB) and answers 500. | Set `CORE_ES_HEAP=4g` in `deploy/core/.env` for full data (the machine has 8 GB). If it still trips: order by `_count` (documents) instead of `records`. |
 | 4 | `/logical` **terms size 1,000** | NVD files records under tens of thousands of vendors: `cyber.vendor_product` opens with the 1,000 largest. `sum_other_doc_count` says how many documents are in the rest. The first call after new data builds the field's *global ordinals* (a table of every distinct path) and can take seconds. | Raise `size` to 5,000, or add a search box for the level (`include` with the typed prefix). |
 | 5 | `/search` meaning: **knn num_candidates 500** | The vector index (HNSW, `int8_hnsw`: one byte per number) finds the nearest *approximately*: it looks at 500 candidates, so a close document can be missed at millions of vectors. Memory: about 512 bytes per vector, so 1.2 M NVD vectors ≈ 600 MB on disk and in the page cache, not in the heap. `total` is never more than `k`. | Raise `num_candidates` (1,000–2,000) for better recall, at some speed cost. |
-| 6 | `/search` words | `phrase_prefix` expands a short word to at most 50 indexed words ("a" finds only some). `prefix` on `id`, case-insensitive, walks the id terms that start with the word: fine for typed ids. A bare CVE id does not find `evt:kev:CVE-…` (the text does not repeat it; §12). Collapse + sort: Elasticsearch reads every match to keep the best 50 records (linear, fine at millions). | Indexer: copy the id's last part into the searchable text. |
+| 6 | `/search` words | `phrase_prefix` expands a short word to at most 50 indexed words ("a" finds only some). `prefix` on `id`, case-insensitive, walks the id terms that start with the word: fine for typed ids. A bare CVE id finds `evt:kev:CVE-…` through `id_key` (after tonight's load; §12). Collapse + sort: Elasticsearch reads every match to keep the best 50 records (linear, fine at millions). | Done in the code (`id_key`, §12); live after tonight's load from empty stores. |
 | 7 | `/map/points` **collapse, size 5,000** | Collapse returns one document per record, at most 5,000 (below `max_result_window`, 10,000). With more than 5,000 records in the box, `total` > items: the UI then keeps the cells (it asks for points only when the cells say ≤ 5,000). | — |
 | 8 | **hits.total** | Not used: with collapse it counts documents (states), not records. Every `total` comes from cardinality (row 1). | — |
 | 9 | **geo_bounding_box across the 180th meridian** | Handled by Elasticsearch itself (`minLon > maxLon`): checked 75 = two boxes = by hand. A box covering the poles is clamped to ±90 by the UI. | — |
@@ -673,7 +689,7 @@ Every read query, judged at millions of documents. "Fix" is what to change tomor
 >    404 for an unknown id.
 >
 > Plus `GET /records/{id}` (unchanged: each source's full record, as stored). A *document* is Elasticsearch's
-> `_source`: `id, kind, type, source, known_at, state`, and when the record has them `name, title, body, time_start,
+> `_source`: `id, id_key (after tonight's load), kind, type, source, known_at, state`, and when the record has them `name, title, body, time_start,
 > time_precision, location [lon, lat], h3_r2..h3_r5, country, subdivision, logical_prefixes[], measures {name: [values]},
 > entities[]`. Lists hold one document per record; `total` counts distinct records (an estimate within about 1 % above
 > 3,000).

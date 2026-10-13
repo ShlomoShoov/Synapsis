@@ -18,6 +18,13 @@ public sealed class SearchDocument
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The id after its namespace, such as "CVE-2023-4966" for "evt:kev:CVE-2023-4966": search matches it by prefix,
+    /// so a bare id typed in the search box finds the record.
+    /// </summary>
+    [JsonPropertyName("id_key")]
+    public string IdKey { get; set; } = string.Empty;
+
     /// <summary>The record without its state, "{id}|{source}": the latest state per record is found by this key.</summary>
     [JsonPropertyName("record_key")]
     public string RecordKey { get; set; } = string.Empty;

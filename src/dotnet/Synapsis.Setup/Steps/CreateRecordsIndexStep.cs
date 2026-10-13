@@ -79,6 +79,7 @@ public sealed class CreateRecordsIndexStep : ISetupStep
     private static void AddIdentity(Properties fields)
     {
         fields.Add("id", new KeywordProperty());
+        fields.Add("id_key", new KeywordProperty());
         fields.Add("record_key", new KeywordProperty());
         fields.Add("state", new IntegerNumberProperty());
         fields.Add("kind", new KeywordProperty());

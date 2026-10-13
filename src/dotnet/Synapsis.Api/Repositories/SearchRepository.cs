@@ -127,9 +127,9 @@ public sealed class SearchRepository
     }
 
     /// <summary>
-    /// GET /search: with q, every word as the start of a word in the name, title or body, or of the id (best first);
-    /// with semantic, the k nearest by meaning; without q, the filtered list (newest first). One document per record;
-    /// total = distinct records that match. Null when the embedder refuses the question.
+    /// GET /search: with q, every word as the start of a word in the name, title or body, of the id or of the id's key
+    /// (best first); with semantic, the k nearest by meaning; without q, the filtered list (newest first). One document
+    /// per record; total = distinct records that match. Null when the embedder refuses the question.
     /// </summary>
     public async Task<JsonObject?> SearchAsync(string? q, bool semantic, string? kind, string? logical, string? entity, int limit,
         DateTime? from, DateTime? to, string[]? sources, string[]? types)
@@ -164,7 +164,8 @@ public sealed class SearchRepository
             return TotalAndItems(await SendAsync(listBody));
         }
 
-        // 2b. Words: each word must be the start of a word in name, title or body, or the start of the id.
+        // 2b. Words: each word must be the start of a word in name, title or body, or the start of the id, or the start
+        //     of the id's key (the part after the namespace: "CVE-2021-44228" finds "evt:kev:CVE-2021-44228").
         if (!semantic)
         {
             List<string> everyWord = new List<string>();
@@ -173,7 +174,8 @@ public sealed class SearchRepository
                 everyWord.Add($$"""
                     { "bool": { "should": [
                       { "multi_match": { "query": {{Json(word)}}, "type": "phrase_prefix", "fields": ["name", "title", "body"] } },
-                      { "prefix": { "id": { "value": {{Json(word)}}, "case_insensitive": true } } }
+                      { "prefix": { "id": { "value": {{Json(word)}}, "case_insensitive": true } } },
+                      { "prefix": { "id_key": { "value": {{Json(word)}}, "case_insensitive": true } } }
                     ] } }
                     """);
             }
