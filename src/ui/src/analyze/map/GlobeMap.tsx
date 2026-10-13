@@ -7,17 +7,35 @@
  * clicking a light of many events flies into it. LIVE's playhead goes straight to the lights layer through the
  * controller, frame by frame, without rendering React.
  */
-import { AttributionControl, Map as MapLibre, Marker, setWorkerUrl } from 'maplibre-gl';
+import {
+  AttributionControl,
+  type GeoJSONSource,
+  Map as MapLibre,
+  Marker,
+  setWorkerUrl,
+} from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { useEffect, useRef, useState } from 'react';
 import type { Item, LngLat } from '../api/model';
 import type { BBox } from '../api/query';
+import {
+  badgeOf,
+  conclusionTypeOf,
+  conclusionTypes,
+  glyphs,
+  keyNumbers,
+  numbersOfItem,
+  saidAbout,
+  type Shape,
+} from '../conclusion/conclusion';
 import { useReducedMotion } from '../lib/useReducedMotion';
 import { formatMoment } from '../time/window';
 import { basemapStyle, lazySources } from './basemap';
 import type { LightSet } from './lights';
 import { LightsLayer, type LiveTime } from './LightsLayer';
+import { Glyph } from '../conclusion/Glyph';
+import { cellIcon, iconOf, type MarkSet } from './marks';
 import { categoryOf, densityColor } from './palette';
 import { nearestLight, unit } from './pick';
 import { starShifts, starTile, tileSizes } from './starfield';
@@ -71,6 +89,8 @@ interface Hover {
   title: string;
   color: string;
   lines: string[];
+  /** A conclusion's glyph, instead of an event's round light. */
+  shape?: Shape;
 }
 
 interface GlobeMapProps {
@@ -78,6 +98,8 @@ interface GlobeMapProps {
   initialView?: Camera;
   /** The lights to draw; null while the first answer is on its way. */
   lights: LightSet | null;
+  /** The conclusions, drawn as glyphs over the lights; null draws none. */
+  marks?: MarkSet | null;
   onLookChange: (look: MapLook) => void;
   /** An event was clicked: its id, and its item. */
   onPick?: (id: string, item?: Item) => void;
@@ -100,6 +122,7 @@ const firstView: Camera = { center: [28, 22], zoom: 2.1 };
 export function GlobeMap({
   initialView,
   lights,
+  marks = null,
   onLookChange,
   onPick,
   onEmptyClick,
@@ -114,6 +137,7 @@ export function GlobeMap({
   const frontRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<LightsLayer | null>(null);
   const mapRef = useRef<MapLibre | null>(null);
+  const marksRef = useRef<MarkSet | null>(marks);
   const [failure, setFailure] = useState<string | null>(null);
   const [hover, setHover] = useState<Hover | null>(null);
   const reducedMotion = useReducedMotion();
@@ -198,6 +222,7 @@ export function GlobeMap({
 
     map.on('load', () => {
       map.addLayer(layer);
+      addMarksLayer(map, marksRef.current);
       slideStars();
       report();
       loadDetail();
@@ -240,10 +265,28 @@ export function GlobeMap({
         center.lat,
       ]);
     };
+    // The conclusions lie over the lights, so they are looked for first.
+    const markAt = (x: number, y: number) => {
+      const set = marksRef.current;
+      if (!set) return -1;
+      const center = map.getCenter();
+      return nearestLight(set.places, x, y, (place) => map.project(place), [
+        center.lng,
+        center.lat,
+      ]);
+    };
     const look = () => {
       frame = 0;
       const set = layer.shown();
-      if (!pointer || !set) return;
+      if (!pointer) return;
+      const mark = markAt(pointer.x, pointer.y);
+      if (mark >= 0) {
+        layer.setHover(-1);
+        map.getCanvas().style.cursor = 'pointer';
+        setHover(hoverOfMark(marksRef.current!, mark, pointer.x, pointer.y));
+        return;
+      }
+      if (!set) return;
       const index = lightAt(pointer.x, pointer.y);
       layer.setHover(index);
       map.getCanvas().style.cursor = index >= 0 ? 'pointer' : '';
@@ -260,6 +303,20 @@ export function GlobeMap({
       setHover(null);
     });
     map.on('click', (event) => {
+      const marked = marksRef.current;
+      const mark = markAt(event.point.x, event.point.y);
+      if (marked && mark >= 0) {
+        if (marked.items[mark]) {
+          callbacks.current.onPick?.(marked.ids[mark]!, marked.items[mark]);
+        } else {
+          map.flyTo({
+            center: marked.places[mark]!,
+            zoom: Math.min(map.getZoom() + 2.5, 9),
+            duration: 1400,
+          });
+        }
+        return;
+      }
       const set = layer.shown();
       const index = lightAt(event.point.x, event.point.y);
       if (!set || index < 0) {
@@ -288,6 +345,12 @@ export function GlobeMap({
   useEffect(() => {
     if (lights) layerRef.current?.setLights(lights);
   }, [lights]);
+
+  useEffect(() => {
+    marksRef.current = marks;
+    const source = mapRef.current?.getSource('conclusions') as GeoJSONSource | undefined;
+    source?.setData(marks?.features ?? noMarks);
+  }, [marks]);
 
   useEffect(() => {
     layerRef.current?.setStill(reducedMotion);
@@ -327,7 +390,11 @@ export function GlobeMap({
           style={{ transform: `translate(${hover.x + 16}px, ${hover.y + 16}px)` }}
         >
           <span className={styles.hoverTitle}>
-            <i style={{ background: hover.color, boxShadow: `0 0 10px ${hover.color}` }} />
+            {hover.shape ? (
+              <Glyph shape={hover.shape} color={hover.color} />
+            ) : (
+              <i style={{ background: hover.color, boxShadow: `0 0 10px ${hover.color}` }} />
+            )}
             {hover.title}
           </span>
           {hover.lines.map((line) => (
@@ -403,6 +470,97 @@ function lookOf(map: MapLibre): MapLook {
 
 function wrapLon(lon: number): number {
   return ((((lon + 180) % 360) + 360) % 360) - 180;
+}
+
+const noMarks = { type: 'FeatureCollection' as const, features: [] };
+
+/** The pixels of a mark (its CSS size; drawn at twice that for sharp screens). */
+const markPx = 22;
+const markRatio = 2;
+
+/** A glyph as an image: filled in its colour with a soft glow, edged in the night's dark so it reads on any light. */
+function glyphImage(shape: Shape, color: string, hollow = false) {
+  const size = markPx * markRatio;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+  const scale = size / 26;
+  context.setTransform(scale, 0, 0, scale, 3 * scale, 3 * scale);
+  const path = new Path2D(glyphs[shape]);
+  context.lineJoin = 'round';
+  context.shadowColor = color;
+  context.shadowBlur = 5 * markRatio;
+  if (hollow) {
+    context.fillStyle = 'rgb(3 5 10 / 0.55)';
+    context.fill(path);
+    context.strokeStyle = color;
+    context.lineWidth = 2;
+    context.stroke(path);
+  } else {
+    context.fillStyle = color;
+    context.fill(path);
+    context.shadowBlur = 0;
+    context.strokeStyle = 'rgb(3 5 10 / 0.9)';
+    context.lineWidth = 1.4;
+    context.stroke(path);
+  }
+  const pixels = context.getImageData(0, 0, size, size);
+  return { width: size, height: size, data: new Uint8Array(pixels.data.buffer) };
+}
+
+/** The conclusions' layer: an image per type, a source and a symbol layer over the lights. */
+function addMarksLayer(map: MapLibre, marks: MarkSet | null) {
+  const styles = [...conclusionTypes, conclusionTypeOf('')];
+  for (const style of styles) {
+    const name = iconOf(style.shape, style.color);
+    const image = glyphImage(style.shape, style.color);
+    if (image && !map.hasImage(name)) map.addImage(name, image, { pixelRatio: markRatio });
+  }
+  const cell = glyphImage('diamond', '#c8ff6e', true);
+  if (cell && !map.hasImage(cellIcon)) map.addImage(cellIcon, cell, { pixelRatio: markRatio });
+  map.addSource('conclusions', { type: 'geojson', data: marks?.features ?? noMarks });
+  map.addLayer({
+    id: 'conclusions',
+    type: 'symbol',
+    source: 'conclusions',
+    layout: {
+      'icon-image': ['get', 'icon'],
+      'icon-size': ['get', 'size'],
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
+    },
+  });
+}
+
+/** The hover label of a conclusion: its sentence, its type, its key numbers, and when it was said about when. */
+function hoverOfMark(set: MarkSet, index: number, x: number, y: number): Hover {
+  const item = set.items[index];
+  if (!item) {
+    const count = set.counts[index] ?? 0;
+    return {
+      x,
+      y,
+      title: `${count.toLocaleString('en')} ${count === 1 ? 'conclusion' : 'conclusions'} here`,
+      color: '#c8ff6e',
+      lines: ['Click to look closer'],
+    };
+  }
+  const style = conclusionTypeOf(item.type);
+  const said = saidAbout(item.knownAt, item.time);
+  return {
+    x,
+    y,
+    title: item.label,
+    color: style.color,
+    shape: style.shape,
+    lines: [
+      badgeOf(item.type),
+      keyNumbers(item.type, numbersOfItem(item)).join(' · '),
+      said.about ? `said ${said.said} about ${said.about}` : `said ${said.said}`,
+    ].filter(Boolean),
+  };
 }
 
 /** The hover label of a light: an event (what, its category, when, where) or a light of many events. */

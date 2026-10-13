@@ -11,6 +11,7 @@ import type { WireGraph, WireRecordAnswer } from '../api/contract';
 import { ApiError } from '../api/http';
 import type { LngLat } from '../api/model';
 import { tokensOf } from '../query/jsonView';
+import { ConclusionCard } from '../conclusion/ConclusionCard';
 import { groupsOf, type LinkGroup, type Neighbour } from './connections';
 import {
   familyOf,
@@ -204,6 +205,9 @@ function ObjectBody({
             </button>
           ))}
         </div>
+      )}
+      {answer && answer.record.kind === 'conclusion' && (
+        <ConclusionCard record={answer.record} knownAt={answer.known_at} onOpen={onOpen} />
       )}
       {view && (
         <Facts

@@ -91,6 +91,11 @@
   pointer-events: auto;
 }
 
+/* A maximised left panel covers the whole page, over the right column too. */
+.left:has([data-max]) {
+  z-index: 20;
+}
+
 .right {
   position: absolute;
   top: 18px;

@@ -38,12 +38,15 @@ const nodeVertex = /* glsl */ `
   attribute vec3 tint;
   attribute float size;
   attribute float glow;
+  attribute float shape;
   uniform float uScale;
   varying vec3 vTint;
   varying float vGlow;
+  varying float vShape;
   void main() {
     vTint = tint;
     vGlow = glow;
+    vShape = shape;
     vec4 view = modelViewMatrix * vec4(position, 1.0);
     gl_PointSize = size * uScale / -view.z;
     gl_Position = projectionMatrix * view;
@@ -52,8 +55,11 @@ const nodeVertex = /* glsl */ `
 const nodeFragment = /* glsl */ `
   varying vec3 vTint;
   varying float vGlow;
+  varying float vShape;
   void main() {
-    float d = length(gl_PointCoord * 2.0 - 1.0);
+    // A conclusion (shape 1) is a diamond, every other record a round light.
+    vec2 p = gl_PointCoord * 2.0 - 1.0;
+    float d = mix(length(p), abs(p.x) + abs(p.y), vShape);
     if (d > 1.0) discard;
     float core = smoothstep(0.36, 0.2, d);
     float halo = pow(1.0 - d, 2.6) * 0.6;
@@ -350,8 +356,11 @@ export class GraphScene {
         index,
         places.get(node.id)!,
         node.color,
-        this.sizes[index]! * (index === this.hovered ? 1.5 : 1),
+        this.sizes[index]! *
+          (index === this.hovered ? 1.5 : 1) *
+          (node.kind === 'conclusion' ? 1.2 : 1),
         node.id === drawn.focus ? 1 : 0,
+        node.kind === 'conclusion' ? 1 : 0,
       );
     });
     setAttributes(this.nodes.geometry, nodeAttributes);
@@ -513,6 +522,7 @@ function attributesOf(count: number) {
     tint: new Float32Array(count * 3),
     size: new Float32Array(count),
     glow: new Float32Array(count),
+    shape: new Float32Array(count),
   };
 }
 
@@ -523,8 +533,10 @@ function put(
   colour: string,
   size: number,
   glow: number,
+  shape = 0,
 ) {
   const tint = new THREE.Color(colour);
+  attributes.shape[index] = shape;
   attributes.position.set(place, index * 3);
   attributes.tint.set([tint.r, tint.g, tint.b], index * 3);
   attributes.size[index] = size;
@@ -539,6 +551,7 @@ function setAttributes(
   geometry.setAttribute('tint', new THREE.BufferAttribute(attributes.tint, 3));
   geometry.setAttribute('size', new THREE.BufferAttribute(attributes.size, 1));
   geometry.setAttribute('glow', new THREE.BufferAttribute(attributes.glow, 1));
+  geometry.setAttribute('shape', new THREE.BufferAttribute(attributes.shape, 1));
 }
 
 /** Faint stars far behind the graph, so turning it feels like turning in space. */

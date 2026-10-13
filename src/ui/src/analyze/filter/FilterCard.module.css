@@ -3,7 +3,7 @@
 .card {
   display: grid;
   gap: 10px;
-  width: 290px;
+  width: var(--panel-width, 290px);
   padding: 12px 14px 12px;
   border-radius: 16px;
   background: var(--glass);
@@ -165,4 +165,26 @@
   font-size: 11.5px;
   line-height: 1.45;
   color: var(--text-3);
+}
+
+/* The conclusions' layer on the map: a switch, with the glyphs it draws. */
+.layer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font: 400 12px var(--font-sans);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.layer input {
+  margin: 0;
+  accent-color: #c8ff6e;
+}
+
+.glyphs {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
 }

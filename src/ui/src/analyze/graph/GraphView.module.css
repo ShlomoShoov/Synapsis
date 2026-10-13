@@ -201,7 +201,7 @@
 .key {
   display: grid;
   gap: 10px;
-  width: 290px;
+  width: var(--panel-width, 290px);
   padding: 14px 16px;
   border-radius: 16px;
   background: var(--glass);
@@ -283,4 +283,21 @@
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-3);
+}
+
+/* A conclusion's name: its own colour edge, so it reads as a conclusion and not an event. */
+.label[data-conclusion] span::before {
+  content: '◆ ';
+  color: #c8ff6e;
+}
+
+/* The link's own name (ABOUT, PREMISE) beside the group's title. */
+.group code {
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  opacity: 0.8;
 }

@@ -1,0 +1,413 @@
+/* Conclusions: the glyph, the list badge, and the card at the top of the object panel. */
+
+.glyph {
+  flex: none;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.glyph path {
+  fill: currentColor;
+  stroke: rgb(3 5 10 / 0.9);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+/* The badge in a list row: "Conclusion · Forecast", then the key numbers. */
+.rowBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--type) 45%, transparent);
+  border-radius: 999px;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--type);
+  white-space: nowrap;
+}
+
+.rowNumbers {
+  font: 400 11px var(--font-mono);
+  color: var(--text-2);
+}
+
+/* The card */
+.card {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 12px 10px;
+  border: 1px solid color-mix(in srgb, var(--type) 35%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--type) 6%, transparent);
+}
+
+.badge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--type);
+}
+
+.badge span {
+  color: var(--text-3);
+}
+
+.badge small {
+  flex-basis: 100%;
+  font: 400 12px var(--font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-2);
+}
+
+.predicate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  margin: 0;
+  font: 500 13px var(--font-sans);
+  color: var(--text-1);
+}
+
+.predicate code,
+.method code {
+  font: 400 11px var(--font-mono);
+  color: var(--text-3);
+}
+
+.numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.numbers li {
+  display: grid;
+  gap: 1px;
+  padding: 6px 8px 5px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.04);
+}
+
+.numbers span {
+  font: 400 10px var(--font-mono);
+  color: var(--text-3);
+}
+
+.numbers b {
+  font: 600 14px var(--font-mono);
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+
+/* The forecast's parts, and the 80% band on the same scale. */
+.forecast {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.stack {
+  display: flex;
+  height: 12px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.05);
+  overflow: hidden;
+}
+
+.stack i {
+  display: block;
+  height: 100%;
+}
+
+[data-part='routine'] {
+  --part: #5b7a99;
+}
+
+[data-part='self'] {
+  --part: var(--type);
+}
+
+[data-part='neighbours'] {
+  --part: #8fb6ff;
+}
+
+.stack i {
+  background: var(--part);
+}
+
+.band {
+  position: relative;
+  height: 10px;
+}
+
+.band i {
+  position: absolute;
+  top: 4px;
+  height: 2px;
+  background: var(--type);
+  opacity: 0.7;
+}
+
+.band i::before,
+.band i::after {
+  position: absolute;
+  top: -3px;
+  width: 1px;
+  height: 8px;
+  background: var(--type);
+  content: '';
+}
+
+.band i::before {
+  left: 0;
+}
+
+.band i::after {
+  right: 0;
+}
+
+.band b {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 10px;
+  margin-left: -1px;
+  background: var(--text-1);
+}
+
+.forecast figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+  font: 400 11px var(--font-mono);
+  color: var(--text-2);
+}
+
+.forecast figcaption i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin: 0 4px 0 2px;
+  border-radius: 2px;
+  background: var(--part);
+}
+
+.forecast figcaption b {
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.bandWords {
+  flex-basis: 100%;
+  color: var(--text-3);
+}
+
+.sum {
+  margin: 0;
+  font: 400 12px var(--font-mono);
+  color: var(--text-2);
+}
+
+/* The model against the routine. */
+.score {
+  display: grid;
+  gap: 6px;
+}
+
+.score h4,
+.premises h4,
+.method h4 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 0;
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.score h4 span,
+.premises h4 span,
+.method h4 span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-2);
+}
+
+[data-who='model'] {
+  --who: var(--type);
+}
+
+[data-who='routine'] {
+  --who: #5b7a99;
+}
+
+.score h4 i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--who);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font: 400 11px var(--font-mono);
+  color: var(--text-3);
+}
+
+.pair div {
+  display: grid;
+  gap: 2px;
+}
+
+.pair div i {
+  display: block;
+  height: 5px;
+  min-width: 1px;
+  border-radius: 2px;
+  background: var(--who);
+}
+
+.pair b {
+  display: grid;
+  justify-items: end;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.pair small {
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+/* Said on ... about ...: the proof it was said before. */
+.said {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 2px solid var(--type);
+  border-radius: 0 8px 8px 0;
+  background: rgb(255 255 255 / 0.03);
+  font: 400 12px var(--font-sans);
+  color: var(--text-3);
+}
+
+.said b {
+  font: 600 12px var(--font-mono);
+  color: var(--text-1);
+}
+
+.said em {
+  flex-basis: 100%;
+  font: italic 400 11px var(--font-sans);
+  color: var(--type);
+}
+
+.premises {
+  display: grid;
+  gap: 6px;
+}
+
+.premises ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.premises li button {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.04);
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.premises li button:hover {
+  background: rgb(255 255 255 / 0.09);
+}
+
+.premises small {
+  flex: none;
+  width: 66px;
+  font: 400 10px var(--font-mono);
+  color: var(--text-3);
+}
+
+.premises code {
+  min-width: 0;
+  font: 400 11px var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.more {
+  justify-self: start;
+  padding: 2px 8px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 999px;
+  background: none;
+  font: 400 11px var(--font-sans);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.method {
+  display: grid;
+  gap: 6px;
+}
+
+.params {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 4px 10px;
+  margin: 0;
+  font: 400 11px var(--font-mono);
+  color: var(--text-2);
+}
+
+.params div {
+  display: grid;
+  min-width: 0;
+}
+
+.params dt {
+  color: var(--text-3);
+}
+
+.params dd {
+  margin: 0;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}

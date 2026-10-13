@@ -1,0 +1,59 @@
+[
+  {
+    "source": "src:synapsis:engine",
+    "state": 1,
+    "known_at": "1989-02-01T00:00:00Z",
+    "received_at": "2026-10-13T21:40:00.000Z",
+    "batch_id": "engine-fixture",
+    "producer": "engine:synapsis",
+    "record": {
+      "kind": "conclusion",
+      "id": "con:engine:forecast:84bcf59ffffffff:1989-02",
+      "type": "forecast",
+      "source": "src:synapsis:engine",
+      "known_at": "1989-02-01T00:00:00Z",
+      "about": [
+        "ent:h3:84bcf59ffffffff"
+      ],
+      "statement": {
+        "predicate": "expected_count",
+        "value": {
+          "expected": 6.4,
+          "routine": 3.1,
+          "self": 2.2,
+          "neighbours": 1.1,
+          "lower80": 2,
+          "upper80": 11,
+          "rank": 3,
+          "of": 1257
+        }
+      },
+      "premises": [
+        "evt:ucdp:14054",
+        "con:engine:spark:84bc1b7ffffffff:1989-01",
+        "evt:ucdp:13364"
+      ],
+      "method": {
+        "by": "src:synapsis:engine",
+        "name": "forecast.cell_month",
+        "version": "1.0"
+      },
+      "confidence": 70,
+      "text": {
+        "title": "Feb 1989 in this cell: 6.4 conflict events expected (80%: 2 to 11), rank 3 of 1,257.",
+        "lang": "en"
+      },
+      "attributes": {
+        "period_start": "1989-02-01T00:00:00Z",
+        "period_end": "1989-03-01T00:00:00Z",
+        "period_precision": "month",
+        "params": {
+          "window_months": 24,
+          "neighbours": "h3 ring 1",
+          "decay": 0.5,
+          "band": "negative binomial, 80%"
+        }
+      }
+    }
+  }
+]

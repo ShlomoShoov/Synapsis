@@ -14,6 +14,7 @@ import { ApiError } from '../api/http';
 import type { Item } from '../api/model';
 import type { Filters } from '../api/query';
 import { useLatest } from '../lib/useLatest';
+import { ConclusionBadge, RowMark } from '../conclusion/ConclusionBadge';
 import { formatTime, headingOfItem, sourceName, typeWords, words } from '../object/describe';
 import type { Focus } from '../object/useObject';
 import styles from './LogicalView.module.css';
@@ -327,9 +328,14 @@ function RecordRow({
       data-current={current || undefined}
       onClick={onOpen}
     >
-      <i style={{ background: heading.color, boxShadow: `0 0 8px ${heading.color}` }} />
+      <RowMark item={item} color={heading.color} />
       <span className={styles.recordLabel}>{heading.title}</span>
       <span className={styles.recordDetail}>{detail}</span>
+      {item.kind === 'conclusion' && (
+        <span className={styles.conclusion}>
+          <ConclusionBadge item={item} />
+        </span>
+      )}
       <svg viewBox="0 0 20 20" aria-hidden="true">
         <path d="m8 5 5 5-5 5" />
       </svg>
