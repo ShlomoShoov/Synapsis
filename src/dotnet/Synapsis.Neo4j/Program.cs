@@ -13,6 +13,7 @@ public static class Program
     {
         HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
         builder.Services.AddSynapsisData(builder.Configuration);
+        builder.Services.AddPipelineLog("projector");
         builder.Services.AddSynapsisKafkaConsumer();
         builder.Services.AddSynapsisNeo4j();
         builder.Services.AddSingleton<MongoRecordRepository>();

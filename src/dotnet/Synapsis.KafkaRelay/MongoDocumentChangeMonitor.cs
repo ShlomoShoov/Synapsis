@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using Synapsis.Data.Dal;
 using Synapsis.Data.Models.Entities;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,15 +32,18 @@ public sealed class MongoDocumentChangeMonitor : IDocumentChangeMonitor
     /// <inheritdoc />
     public async Task WatchInsertsAsync(
         BsonDocument? resumeToken,
-        Func<string, BsonDocument, CancellationToken, Task> onInsert,
+        Func<IReadOnlyList<(string DocumentId, BsonDocument ResumeToken)>, CancellationToken, Task> onInserts,
         CancellationToken cancellationToken)
     {
         IMongoCollection<StoredRecord> collection = _context.Records;
 
-        // Filter exclusively for insert operations
+        // Filter exclusively for insert operations; the relay needs only the document key, so the full document is left out
         PipelineDefinition<ChangeStreamDocument<StoredRecord>, ChangeStreamDocument<StoredRecord>> pipeline =
             new EmptyPipelineDefinition<ChangeStreamDocument<StoredRecord>>()
-                .Match(change => change.OperationType == ChangeStreamOperationType.Insert);
+                .Match(change => change.OperationType == ChangeStreamOperationType.Insert)
+                .AppendStage<ChangeStreamDocument<StoredRecord>, ChangeStreamDocument<StoredRecord>, ChangeStreamDocument<StoredRecord>>(
+                    new BsonDocument("$project", new BsonDocument("fullDocument", 0)),
+                    new ChangeStreamDocumentSerializer<StoredRecord>(MongoDB.Bson.Serialization.BsonSerializer.LookupSerializer<StoredRecord>()));
 
         ChangeStreamOptions options = new ChangeStreamOptions
         {
@@ -60,18 +64,18 @@ public sealed class MongoDocumentChangeMonitor : IDocumentChangeMonitor
 
         while (await cursor.MoveNextAsync(cancellationToken))
         {
+            List<(string DocumentId, BsonDocument ResumeToken)> inserts = new List<(string DocumentId, BsonDocument ResumeToken)>();
             foreach (ChangeStreamDocument<StoredRecord> change in cursor.Current)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
                 // Extract document ID from DocumentKey._id
-                string documentId = change.DocumentKey["_id"].AsString;
-                BsonDocument token = change.ResumeToken;
+                inserts.Add((change.DocumentKey["_id"].AsString, change.ResumeToken));
+            }
+            cancellationToken.ThrowIfCancellationRequested();
 
-                _logger.LogDebug("Detected insert for document ID {DocumentId}", documentId);
-
-                // Await callback processing before advancing to the next event
-                await onInsert(documentId, token, cancellationToken);
+            // Await the batch's processing before advancing to the next batch
+            if (inserts.Count > 0)
+            {
+                await onInserts(inserts, cancellationToken);
             }
         }
     }

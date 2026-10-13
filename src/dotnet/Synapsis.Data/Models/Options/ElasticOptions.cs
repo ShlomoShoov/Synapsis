@@ -14,4 +14,7 @@ public sealed class ElasticOptions
 
     /// <summary>The index of the search documents (one document per state of an entity, event or conclusion).</summary>
     public string RecordsIndex { get; set; } = string.Empty;
+
+    /// <summary>The index of the pipeline log (relay, indexer, projector and engine counters; contracts/pipeline-log.md).</summary>
+    public string PipelineLogIndex { get; set; } = string.Empty;
 }

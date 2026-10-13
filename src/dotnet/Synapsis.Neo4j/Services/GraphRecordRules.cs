@@ -12,9 +12,13 @@ public static class GraphRecordRules
 {
     /// <summary>
     /// Event types kept out of the graph even with a participant: too many to be useful as nodes (EPSS: about 12 M
-    /// monthly scores, one per vulnerability per month). They stay searchable in Elasticsearch.
+    /// monthly scores, one per vulnerability per month; NVD: about 1.2 M publications and assessments, whose CVE
+    /// entities already link the KEV events). They stay searchable in Elasticsearch.
     /// </summary>
-    private static readonly HashSet<string> TypesKeptOut = new HashSet<string> { "CYB.VULN.EPSS_SCORE" };
+    private static readonly HashSet<string> TypesKeptOut = new HashSet<string>
+    {
+        "CYB.VULN.EPSS_SCORE", "CYB.VULN.PUBLISHED", "CYB.VULN.NVD_ASSESSMENT"
+    };
 
     /// <summary>The graph label of a record id, by its prefix (relations are links, not nodes, so "rel:" has none).</summary>
     private static readonly Dictionary<string, string> LabelByPrefix = new Dictionary<string, string>

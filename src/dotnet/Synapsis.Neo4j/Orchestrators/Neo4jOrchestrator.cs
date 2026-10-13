@@ -18,6 +18,7 @@ public sealed class Neo4jOrchestrator : BackgroundService
     private readonly KafkaConsumerContext _kafkaConsumer;
     private readonly MongoRecordRepository _mongoRecordRepository;
     private readonly Neo4jRepository _neo4jRepository;
+    private readonly PipelineLog _pipelineLog;
     private readonly ILogger<Neo4jOrchestrator> _logger;
 
     /// <summary>Creates the Neo4j processing flow.</summary>
@@ -25,11 +26,14 @@ public sealed class Neo4jOrchestrator : BackgroundService
         KafkaConsumerContext kafkaConsumer,
         MongoRecordRepository mongoRecordRepository,
         Neo4jRepository neo4jRepository,
+        PipelineLog pipelineLog,
         ILogger<Neo4jOrchestrator> logger)
     {
         _kafkaConsumer = kafkaConsumer;
         _mongoRecordRepository = mongoRecordRepository;
         _neo4jRepository = neo4jRepository;
+        _pipelineLog = pipelineLog;
+        _pipelineLog.Lag = kafkaConsumer.Lag;
         _logger = logger;
     }
 
@@ -50,6 +54,7 @@ public sealed class Neo4jOrchestrator : BackgroundService
             catch (Exception exception)
             {
                 _logger.LogWarning(exception, "Kafka consumption failed. Retrying shortly.");
+                _pipelineLog.Failed("Kafka consumption failed: " + exception.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 continue;
             }
@@ -78,6 +83,7 @@ public sealed class Neo4jOrchestrator : BackgroundService
                 attempt++;
                 int delaySeconds = Math.Min((int)Math.Pow(2, Math.Min(attempt, 5)), 30);
                 _logger.LogWarning(exception, "Record processing failed at offset {Offset}. Retrying in {Delay} seconds.", message.Offset, delaySeconds);
+                _pipelineLog.Failed($"Offset {message.Offset.Value} failed (attempt {attempt}): {exception.Message}");
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken);
             }
         }
@@ -92,6 +98,8 @@ public sealed class Neo4jOrchestrator : BackgroundService
         {
             _logger.LogError("Kafka message at offset {Offset} has no document ID.", message.Offset);
             _kafkaConsumer.Commit(message);
+            _pipelineLog.Processed();
+            _pipelineLog.Failed($"Kafka message at offset {message.Offset.Value} has no document ID.");
             return;
         }
 
@@ -101,6 +109,8 @@ public sealed class Neo4jOrchestrator : BackgroundService
         {
             _logger.LogError("MongoDB document {DocumentKey} was not found.", documentKey);
             _kafkaConsumer.Commit(message);
+            _pipelineLog.Processed();
+            _pipelineLog.Failed($"MongoDB document {documentKey} was not found.");
             return;
         }
 
@@ -111,13 +121,29 @@ public sealed class Neo4jOrchestrator : BackgroundService
         {
             _logger.LogError("MongoDB document {DocumentKey} could not be converted: {Reason}", documentKey, error);
             _kafkaConsumer.Commit(message);
+            _pipelineLog.Processed();
+            _pipelineLog.Failed($"MongoDB document {documentKey} could not be converted: {error}");
             return;
         }
 
-        // 4. Pass the typed record to the destination repository.
-        await _neo4jRepository.StoreAsync(record, stoppingToken);
+        // 4. Pass the typed record to the destination repository; an event that is not a node (no participant, or a
+        // type kept out, such as EPSS and NVD) writes nothing, so it opens no transaction.
+        bool skipped = record is EventRecord eventRecord && GraphRecordRules.ParticipantsOfConnectingEvent(eventRecord).Count == 0;
+        if (!skipped)
+        {
+            await _neo4jRepository.StoreAsync(record, stoppingToken);
+        }
 
         // 5. Commit only after successful processing.
         _kafkaConsumer.Commit(message);
+        _pipelineLog.Processed();
+        if (skipped)
+        {
+            _pipelineLog.Skipped();
+        }
+        else
+        {
+            _pipelineLog.Written();
+        }
     }
 }

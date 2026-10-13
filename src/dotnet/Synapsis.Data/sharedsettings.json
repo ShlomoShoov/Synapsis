@@ -6,7 +6,8 @@
   "Elastic": {
     "Url": "http://localhost:9200",
     "IngestLogIndex": "synapsis-ingest-log",
-    "RecordsIndex": "synapsis-records"
+    "RecordsIndex": "synapsis-records",
+    "PipelineLogIndex": "synapsis-pipeline-log"
   },
   "Kafka": {
     "Bootstrap": "localhost:9094",

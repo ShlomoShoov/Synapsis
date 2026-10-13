@@ -21,6 +21,7 @@ public static class Program
         // Register the shared settings, MongoDB and the Kafka producer
         builder.Services.AddSynapsisData(builder.Configuration);
         builder.Services.AddSynapsisKafka();
+        builder.Services.AddPipelineLog("relay");
 
         // Register Relay components
         builder.Services.AddSingleton<IDocumentChangeMonitor, MongoDocumentChangeMonitor>();

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using MongoDB.Bson;
 using System;
 using System.Threading;
@@ -11,13 +12,14 @@ namespace Synapsis.KafkaRelay;
 public interface IDocumentChangeMonitor
 {
     /// <summary>
-    /// Watches the records collection for new document insertions and invokes the callback for each event.
+    /// Watches the records collection for new document insertions and invokes the callback for each batch of events
+    /// the server returns, in order.
     /// </summary>
     /// <param name="resumeToken">The MongoDB resume token to resume from, or null if starting fresh.</param>
-    /// <param name="onInsert">Async callback invoked for each detected document insert with its document ID and resume token.</param>
+    /// <param name="onInserts">Async callback invoked for each batch of inserts: each one's document ID and resume token.</param>
     /// <param name="cancellationToken">Cancellation token to signal shutdown.</param>
     Task WatchInsertsAsync(
         BsonDocument? resumeToken,
-        Func<string, BsonDocument, CancellationToken, Task> onInsert,
+        Func<IReadOnlyList<(string DocumentId, BsonDocument ResumeToken)>, CancellationToken, Task> onInserts,
         CancellationToken cancellationToken);
 }

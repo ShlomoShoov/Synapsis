@@ -37,6 +37,28 @@ public sealed class KafkaConsumerContext : IDisposable
         _consumer.Commit(message);
     }
 
+    /// <summary>
+    /// The messages still waiting in the partitions this consumer holds: the last known end of each partition minus
+    /// its position (both kept by the client, no request); null before the first assignment.
+    /// </summary>
+    public long? Lag()
+    {
+        long lag = 0;
+        bool known = false;
+        foreach (TopicPartition partition in _consumer.Assignment)
+        {
+            WatermarkOffsets ends = _consumer.GetWatermarkOffsets(partition);
+            Offset position = _consumer.Position(partition);
+            if (ends.High == Offset.Unset)
+            {
+                continue;
+            }
+            lag += position == Offset.Unset ? ends.High.Value - Math.Max(0, ends.Low.Value) : Math.Max(0, ends.High.Value - position.Value);
+            known = true;
+        }
+        return known ? lag : null;
+    }
+
     /// <summary>Closes the consumer and releases its Kafka connection.</summary>
     public void Dispose()
     {

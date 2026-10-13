@@ -40,6 +40,14 @@ public static class RecordValidator
                 continue;
             }
 
+            // 1b. Every number must be finite (1e400 would be stored as Infinity, which no store downstream can take).
+            string? notFinite = FindNumberThatIsNotFinite(json, "");
+            if (notFinite != null)
+            {
+                result.Rejected.Add(Reject(json, index, CannotRead, "the number at " + notFinite + " is not finite"));
+                continue;
+            }
+
             // 2. Check the required fields.
             string? missing = FindMissingField(record);
             if (missing != null)
@@ -67,6 +75,40 @@ public static class RecordValidator
             result.Valid.Add(new ValidRecord { Json = json, Record = record });
         }
         return result;
+    }
+
+    /// <summary>The path of the first number that is not a finite double (such as 1e400), or null when none is.</summary>
+    private static string? FindNumberThatIsNotFinite(JsonElement json, string path)
+    {
+        switch (json.ValueKind)
+        {
+            case JsonValueKind.Number:
+                return json.TryGetDouble(out double value) && double.IsFinite(value) ? null : (path == "" ? "the top" : path);
+            case JsonValueKind.Object:
+                foreach (JsonProperty property in json.EnumerateObject())
+                {
+                    string? found = FindNumberThatIsNotFinite(property.Value, path == "" ? property.Name : path + "." + property.Name);
+                    if (found != null)
+                    {
+                        return found;
+                    }
+                }
+                return null;
+            case JsonValueKind.Array:
+                int position = 0;
+                foreach (JsonElement item in json.EnumerateArray())
+                {
+                    string? found = FindNumberThatIsNotFinite(item, path + "[" + position + "]");
+                    if (found != null)
+                    {
+                        return found;
+                    }
+                    position++;
+                }
+                return null;
+            default:
+                return null;
+        }
     }
 
     /// <summary>The name of the first required field that is missing or empty, or null when none is.</summary>

@@ -2,10 +2,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Confluent.Kafka;
 using Synapsis.Data.Dal;
 using Synapsis.Data.Models.Options;
+using Synapsis.Data.Services;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,17 +14,21 @@ namespace Synapsis.KafkaRelay;
 
 /// <summary>
 /// Background service that coordinates watching MongoDB inserts, publishing document IDs to Kafka,
-/// retrying failures indefinitely, and saving checkpoints.
+/// retrying failures indefinitely, and saving checkpoints. Messages are published in order, up to 500 at a time
+/// without waiting for each one; the checkpoint is saved once Kafka has acknowledged the whole batch (at least once:
+/// a crash re-sends the batch, and the consumers are idempotent).
 /// </summary>
 public sealed class DocumentRelayOrchestrator : BackgroundService
 {
     private const string CheckpointId = "relay_resume_token";
     private const string CheckpointsCollectionName = "_checkpoints";
+    private const int MostPerBatch = 500;
 
     private readonly IDocumentChangeMonitor _changeMonitor;
     private readonly KafkaContext _kafkaContext;
     private readonly MongoOptions _mongoOptions;
     private readonly KafkaOptions _kafkaOptions;
+    private readonly PipelineLog _pipelineLog;
     private readonly ILogger<DocumentRelayOrchestrator> _logger;
 
     private readonly IMongoCollection<BsonDocument> _checkpointCollection;
@@ -35,18 +40,21 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
     /// <param name="kafkaContext">The shared Kafka producer connection.</param>
     /// <param name="mongoOptions">The MongoDB connection options.</param>
     /// <param name="kafkaOptions">The Kafka connection options.</param>
+    /// <param name="pipelineLog">The relay's counters in the pipeline log.</param>
     /// <param name="logger">The logger instance.</param>
     public DocumentRelayOrchestrator(
         IDocumentChangeMonitor changeMonitor,
         KafkaContext kafkaContext,
         MongoOptions mongoOptions,
         KafkaOptions kafkaOptions,
+        PipelineLog pipelineLog,
         ILogger<DocumentRelayOrchestrator> logger)
     {
         _changeMonitor = changeMonitor;
         _kafkaContext = kafkaContext;
         _mongoOptions = mongoOptions;
         _kafkaOptions = kafkaOptions;
+        _pipelineLog = pipelineLog;
         _logger = logger;
 
         MongoClient mongoClient = new MongoClient(_mongoOptions.Url);
@@ -71,7 +79,7 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
 
                 await _changeMonitor.WatchInsertsAsync(
                     resumeToken,
-                    ProcessInsertEventAsync,
+                    ProcessInsertsAsync,
                     stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -87,6 +95,7 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "MongoDB change stream encountered an error or disconnection. Reconnecting in 5 seconds...");
+                _pipelineLog.Failed("MongoDB change stream error: " + ex.Message);
                 try
                 {
                     await Task.Delay(5000, stoppingToken);
@@ -99,16 +108,21 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
         }
     }
 
-    private async Task ProcessInsertEventAsync(string documentId, BsonDocument resumeToken, CancellationToken cancellationToken)
+    private async Task ProcessInsertsAsync(IReadOnlyList<(string DocumentId, BsonDocument ResumeToken)> inserts, CancellationToken cancellationToken)
     {
-        // 1. Publish to Kafka with infinite retry until success or cancellation
-        await PublishWithRetryAsync(documentId, cancellationToken);
+        for (int start = 0; start < inserts.Count; start += MostPerBatch)
+        {
+            int count = Math.Min(MostPerBatch, inserts.Count - start);
 
-        // 2. Persist checkpoint with retry until success or cancellation
-        await SaveResumeTokenWithRetryAsync(resumeToken, cancellationToken);
+            // 1. Publish the batch to Kafka with infinite retry until every message is acknowledged or cancellation
+            await PublishWithRetryAsync(inserts, start, count, cancellationToken);
+
+            // 2. Persist the checkpoint of the batch's last message with retry until success or cancellation
+            await SaveResumeTokenWithRetryAsync(inserts[start + count - 1].ResumeToken, cancellationToken);
+        }
     }
 
-    private async Task PublishWithRetryAsync(string documentId, CancellationToken cancellationToken)
+    private async Task PublishWithRetryAsync(IReadOnlyList<(string DocumentId, BsonDocument ResumeToken)> inserts, int start, int count, CancellationToken cancellationToken)
     {
         int attempt = 0;
 
@@ -116,15 +130,23 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
         {
             try
             {
-                int separator = documentId.IndexOf('|');
-                if (separator <= 0)
+                // Produced in order without waiting for each one; a failure sends the whole batch again
+                Task[] deliveries = new Task[count];
+                for (int index = 0; index < count; index++)
                 {
-                    throw new InvalidOperationException("The MongoDB document id has no record id.");
+                    string documentId = inserts[start + index].DocumentId;
+                    int separator = documentId.IndexOf('|');
+                    if (separator <= 0)
+                    {
+                        throw new InvalidOperationException($"The MongoDB document id '{documentId}' has no record id.");
+                    }
+                    deliveries[index] = _kafkaContext.ProduceAsync(_kafkaOptions.Topic, documentId.Substring(0, separator), documentId, cancellationToken);
                 }
-                string recordId = documentId.Substring(0, separator);
-                DeliveryResult<string, string> deliveryResult = await _kafkaContext.ProduceAsync(_kafkaOptions.Topic, recordId, documentId, cancellationToken);
-                _logger.LogInformation("Published document ID '{DocumentId}' to topic '{Topic}', partition {Partition}, offset {Offset}",
-                    documentId, _kafkaOptions.Topic, deliveryResult.Partition.Value, deliveryResult.Offset.Value);
+                await Task.WhenAll(deliveries);
+                _pipelineLog.Processed(count);
+                _pipelineLog.Written(count);
+                _logger.LogInformation("Published {Count} document IDs to topic '{Topic}', the last '{DocumentId}'",
+                    count, _kafkaOptions.Topic, inserts[start + count - 1].DocumentId);
                 return;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -135,8 +157,9 @@ public sealed class DocumentRelayOrchestrator : BackgroundService
             {
                 attempt++;
                 int delaySeconds = Math.Min((int)Math.Pow(2, Math.Min(attempt, 5)), 30);
-                _logger.LogWarning(ex, "Failed to publish document ID '{DocumentId}' to Kafka (attempt {Attempt}). Retrying in {Delay}s...",
-                    documentId, attempt, delaySeconds);
+                _logger.LogWarning(ex, "Failed to publish a batch of {Count} document IDs to Kafka (attempt {Attempt}). Retrying in {Delay}s...",
+                    count, attempt, delaySeconds);
+                _pipelineLog.Failed($"Kafka publish failed (attempt {attempt}): {ex.Message}");
 
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
             }

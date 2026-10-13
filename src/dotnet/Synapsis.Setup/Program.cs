@@ -28,6 +28,7 @@ public static class Program
         builder.Services.AddSynapsisNeo4j();
         builder.Services.AddSingleton<ISetupStep, CreateMongoIndexesStep>();
         builder.Services.AddSingleton<ISetupStep, CreateIngestLogIndexStep>();
+        builder.Services.AddSingleton<ISetupStep, CreatePipelineLogIndexStep>();
         builder.Services.AddSingleton<ISetupStep, CreateRecordsIndexStep>();
         builder.Services.AddSingleton<ISetupStep, CreateNeo4jConstraintsStep>();
         builder.Services.AddSingleton<ISetupStep, CreateKafkaTopicsStep>();

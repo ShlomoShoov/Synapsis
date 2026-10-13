@@ -22,6 +22,7 @@ public sealed class ElasticsearchOrchestrator : BackgroundService
     private readonly MongoRecordRepository _mongoRecordRepository;
     private readonly ElasticsearchRepository _elasticsearchRepository;
     private readonly EmbedderClient _embedderClient;
+    private readonly PipelineLog _pipelineLog;
     private readonly ILogger<ElasticsearchOrchestrator> _logger;
 
     /// <summary>Creates the indexer over Kafka, MongoDB, Elasticsearch and the embedder.</summary>
@@ -30,12 +31,15 @@ public sealed class ElasticsearchOrchestrator : BackgroundService
         MongoRecordRepository mongoRecordRepository,
         ElasticsearchRepository elasticsearchRepository,
         EmbedderClient embedderClient,
+        PipelineLog pipelineLog,
         ILogger<ElasticsearchOrchestrator> logger)
     {
         _kafkaConsumer = kafkaConsumer;
         _mongoRecordRepository = mongoRecordRepository;
         _elasticsearchRepository = elasticsearchRepository;
         _embedderClient = embedderClient;
+        _pipelineLog = pipelineLog;
+        _pipelineLog.Lag = kafkaConsumer.Lag;
         _logger = logger;
     }
 
@@ -56,6 +60,7 @@ public sealed class ElasticsearchOrchestrator : BackgroundService
             catch (Exception exception)
             {
                 _logger.LogWarning(exception, "Kafka consumption failed. Retrying shortly.");
+                _pipelineLog.Failed("Kafka consumption failed: " + exception.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 continue;
             }
@@ -84,6 +89,7 @@ public sealed class ElasticsearchOrchestrator : BackgroundService
                 attempt++;
                 int delaySeconds = Math.Min((int)Math.Pow(2, Math.Min(attempt, 5)), 30);
                 _logger.LogWarning(exception, "Record processing failed at offset {Offset}. Retrying in {Delay} seconds.", message.Offset, delaySeconds);
+                _pipelineLog.Failed($"Offset {message.Offset.Value} failed (attempt {attempt}): {exception.Message}");
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken);
             }
         }
@@ -99,6 +105,7 @@ public sealed class ElasticsearchOrchestrator : BackgroundService
         StoredRecord? storedRecord = await LoadDocumentAsync(message, stoppingToken);
 
         // 2. A relation is not indexed, and a state already in Elasticsearch is not written again (no second vector).
+        bool written = false;
         if (storedRecord != null && await IsToIndexAsync(storedRecord, stoppingToken))
         {
             // 3. Read the record and build its search document.
@@ -108,12 +115,21 @@ public sealed class ElasticsearchOrchestrator : BackgroundService
             if (document != null)
             {
                 await AddVectorAsync(document, storedRecord.Key, stoppingToken);
-                await WriteAsync(document, storedRecord.Key, stoppingToken);
+                written = await WriteAsync(document, storedRecord.Key, stoppingToken);
             }
         }
 
         // 5. Commit: the message is handled.
         _kafkaConsumer.Commit(message);
+        _pipelineLog.Processed();
+        if (written)
+        {
+            _pipelineLog.Written();
+        }
+        else
+        {
+            _pipelineLog.Skipped();
+        }
     }
 
     /// <summary>The stored document the message names, or null (logged) when the message is empty or the document is missing.</summary>
@@ -177,13 +193,16 @@ public sealed class ElasticsearchOrchestrator : BackgroundService
         document.TextVector = vector;
     }
 
-    /// <summary>Writes the document; a document Elasticsearch refuses is logged and skipped.</summary>
-    private async Task WriteAsync(SearchDocument document, string documentKey, CancellationToken stoppingToken)
+    /// <summary>Writes the document (true); a document Elasticsearch refuses is logged and skipped (false).</summary>
+    private async Task<bool> WriteAsync(SearchDocument document, string documentKey, CancellationToken stoppingToken)
     {
         string? refusal = await _elasticsearchRepository.WriteAsync(documentKey, document, stoppingToken);
         if (refusal != null)
         {
             _logger.LogError("Elasticsearch refused {DocumentKey}: {Reason}", documentKey, refusal);
+            _pipelineLog.Failed($"Elasticsearch refused {documentKey}: {refusal}");
+            return false;
         }
+        return true;
     }
 }

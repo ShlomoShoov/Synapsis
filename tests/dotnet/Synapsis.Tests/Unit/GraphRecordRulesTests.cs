@@ -32,13 +32,16 @@ public sealed class GraphRecordRulesTests
         Assert.Empty(GraphRecordRules.ParticipantsOfConnectingEvent(new EventRecord { Type = "GEO.EARTHQUAKE" }));
     }
 
-    /// <summary>A type kept out of the graph (EPSS scores) does not become a node, even with a participant.</summary>
-    [Fact]
-    public void Kept_out_type_does_not_create_an_event_node()
+    /// <summary>A type kept out of the graph (EPSS scores, NVD) does not become a node, even with a participant.</summary>
+    [Theory]
+    [InlineData("CYB.VULN.EPSS_SCORE")]
+    [InlineData("CYB.VULN.PUBLISHED")]
+    [InlineData("CYB.VULN.NVD_ASSESSMENT")]
+    public void Kept_out_type_does_not_create_an_event_node(string type)
     {
         EventRecord record = new EventRecord
         {
-            Type = "CYB.VULN.EPSS_SCORE",
+            Type = type,
             Participants = new List<Participant> { new Participant { Entity = "ent:cve:CVE-2021-44228", Role = "subject" } }
         };
 

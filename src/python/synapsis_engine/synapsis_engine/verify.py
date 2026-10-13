@@ -10,7 +10,7 @@ import pandas as pd
 
 from . import backfill, config, findings, m3
 from .__main__ import compute, digest, load_workspace, records_of, volume
-from .io import api_client, mongo_reader
+from .io import api_client, mongo_reader, pipeline_log
 
 TOL = 1e-12
 GOLDEN_MIN_EVENTS = {"src:usgs:comcat": 20000, "src:ucdp:ged": 300000, "src:start:gtd": 45000}
@@ -316,5 +316,13 @@ def main():
     L.insert(4, "Summary: " + ", ".join(f"{k} {'pass' if v else 'FAIL'}" for k, v in ok.items()) + "\n")
     text = "\n".join(L)
     (config.data_dir() / "engine-report.md").write_text(text)
+    proofs = f"{sum(ok.values())}/{len(ok)} proofs"
+    per_source = collections.Counter(m["source"] for _, m in out)
+    for s in sorted(set(per_source) | {r[0] for r in g}):
+        rows = [r[4] for r in g if r[0] == s]
+        res = [str(e) for e in rows]
+        pipeline_log.run("verify", s, per_source.get(s, 0), per_source.get(s, 0), res.count("FAIL"),
+                         f"{proofs}; golden {sum(e.startswith('ok') for e in res)} pass, {res.count('FAIL')} fail, "
+                         f"{res.count('pending')} pending")
     print(text)
     return 0 if all(ok.values()) else 1

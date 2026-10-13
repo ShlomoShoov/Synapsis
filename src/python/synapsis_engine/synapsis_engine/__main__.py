@@ -7,7 +7,7 @@ import sys
 import time
 
 from . import backfill, config, findings, workspace
-from .io import api_client, mongo_reader
+from .io import api_client, mongo_reader, pipeline_log
 
 MAX_WITHOUT_FORCE = 200_000
 
@@ -74,17 +74,28 @@ def cmd_backfill(a):
         for r in recs:
             f.write(json.dumps(r, sort_keys=True) + "\n")
     print(f"sha256 over the sorted records: {digest(recs)}")
+    per_source = collections.Counter(m["source"] for _, m in out)
     if len(recs) > MAX_WITHOUT_FORCE and not a.force:
         print(f"stopped: {len(recs):,} records > {MAX_WITHOUT_FORCE:,}; add --force to send them")
+        for s, n in sorted(per_source.items()):
+            pipeline_log.run("backfill", s, n, 0, message=f"{n:,} conclusions computed, not sent (over the limit without --force)")
         return 2
     if a.dry_run:
         print("dry run: nothing sent")
+        for s, n in sorted(per_source.items()):
+            pipeline_log.run("backfill", s, n, 0, message=f"dry run: {n:,} conclusions computed, nothing sent")
         return 0
     t0 = time.time()
     ans = api_client.post(recs)
     print(f"POST /ingest: {json.dumps({k: v for k, v in ans.items() if k != 'rejections'})} ({time.time() - t0:.0f} s)")
     for r in ans["rejections"]:
         print("  rejected:", r)
+    source_of = {r["id"]: m["source"] for r, m in out}
+    refused = collections.Counter(source_of.get(r.get("id"), "") for r in ans["rejections"])
+    for s, n in sorted(per_source.items()):
+        bad = refused.get(s, 0)  # the API lists at most 5 refusals per batch: a floor
+        pipeline_log.run("backfill", s, n, n - bad, bad, f"{n:,} conclusions sent ({ans['new']:,} new, "
+                         f"{ans['unchanged']:,} unchanged, {ans['rejected']:,} refused in the whole run)")
     return 1 if ans["rejected"] else 0
 
 

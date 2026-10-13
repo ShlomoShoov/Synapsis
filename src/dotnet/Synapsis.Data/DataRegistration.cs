@@ -3,8 +3,10 @@ using System.IO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Synapsis.Data.Dal;
 using Synapsis.Data.Models.Options;
+using Synapsis.Data.Services;
 
 namespace Synapsis.Data;
 
@@ -55,6 +57,15 @@ public static class DataRegistration
     public static IServiceCollection AddSynapsisKafkaConsumer(this IServiceCollection services)
     {
         services.AddSingleton<KafkaConsumerContext>();
+        return services;
+    }
+
+    /// <summary>Registers the service's pipeline log ("relay", "indexer" or "projector"), written every 30 seconds.</summary>
+    public static IServiceCollection AddPipelineLog(this IServiceCollection services, string service)
+    {
+        services.AddSingleton(provider => new PipelineLog(service, provider.GetRequiredService<ElasticOptions>(),
+            provider.GetRequiredService<ILogger<PipelineLog>>()));
+        services.AddHostedService(provider => provider.GetRequiredService<PipelineLog>());
         return services;
     }
 

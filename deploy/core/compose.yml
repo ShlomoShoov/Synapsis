@@ -152,6 +152,7 @@ services:
     environment:                                 # addresses only; names and other settings: sharedsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
       Kafka__Bootstrap: kafka:9092
+      Elastic__Url: http://elasticsearch:9200     # the pipeline log (index synapsis-pipeline-log)
     depends_on:
       setup: {condition: service_completed_successfully}
 
@@ -178,6 +179,7 @@ services:
     environment:                                 # addresses and the login; the group id: its appsettings.json
       Mongo__Url: mongodb://mongo:27017/?replicaSet=rs0
       Kafka__Bootstrap: kafka:9092
+      Elastic__Url: http://elasticsearch:9200     # the pipeline log (index synapsis-pipeline-log)
       Neo4j__Url: bolt://neo4j:7687
       Neo4j__Username: ${CORE_NEO4J_USERNAME:-neo4j}
       Neo4j__Password: ${CORE_NEO4J_PASSWORD:?Set CORE_NEO4J_PASSWORD in deploy/core/.env}
@@ -207,6 +209,7 @@ services:
       ENGINE_MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
       SYNAPSIS_API_URL: http://api:8080
       ENGINE_DATA: /data
+      ENGINE_ES_URL: http://elasticsearch:9200    # the pipeline log (index synapsis-pipeline-log)
     volumes: [engine-data:/data]
     depends_on:
       api: {condition: service_healthy}
