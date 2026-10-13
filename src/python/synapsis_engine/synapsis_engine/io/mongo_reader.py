@@ -11,9 +11,15 @@ def _records(url=None, db=None):
     return MongoClient(url or config.mongo_url(), tz_aware=False)[db or config.mongo_db()]["records"]
 
 
+def _event_filter():
+    """Events of every source except the engine's own, or only the sources named in ENGINE_SOURCES."""
+    only = config.only_sources()
+    return {"kind": "event", "source": {"$in": only} if only else {"$nin": config.IGNORED}}
+
+
 def events(chunk=20000, url=None):
-    """Event states, every source except the engine's own, as lists of documents."""
-    cur = _records(url).find({"kind": "event", "source": {"$nin": config.IGNORED}}, EVENT_FIELDS, batch_size=chunk)
+    """Event states (see _event_filter), as lists of documents."""
+    cur = _records(url).find(_event_filter(), EVENT_FIELDS, batch_size=chunk)
     buf = []
     for d in cur:
         buf.append(d)
@@ -31,9 +37,9 @@ def entity_names(url=None):
 
 
 def first_state_counts(url=None):
-    """Events per source in MongoDB: distinct record ids (kind event, the engine's sources excluded)."""
+    """Events per source in MongoDB: distinct record ids (the events _event_filter reads)."""
     rows = _records(url).aggregate([
-        {"$match": {"kind": "event", "source": {"$nin": config.IGNORED}}},
+        {"$match": _event_filter()},
         {"$group": {"_id": {"s": "$source", "i": "$id"}}},
         {"$group": {"_id": "$_id.s", "n": {"$sum": 1}}}], allowDiskUse=True)
     return {r["_id"]: r["n"] for r in rows}
