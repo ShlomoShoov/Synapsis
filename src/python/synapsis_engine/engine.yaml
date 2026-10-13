@@ -1,0 +1,27 @@
+# Engine declarations: only what the data cannot tell. Everything else (shapes, buckets, lags, calibration spans) is
+# chosen from the data and written into the coverage report. JSON syntax, which YAML 1.2 also reads; lines starting
+# with # are comments. UCDP's lag is pinned to 4 weeks (EXPECTED.md section 2: known_at = event + 28 days): its
+# measured 99th percentile is driven by events that span months, whose known_at follows their end.
+{
+  "budget": 0.005,
+  "pins": {
+    "src:usgs:comcat": {"resolution": 2, "bucket": "day", "start": "1965-01-01", "end": "2016-12-31",
+                        "calibrate_before": "1990-01-01",
+                        "own_grid": {"a": [0.002, 0.005, 0.01, 0.02, 0.03], "decay": [0.7, 0.8, 0.85, 0.9, 0.95], "gamma": [0.0]},
+                        "grid": {"a": [0.002, 0.005, 0.01, 0.02, 0.03], "decay": [0.7, 0.8, 0.85, 0.9, 0.95], "gamma": [0.0, 0.05, 0.1, 0.2, 0.4]}},
+    "src:ucdp:ged": {"resolution": 3, "bucket": "week", "start": "1989-01-02", "lag_hours": 672,
+                     "calibrate_before": "2010-01-01", "test_before": "2025-01-01",
+                     "grid": {"a": [0.01, 0.02, 0.05, 0.1, 0.2, 0.4], "decay": [0.3, 0.5, 0.7, 0.85, 0.95], "gamma": [0.0, 0.1, 0.3, 0.6]}},
+    "src:start:gtd": {"resolution": 3, "bucket": "week", "start": "1969-12-29",
+                      "calibrate_before": "1985-01-01", "test_before": "1993-01-01",
+                      "grid": {"a": [0.01, 0.02, 0.05, 0.1, 0.2, 0.4], "decay": [0.3, 0.5, 0.7, 0.85, 0.95], "gamma": [0.0, 0.1, 0.3, 0.6]}}
+  },
+  "default_grid": {"a": [0.02, 0.05, 0.1, 0.2, 0.4, 0.7], "decay": [0.3, 0.5, 0.7, 0.85, 0.95], "gamma": [0.0, 0.1, 0.3, 0.6]},
+  "lenses": {
+    "source": "src:fdic:financials", "failures": "FIN.BANK.FAILURE",
+    "A": {"title": "run risk", "measures": {"uninsured": 1, "unreal_loss_to_equity": 1}},
+    "B": {"title": "credit stress", "measures": {"noncurrent_loans_ratio": 1, "roa": -1}}
+  },
+  "bias_pair": {"poll": "POL.POLL.STATE", "result": "POL.ELECTION.RESULT", "measure": "margin", "days": 30},
+  "demo_dates": {"src:usgs:comcat": ["2011-03-11"], "src:ucdp:ged": ["2023-04-10"]}
+}

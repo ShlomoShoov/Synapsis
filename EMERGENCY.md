@@ -291,6 +291,18 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   answers, no warning from the indexer or the projector. **To do on the sample**: send (b) about a real FDIC bank
   with a failure.
 
+### Engine agent: stage log (branch `feat/engine`)
+- **Stage A**: `src/python/synapsis_engine/` (service `engine`, profile `engine`; run with
+  `docker compose -f deploy/core/compose.yml --profile engine run --rm --no-deps engine backfill|verify|coverage`).
+  Reads the first state of every event from MongoDB into DuckDB (volume `engine-data`), picks each source's shape from
+  the data (measurement / occurrence, subject, bucket, lag = p99 of known_at after the bucket's end), fits M3 on the
+  first 60% of buckets (pins in `engine.yaml` for USGS, UCDP, GTD), and writes sparks, forecasts (top 20 per bucket,
+  last 52 buckets and demo dates) and `forecast_score` through `POST /ingest` as `src:synapsis:engine`. An event counts
+  only if it was known when its bucket closed (end + lag); the model card is frozen when the calibration span closes.
+  `verify` on the sample: same maths 0 difference, determinism (same sha256, second POST all unchanged), no hindsight
+  (truncated reruns identical), placebo, pipeline counts, coverage: all pass; golden values pending the full load.
+  UCDP's lag is pinned to 4 weeks (its measured p99 follows month-long events). New conclusion type `forecast_score`.
+
 ## 11. How the system looks now
 
 **Services and ports** (`docker compose -f deploy/core/compose.yml up -d --build --wait`):

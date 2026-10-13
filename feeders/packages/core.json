@@ -501,6 +501,10 @@
       "title": "Past windows that looked like this one, and how they continued"
     },
     {
+      "code": "forecast_score",
+      "title": "How well the engine's forecasts did: captured events, AUC, errors against what happened"
+    },
+    {
       "code": "calibrated_estimate",
       "title": "A source value corrected by that source's learned bias"
     },

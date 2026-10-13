@@ -23,6 +23,7 @@ volumes:
   kafka-data:
   neo4j-data:
   models:                     # embedder model weights, downloaded on the first start (about 200 MB)
+  engine-data:                # the engine's DuckDB workspace, its model cards and its last report
 
 services:
   mongo:
@@ -195,6 +196,20 @@ services:
     depends_on:
       setup: {condition: service_completed_successfully}
       embedder: {condition: service_healthy}
+
+  engine:                     # the engine (Python): reads MongoDB, writes conclusions through POST /ingest. Runs on demand:
+                              # docker compose -f deploy/core/compose.yml --profile engine run --rm engine backfill
+    image: synapsis/engine:dev
+    build: {context: ../.., dockerfile: src/python/synapsis_engine/Dockerfile}
+    profiles: [engine]
+    restart: "no"
+    environment:
+      ENGINE_MONGO_URL: mongodb://mongo:27017/?replicaSet=rs0
+      SYNAPSIS_API_URL: http://api:8080
+      ENGINE_DATA: /data
+    volumes: [engine-data:/data]
+    depends_on:
+      api: {condition: service_healthy}
 
   ui:                         # the web client (React, served by nginx): http://localhost:1897 redirects to /home
     image: synapsis/ui:dev
