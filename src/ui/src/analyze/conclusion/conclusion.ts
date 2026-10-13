@@ -245,7 +245,11 @@ export function saidAbout(
   if (!period?.start) return { said };
   const precision = period.precision ?? 'day';
   const start = formatTime(period.start, precision);
-  const end = period.end ? formatTime(period.end, precision) : undefined;
+  // The end is excluded (the next month's first moment): the period's last moment is just before it.
+  const endMs = period.end ? Date.parse(period.end) - 1 : Number.NaN;
+  const end = Number.isNaN(endMs)
+    ? undefined
+    : formatTime(new Date(endMs).toISOString(), precision);
   const about = end && end !== start ? `${start} → ${end}` : start;
   // Said before the period began (a forecast) or ended: the proof that it was said in advance.
   const knownMs = Date.parse(knownAt);
