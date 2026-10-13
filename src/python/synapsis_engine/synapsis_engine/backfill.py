@@ -11,7 +11,7 @@ import math
 import numpy as np
 import pandas as pd
 
-from . import anomalies, bias, config, findings, m3
+from . import anomalies, bias, config, findings, m3, patterns
 
 FORECAST_TOP = 20
 FORECAST_LAST = 52
@@ -124,7 +124,8 @@ def occurrence_conclusions(ws, series, card, as_of=None):
     N = m3.neighbours(series.subjects) if kind == "cell" else None
     C_in, B = series.C_in, series.B
     mu = m3.background(C_in)
-    lam = m3.shift(mu, L) + a * d ** L * m3.shift(m3.excitation(C_in, N, d, g), L) + 1e-9
+    E = m3.excitation(C_in, N, d, g)
+    lam = m3.shift(mu, L) + a * d ** L * m3.shift(E, L) + 1e-9
     params = {"model": "M3", "a": a, "decay": d, "gamma": g, "L": L, "lag_hours": card.get("lag_hours"),
               "alpha": 50, "bucket": card["bucket"], "threshold": round(card["threshold"], 6),
               "budget": card["budget"], "calibrate_before": card["calibrate_before"]}
@@ -132,9 +133,11 @@ def occurrence_conclusions(ws, series, card, as_of=None):
     label = lambda s: subject_label(ws, kind, series.subjects[s], res)
 
     # sparks: issued when their bucket closes
+    sparks = []
     for t, s, n, l, sv in zip(*anomalies.occurrence_sparks(C_in, lam, card["t_cal"], card["threshold"])):
         if limit is not None and series.close[t] > limit:
             continue
+        sparks.append((int(t), int(s)))
         about, skey, extra = findings.subject_about(kind, series.subjects[s], res)
         out.append(findings.conclusion(
             "spark", src, skey, findings.day(B[t]), series.close[t], about,
@@ -174,9 +177,48 @@ def occurrence_conclusions(ws, series, card, as_of=None):
                     pre, "engine.m3_forecast", params, B[t], card["bucket"], extra,
                     ts(series.max_in[t - 1 - L]) if t - 1 - L >= 0 else None))
 
+    # similar patterns: at the issue right after each spark, and on the demo dates for subjects with a spark in the
+    # window
+    win = patterns.Windows(C_in)
+    queries = {(t + 1 + L, s) for t, s in sparks}
+    for t in card["demo_rows"]:
+        queries |= {(t, s) for b, s in sparks if t - L - patterns.W <= b < t - L}
+    for t, s in sorted(queries):
+        if t >= len(B) + L or (limit is not None and series.tau[t] > limit):
+            continue
+        out += pattern_conclusion(ws, series, card, win, t, s, label)
     if as_of is None:
+        card["patterns"] = patterns.evaluate(win, C_in, series.C_full, mu, E, N, (a, d, g), L,
+                                             (card["t_cal"], card["t_end"]))
         out += occurrence_scores(series, card, lam, m3.shift(mu, L) + 1e-9, params)
     return out
+
+
+def pattern_conclusion(ws, series, card, win, t, s, label):
+    L, B = card["L"], series.B
+    r = win.query(series.C_in, t, s, L)
+    if r is None:
+        return []
+    kind, res, src = card["kind"], card["resolution"], card["source"]
+    about, skey, extra = findings.subject_about(kind, series.subjects[s], res)
+    fut = pd.date_range(B[t - L], periods=patterns.H, freq=config.FREQ[card["bucket"]])
+    matches = [{"subject": series.subjects[win.s[j]], "start": findings.day(B[win.u[j] - patterns.W]),
+                "total": findings.num(tot), "distance": findings.num(dd)}
+               for j, tot, dd in zip(r["idx"], r["raw"], r["dist"])]
+    future = [{"start": findings.day(fut[h]), "median": findings.num(np.median(r["F"][:, h])),
+               "p10": findings.num(np.percentile(r["F"][:, h], 10)), "p90": findings.num(np.percentile(r["F"][:, h], 90))}
+              for h in range(patterns.H)]
+    val = {"expected_total": r["expected_total"], "lower80": r["lower80"], "upper80": r["upper80"], "k": len(r["idx"]),
+           "distance": float(np.mean(r["dist"]))}
+    params = {"model": "similar_windows", "window": patterns.W, "horizon": patterns.H, "k": patterns.K, "L": L,
+              "bucket": card["bucket"], "features": "log1p counts: shape, then 0.5 * level"}
+    return [findings.conclusion(
+        "similar_pattern", src, skey, findings.day(fut[0]), series.tau[t], about, val,
+        f"{label(s)}: the {len(r['idx'])} most similar past {patterns.W}-{card['bucket']} windows of this source "
+        f"continued with {findings.fmt(val['expected_total'])} events over the next {patterns.H} {card['bucket']}s "
+        f"(80% band {findings.fmt(val['lower80'])}-{findings.fmt(val['upper80'])})",
+        series.premises(s, t - 1 - L, t - L - patterns.W), "engine.similar_pattern", params, fut[0], card["bucket"],
+        {**extra, "matches": matches, "future": future}, ts(series.max_in[t - 1 - L]))]
 
 
 def occurrence_scores(series, card, lam, routine, params):
@@ -210,7 +252,8 @@ def occurrence_scores(series, card, lam, routine, params):
     known = max(r[1]["known_at"] for r in out)
     out.append(findings.conclusion(
         "forecast_score", src, kind, "test", known, about,
-        {k: s[k] for k in ("auc_model", "auc_routine", "top1_model", "top1_routine")} | {"k": s["k"]},
+        {k: s[k] for k in ("auc_model", "auc_routine", "top1_model", "top1_routine")} | {"k": s["k"]}
+        | {k: (card.get("patterns") or {}).get(k) for k in ("mae_patterns", "mae_routine", "mae_m3")},
         f"{src}: M3 AUC {findings.fmt(s['auc_model'])} and top-1% share {findings.fmt(s['top1_model'])}; routine "
         f"AUC {findings.fmt(s['auc_routine'])} and {findings.fmt(s['top1_routine'])}, over {len(test):,} {card['bucket']}s from "
         f"{findings.day(B[test[0]])} to {findings.day(B[test[-1]])}",

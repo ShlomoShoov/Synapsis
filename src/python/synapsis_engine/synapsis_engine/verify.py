@@ -209,6 +209,16 @@ def usgs_extra(ws, card):
     return rows
 
 
+def patterns_line(p):
+    if not p:
+        return "; similar patterns: no evaluation query in the test span"
+    verdict = ("beat both the routine and M3" if p["beats_routine"] and p["beats_m3"] else
+               "beat the routine but not M3" if p["beats_routine"] else
+               "beat M3 but not the routine" if p["beats_m3"] else "do not beat the routine or M3")
+    return (f"; similar patterns {verdict} (MAE of the next-8 total over {p['queries']:,} queries: patterns "
+            f"{p['mae_patterns']:.3f}, routine {p['mae_routine']:.3f}, M3 {p['mae_m3']:.3f})")
+
+
 def coverage(shapes, cards, notes, out):
     vol = collections.Counter((m["source"], r["type"]) for r, m in out)
     lines = ["| Source | Bucket | Lag (h) / L | Type | Events | Shape and rule | Conclusions |", "|---|---|---|---|---|---|---|"]
@@ -244,8 +254,9 @@ def coverage(shapes, cards, notes, out):
                          f"out of the inputs), {c['subjects']:,} subjects, {c['bucket']}s {c['start']}..{c['end']}, "
                          f"calibration {c['t_cal']} buckets (frozen {c['freeze']}), M3 (a, decay, gamma) = "
                          f"{tuple(c['params'])}, spark threshold {c['threshold']:.3f}"
-                         + (f"; test: M3 AUC {sc['auc_model']}, top1% {sc['top1_model']:.3f} vs routine AUC "
-                            f"{sc['auc_routine']}, top1% {sc['top1_routine']:.3f}" if sc else ""))
+                         + (f"; test: M3 AUC {findings.fmt(sc['auc_model'])}, top1% {sc['top1_model']:.3f} vs routine "
+                            f"AUC {findings.fmt(sc['auc_routine'])}, top1% {sc['top1_routine']:.3f}" if sc else "")
+                         + patterns_line(c.get("patterns")))
     for source, ns in notes.items():
         for n in ns:
             lines.append(f"- `{source}`: {n}")

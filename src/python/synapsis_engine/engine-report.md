@@ -1,6 +1,6 @@
 # Engine report
 
-Generated 2026-10-13 19:37 UTC by `python -m synapsis_engine verify`. Records: 4,733 (4,713 conclusions).
+Generated 2026-10-13 19:40 UTC by `python -m synapsis_engine verify`. Records: 4,734 (4,714 conclusions).
 
 Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 
@@ -25,12 +25,12 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 
 ## 2. Determinism
 
-- Two backfills: sha256 `8894cbe07ac991bfb114c20226e707e418d771bfaee74df1f5c405a5f94013c9` and `8894cbe07ac991bfb114c20226e707e418d771bfaee74df1f5c405a5f94013c9`: same.
-- POST: first {"received": 4733, "new": 0, "changed": 0, "unchanged": 4733, "rejected": 0}; second {"received": 4733, "new": 0, "changed": 0, "unchanged": 4733, "rejected": 0}.
+- Two backfills: sha256 `e6e18abb03cf19327207d75525f8e9c640e666fe6b156f8dc6ecc510c94c7f9b` and `e6e18abb03cf19327207d75525f8e9c640e666fe6b156f8dc6ecc510c94c7f9b`: same.
+- POST: first {"received": 4734, "new": 1, "changed": 2, "unchanged": 4731, "rejected": 0}; second {"received": 4734, "new": 0, "changed": 0, "unchanged": 4734, "rejected": 0}.
 
 ## 3. No hindsight
 
-- Every event counted for a conclusion has known_at <= the conclusion's known_at: 4,713 conclusions checked, 0 violations.
+- Every event counted for a conclusion has known_at <= the conclusion's known_at: 4,714 conclusions checked, 0 violations.
 - Runs on records truncated at known_at <= the issue time (frozen model cards):
 
 | Source | Issue time | Conclusions (full run) | Conclusions (truncated) | Same |
@@ -52,7 +52,7 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 | src:nist:nvd | 2026-06-22 00:00:00 | 1,040 | 1,040 | yes |
 | src:ransomware-live:victims | 2023-07-31 00:00:00 | 280 | 280 | yes |
 | src:ransomware-live:victims | 2023-10-30 00:00:00 | 540 | 540 | yes |
-| src:ransomware-live:victims | 2024-04-22 00:00:00 | 1,041 | 1,041 | yes |
+| src:ransomware-live:victims | 2024-04-22 00:00:00 | 1,042 | 1,042 | yes |
 | src:reddit:arcticshift | 2026-01-26 00:00:00 | 14 | 14 | yes |
 | src:reddit:arcticshift | 2026-04-27 00:00:00 | 27 | 27 | yes |
 | src:reddit:arcticshift | 2026-10-19 00:00:00 | 52 | 52 | yes |
@@ -178,7 +178,7 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 | src:nist:nvd | week | 0.0 / 0 | CYB.VULN.NVD_ASSESSMENT | 66 | occurrence (no measures (0% of events)); subject: first participant entity | forecast 1,040, forecast_score 3 |
 |  |  |  | CYB.VULN.PUBLISHED | 67 | occurrence (no measures (0% of events)); subject: first participant entity |  |
 | src:polymarket:prices | week | 0.0 / 0 | MKT.PREDICTION.PRICE | 200 | measurement: 100% of 200 (subject, period) pairs hold one record (>= 80%) | none |
-| src:ransomware-live:victims | week | 0.0 / 0 | CYB.RANSOM.VICTIM_POSTED | 176 | occurrence (no measures (0% of events)); subject: logical prefix at depth 2 | forecast 1,040, forecast_score 2, spark 1 |
+| src:ransomware-live:victims | week | 0.0 / 0 | CYB.RANSOM.VICTIM_POSTED | 176 | occurrence (no measures (0% of events)); subject: logical prefix at depth 2 | forecast 1,040, forecast_score 2, similar_pattern 1, spark 1 |
 | src:reddit:arcticshift | week | 0.0 / 0 | TXT.POST | 100 | occurrence (no measures (0% of events)); subject: logical prefix at depth 2 | forecast 52, forecast_score 2 |
 |  |  |  | TXT.POST.ENGAGEMENT | 100 | occurrence (only 0% of (subject, period) pairs hold one record (< 80%)); subject: logical prefix at depth 2 |  |
 | src:start:gtd | week | 0.0 / 0 | SEC.ATTACK.ARMED_ASSAULT | 8 | pinned in engine.yaml: H3 r3, week | none |
@@ -197,23 +197,23 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 
 Operators per series (model cards):
 
-- `src:cisa:kev|logical`: 1,739 events (0 arrived after their bucket closed and are left out of the inputs), 725 subjects, weeks 2021-11-01..2026-10-12, calibration 154 buckets (frozen 2024-10-14 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 86.560; test: M3 AUC 0.4734707573438679, top1% 0.157 vs routine AUC 0.45837977202254143, top1% 0.157
-- `src:delphi:hhs-admissions|logical`: 200 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2020-03-23..2020-07-06, calibration 9 buckets (frozen 2020-05-29 00:00:00), M3 (a, decay, gamma) = (0.2, 0.7, 0.0), spark threshold 45.239; test: M3 AUC None, top1% 1.000 vs routine AUC None, top1% 1.000
+- `src:cisa:kev|logical`: 1,739 events (0 arrived after their bucket closed and are left out of the inputs), 725 subjects, weeks 2021-11-01..2026-10-12, calibration 154 buckets (frozen 2024-10-14 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 86.560; test: M3 AUC 0.473, top1% 0.157 vs routine AUC 0.458, top1% 0.157; similar patterns beat both the routine and M3 (MAE of the next-8 total over 2,925 queries: patterns 0.270, routine 0.318, M3 0.327)
+- `src:delphi:hhs-admissions|logical`: 200 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2020-03-23..2020-07-06, calibration 9 buckets (frozen 2020-05-29 00:00:00), M3 (a, decay, gamma) = (0.2, 0.7, 0.0), spark threshold 45.239; test: M3 AUC n/a, top1% 1.000 vs routine AUC n/a, top1% 1.000; similar patterns: no evaluation query in the test span
 - `src:fdic:failures|measurement|FIN.BANK.FAILURE`: own past, 128 values, 0 with a z (>= 8 previous changes, MAD > 0), calibration 2783 buckets (frozen 1987-08-17 00:00:00), |z| threshold inf
 - `src:fdic:financials|lenses`: lenses A and B on 2022-10-01..2023-07-01; year-end scores: A|2022: pending: failures recorded only to 2023-03-12 00:00:00 (< 2024-02-15); B|2022: pending: failures recorded only to 2023-03-12 00:00:00 (< 2024-02-15)
 - `src:fdic:financials|measurement|FIN.BANK.QUARTER_REPORT`: own past, 0 values: not covered: only 1 calibration buckets (< 8)
 - `src:first:epss|measurement|CYB.VULN.EPSS_SCORE`: own past, 0 values: not covered: only 0 calibration buckets (< 8)
 - `src:gdelt:events|cell`: not covered: only 3 calibration buckets (< 8) (200 events, 21 subjects)
-- `src:hn:algolia|logical`: 186 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2021-11-01..2026-10-19, calibration 155 buckets (frozen 2024-10-21 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 294.000; test: M3 AUC None, top1% 1.000 vs routine AUC None, top1% 1.000
+- `src:hn:algolia|logical`: 186 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2021-11-01..2026-10-19, calibration 155 buckets (frozen 2024-10-21 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 294.000; test: M3 AUC n/a, top1% 1.000 vs routine AUC n/a, top1% 1.000; similar patterns: no evaluation query in the test span
 - `src:jhu:csse-covid|measurement|HLT.SIGNAL.DAILY`: own past, 200 values, 126 with a z (>= 8 previous changes, MAD > 0), calibration 17 buckets (frozen 2020-05-18 00:00:00), |z| threshold 19.80
-- `src:nist:nvd|participant`: 133 events (0 arrived after their bucket closed and are left out of the inputs), 67 subjects, weeks 1998-12-28..2026-06-22, calibration 860 buckets (frozen 2015-06-22 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 9.000; test: M3 AUC 0.5146825396825397, top1% 0.015 vs routine AUC 0.5146825396825397, top1% 0.015
+- `src:nist:nvd|participant`: 133 events (0 arrived after their bucket closed and are left out of the inputs), 67 subjects, weeks 1998-12-28..2026-06-22, calibration 860 buckets (frozen 2015-06-22 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 9.000; test: M3 AUC 0.515, top1% 0.015 vs routine AUC 0.515, top1% 0.015; similar patterns beat both the routine and M3 (MAE of the next-8 total over 32 queries: patterns 0.000, routine 0.012, M3 0.018)
 - `src:polymarket:prices|measurement|MKT.PREDICTION.PRICE`: own past, 0 values: not covered: only 1 calibration buckets (< 8)
-- `src:ransomware-live:victims|logical`: 176 events (0 arrived after their bucket closed and are left out of the inputs), 24 subjects, weeks 2019-12-30..2024-04-22, calibration 135 buckets (frozen 2022-08-01 00:00:00), M3 (a, decay, gamma) = (0.1, 0.5, 0.0), spark threshold 9.000; test: M3 AUC 0.0, top1% 0.000 vs routine AUC 0.0, top1% 0.000
-- `src:reddit:arcticshift|logical`: 200 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2020-06-29..2026-10-19, calibration 197 buckets (frozen 2024-04-08 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 300.000; test: M3 AUC None, top1% 1.000 vs routine AUC None, top1% 1.000
+- `src:ransomware-live:victims|logical`: 176 events (0 arrived after their bucket closed and are left out of the inputs), 24 subjects, weeks 2019-12-30..2024-04-22, calibration 135 buckets (frozen 2022-08-01 00:00:00), M3 (a, decay, gamma) = (0.1, 0.5, 0.0), spark threshold 9.000; test: M3 AUC 0, top1% 0.000 vs routine AUC 0, top1% 0.000; similar patterns: no evaluation query in the test span
+- `src:reddit:arcticshift|logical`: 200 events (0 arrived after their bucket closed and are left out of the inputs), 1 subjects, weeks 2020-06-29..2026-10-19, calibration 197 buckets (frozen 2024-04-08 00:00:00), M3 (a, decay, gamma) = (0.02, 0.3, 0.0), spark threshold 300.000; test: M3 AUC n/a, top1% 1.000 vs routine AUC n/a, top1% 1.000; similar patterns: no evaluation query in the test span
 - `src:start:gtd|cell`: not covered: no bucket after the calibration span (the data ends 1970-06-29) (160 events, 58 subjects)
 - `src:tukaani:xz-git|measurement|CODE.COMMIT`: own past, 198 values, 188 with a z (>= 8 previous changes, MAD > 0), calibration 24 buckets (frozen 2008-05-19 00:00:00), |z| threshold 10.24
 - `src:ucdp:ged|cell`: not covered: no bucket after the calibration span (the data ends 1989-01-09) (50 events, 23 subjects)
-- `src:usgs:comcat|cell`: 200 events (2 arrived after their bucket closed and are left out of the inputs), 86 subjects, days 1965-01-01..2016-12-31, calibration 9131 buckets (frozen 1990-01-01 00:54:07), M3 (a, decay, gamma) = (0.03, 0.7, 0.4), spark threshold 21.157; test: M3 AUC None, top1% 0.000 vs routine AUC None, top1% 0.000
+- `src:usgs:comcat|cell`: 200 events (2 arrived after their bucket closed and are left out of the inputs), 86 subjects, days 1965-01-01..2016-12-31, calibration 9131 buckets (frozen 1990-01-01 00:54:07), M3 (a, decay, gamma) = (0.03, 0.7, 0.4), spark threshold 21.157; test: M3 AUC n/a, top1% 0.000 vs routine AUC n/a, top1% 0.000; similar patterns: no evaluation query in the test span
 - `src:wikipedia:polls|bias`: source-bias routine (elections): not covered: no POL.ELECTION.RESULT records
 - `src:wikipedia:polls|participant`: not covered: only 2 calibration buckets (< 8) (109 events, 54 subjects)
 - `src:fdic:financials`: FIN.BANK.QUARTER_REPORT (own past): only 1 calibration buckets (< 8)
@@ -240,6 +240,7 @@ Operators per series (model cards):
 | src:nist:nvd | forecast_score | 3 |
 | src:ransomware-live:victims | forecast | 1,040 |
 | src:ransomware-live:victims | forecast_score | 2 |
+| src:ransomware-live:victims | similar_pattern | 1 |
 | src:ransomware-live:victims | spark | 1 |
 | src:reddit:arcticshift | forecast | 52 |
 | src:reddit:arcticshift | forecast_score | 2 |

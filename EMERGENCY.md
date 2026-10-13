@@ -310,6 +310,12 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   `calibrated_estimate` per state and election {poll, bias, corrected, probability}, and a `forecast_score` per
   election {mae, winners, of, brier, brier_market}. Dated no earlier than the first result of the year (the election
   day is read from the results). The sample has no `POL.ELECTION.RESULT` yet: pending; tested on synthetic data.
+- **Stage D**: similar patterns: the 10 nearest past 8-bucket windows of the same source (log counts: shape, then half
+  the level), only windows whose next 8 buckets were known at the issue, continued and rescaled; `similar_pattern` at
+  each spark and on the demo dates. Per source, the MAE of the next-8 total against the routine and M3 run forward
+  is in the per-source `forecast_score` and in the report, which says per source whether patterns beat them.
+  **After the full load**: `backfill` (stops above 200,000 records without `--force`), then `verify`; the report
+  (`/data/engine-report.md` in the volume, copy in `src/python/synapsis_engine/engine-report.md`) fills the goldens.
 
 ## 11. How the system looks now
 
