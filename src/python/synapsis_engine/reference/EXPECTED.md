@@ -78,6 +78,12 @@ Tolerance: SVB rank 5 (±1 if the bank count differs), AUC ±0.01, failures in t
 "routine_bias+prior_blend": mean absolute error **2.56** points (2020) and **2.24** (2024); winners 48 of 50 (2020)
 and **37 of 37** (2024). Polls alone: 5.60 and 3.31; 34 of 37. 2024 Brier: corrected **0.0041**, Polymarket 0.0391,
 polls alone 0.0457. Tolerance: error ±0.05 points; winners exact.
+Win probability (round 3, `remaining_tests_r3.py` test S5, lines 62-72): p = Φ(forecast / σ), where σ = np.std
+(ddof 0) of (2020 result − 2020 forecast) over the 2020 states, learned from 2020 only (σ = 2.95 for
+routine_bias+prior_blend, 4.68 for polls alone), applied to 2024. Brier on the 35 states that have a Polymarket
+market: corrected 0.0041, market 0.0391, polls alone 0.0457, average of routine and market 0.0144. Tolerance ±0.001.
+Estimates are issued before election day: known_at = the end of the 30-day poll window (election day from a fixed
+calendar, as EDAY in case_f6_elections.py), never from the current cycle's results.
 
 ## Not proven (do not claim)
 Map neighbours add little (UCDP γ = 0). Sudan 2023 top-20 capture: routine and M3 equal (82.6%). KEV vendors: M3
