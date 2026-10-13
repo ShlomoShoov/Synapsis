@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Synapsis.Api.Models.Requests;
@@ -11,7 +12,7 @@ namespace Synapsis.Api.Controllers;
 /// The Analyze routes the UI reads: GET /analyze/map (events by place and time) and GET /analyze/graph (the
 /// connections of a clicked event or entity; its full record is GET /records/{id}). ASP.NET reads and checks the
 /// parameters (a wrong one answers 400 before the method runs); the method passes them to AnalyzeService and returns
-/// its answer. Until the queries are built, the service says so and the route answers 501 Not Implemented.
+/// its answer.
 /// </summary>
 [ApiController]
 [Route("analyze")]
@@ -40,7 +41,11 @@ public sealed class AnalyzeController : ControllerBase
         }
     }
 
-    /// <summary>GET /analyze/graph: a record as a summary, with its connections grouped by kind.</summary>
+    /// <summary>GET /analyze/graph: returns a record summary, or a built-in 404 or 400 problem answer.</summary>
+    /// <remarks>
+    /// as_of filters known_at on the current Neo4j graph; overwritten or stale links cannot reconstruct a historical
+    /// topology. Graph event filtering uses the fields supported by GraphFilters, not every accepted shared filter.
+    /// </remarks>
     [HttpGet("graph")]
     public async Task<ActionResult<GraphAnswer>> Graph([FromQuery] GraphRequest request)
     {
@@ -49,9 +54,14 @@ public sealed class AnalyzeController : ControllerBase
             GraphAnswer answer = await _analyzeService.GraphAsync(request);
             return Ok(answer);
         }
-        catch (NotImplementedException notBuilt)
+        catch (KeyNotFoundException missing)
         {
-            return Problem(statusCode: 501, detail: notBuilt.Message);
+            return Problem(statusCode: 404, detail: missing.Message);
+        }
+        catch (ArgumentException invalidGroup) when (invalidGroup.ParamName == "group")
+        {
+            ModelState.AddModelError("group", invalidGroup.Message);
+            return ValidationProblem();
         }
     }
 }
