@@ -118,17 +118,6 @@ services:
       setup: {condition: service_completed_successfully}
       embedder: {condition: service_healthy}
 
-  mock-api:                   # the read mock: GET /analyze/map, /analyze/graph, /records/{id} from its sample of real
-                              # records (no store). Start: docker compose -f deploy/core/compose.yml --profile mock up -d mock-api
-    profiles: [mock]
-    image: synapsis/mock-api:dev
-    build: {context: ../.., dockerfile: src/dotnet/Synapsis.MockApi/Dockerfile}
-    restart: unless-stopped
-    environment:                                 # the browser addresses of the UI
-      Mock__CorsOrigins__0: http://localhost:1897
-      Mock__CorsOrigins__1: http://localhost:5173
-    ports: ["8081:8081"]
-
   kafka:
     image: apache/kafka:3.8.0
     restart: unless-stopped

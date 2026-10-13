@@ -6,10 +6,7 @@ info:
     The routes the C# API answers (http://localhost:8080; Swagger UI at /swagger), and the ingestion log it writes
     to Elasticsearch, which the UI reads directly (see x-elasticsearch at the end of this file).
 
-    Analyze (the UI's reading routes): GET /analyze/map, GET /analyze/graph, and GET /records/{id} for the full details.
-    The real API has the routes and their parameters; its queries answer 501 until they are built. The mock
-    (Synapsis.MockApi, http://localhost:8081) answers the same three routes with the same shapes, from a sample of real
-    records; the UI switches between them by changing one address.
+    FROZEN on 13 Oct 2026 (emergency mode): the read routes are described in EMERGENCY.md §12 and in Swagger, not here.
 
     - JSON field names are snake_case. Times are UTC, such as "2026-10-10T08:15:00Z".
     - The API does not know schema packages. It reads every record into its class (any field of the wrong type is
@@ -28,8 +25,6 @@ info:
 servers:
   - url: http://localhost:8080
     description: The C# API
-  - url: http://localhost:8081
-    description: The mock (GET /analyze/map, GET /analyze/graph, GET /records/{id})
 
 paths:
   /health:

@@ -22,22 +22,11 @@ later with Compose v2, and at least 8 GB of memory for Docker.
    docker compose -f deploy/feeders/compose.yml up -d --build
    ```
 
-3. The read mock (optional): the Analyze routes (`/analyze/map`, `/analyze/graph`, `/records/{id}`) on
-   `http://localhost:8081`, answered from a sample of real records, with no store.
-
-   ```bash
-   docker compose -f deploy/core/compose.yml --profile mock up -d --build mock-api
-   curl -s "localhost:8081/analyze/map?zoom=2"
-   ```
-
-   Without Docker: `dotnet run --project src/dotnet/Synapsis.MockApi`. The sample is refreshed from the local
-   MongoDB with `bash src/dotnet/Synapsis.MockApi/Sample/export-sample.sh`.
-
 ## Shut down
 
 ```bash
 docker compose -f deploy/feeders/compose.yml down
-docker compose -f deploy/core/compose.yml --profile mock down
+docker compose -f deploy/core/compose.yml down
 ```
 
 Add `-v` to either command to delete that deployment's data as well.

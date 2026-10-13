@@ -8,15 +8,14 @@ using Microsoft.OpenApi.Models;
 using Synapsis.Api.Models.Options;
 using Synapsis.Api.Orchestrators;
 using Synapsis.Api.Repositories;
-using Synapsis.Api.Services;
 using Synapsis.Data;
 
 // The composition root: read the settings, register the components, start HTTP (the stores are prepared by Synapsis.Setup).
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 ApiOptions apiOptions = builder.Configuration.GetSection("Api").Get<ApiOptions>() ?? new ApiOptions();
 
-// 1. Components: the data (MongoDB, Elasticsearch, Neo4j), the repositories, the ingestion process, the Analyze
-//    logic, HTTP.
+// 1. Components: the data (MongoDB, Elasticsearch, Neo4j), the repositories, the ingestion process, the read
+//    routes, HTTP.
 builder.Services.AddSynapsisData(builder.Configuration);
 builder.Services.AddSynapsisNeo4j();
 builder.Services.AddSingleton<RecordRepository>();
@@ -25,7 +24,6 @@ builder.Services.AddSingleton<IngestLogRepository>();
 builder.Services.AddSingleton<SearchRepository>();
 builder.Services.AddSingleton<GraphRepository>();
 builder.Services.AddSingleton<IngestionOrchestrator>();
-builder.Services.AddSingleton<AnalyzeService>();
 AddHttp(builder, apiOptions);
 
 // 2. The HTTP pipeline: errors as built-in problem answers, gzip bodies, browser access, Swagger.

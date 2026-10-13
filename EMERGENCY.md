@@ -32,7 +32,7 @@ the repo). Update this file whenever a task is done or a decision changes. Keep 
 | `/analyze/map` cells layer (Elasticsearch) | Committed and merged into `dev` (Stage 1, 16:15). Replaced in Stage 2 by `/map/cells`. |
 | `/analyze/map` points layer | Answers 501. |
 | `/analyze/graph` | **Built by Ytshak** on `origin/feature/analyze-graph-endpoint` (commit `dbe71c8`, 15:12): Neo4j (relations, events, entities that appear together) + MongoDB (verifying the records, building summaries), grouped and paged. About 830 lines of code + 1,050 lines of tests. Merges cleanly with `ui/analyze` HEAD; it will conflict only with the uncommitted `AnalyzeService.cs`. Not yet run against the stack. |
-| Read mock `Synapsis.MockApi` (port 8081) | Running. **To be deleted** (§7). |
+| Read mock `Synapsis.MockApi` (port 8081) | **Deleted** (Stage 3, see §10). |
 | UI: home, Observe | Built. Observe reads the ingest log from Elasticsearch directly. |
 | UI: Analyze | Part 1 on `ui/analyze`: the 3D globe, the time window, cells and points drawn, reading **the mock**. Clicking does nothing yet. No search, no tree. **Bug:** the UI never sends `layer`, so the API (where `layer` is now required) answers 400. **Problem:** it opens on the last month, where the sample has nothing to show. |
 | Engine | **Nothing.** |
@@ -172,6 +172,52 @@ UI in development (from `src/ui`, no Node needed):
 - **Stage 2.3**: `GET /graph` (§12): one Cypher statement. Ytshak's `/analyze/graph` is still there until Stage 3.
 - **Stage 2.4**: `GET /logical` (§12).
 - **Stage 2.5**: `GET /search` (§12): words, meaning, or the filtered list. The `api` service now gets the embedder's address (`Embedder__Url`) and waits for it. **Stage 2 done.**
+- **Stage 3**: deleted every old read class, the mock and their tests (list below). The `/analyze/*` routes are gone. Build: 0 warnings.
+
+**Deleted in Stage 3** (lines per file):
+
+| File | Lines |
+| --- | --- |
+| `src/dotnet/Synapsis.Api/Controllers/AnalyzeController.cs` | 67 |
+| `src/dotnet/Synapsis.Api/Services/AnalyzeService.cs` | 421 |
+| `src/dotnet/Synapsis.Api/Services/MapLayers.cs` | 63 |
+| `src/dotnet/Synapsis.Api/Services/FilterParser.cs` | 138 |
+| `src/dotnet/Synapsis.Api/Services/GraphSummaryBuilder.cs` | 245 |
+| `src/dotnet/Synapsis.Api/Models/Results/CellCounts.cs` | 16 |
+| `src/dotnet/Synapsis.Api/Models/Results/GraphConnectionCandidate.cs` | 34 |
+| `src/dotnet/Synapsis.Api/Models/Dto/MapAnswer.cs` | 39 |
+| `src/dotnet/Synapsis.Api/Models/Dto/MapCell.cs` | 22 |
+| `src/dotnet/Synapsis.Api/Models/Dto/OmittedCount.cs` | 14 |
+| `src/dotnet/Synapsis.Api/Models/Dto/RecordSummary.cs` | 68 |
+| `src/dotnet/Synapsis.Api/Models/Dto/ConnectedRecord.cs` | 14 |
+| `src/dotnet/Synapsis.Api/Models/Dto/ConnectionGroup.cs` | 32 |
+| `src/dotnet/Synapsis.Api/Models/Dto/EntityLabel.cs` | 11 |
+| `src/dotnet/Synapsis.Api/Models/Dto/GraphAnswer.cs` | 24 |
+| `src/dotnet/Synapsis.Api/Models/Requests/AnalyzeFilters.cs` | 79 |
+| `src/dotnet/Synapsis.Api/Models/Requests/MapRequest.cs` | 32 |
+| `src/dotnet/Synapsis.Api/Models/Requests/GraphRequest.cs` | 29 |
+| `src/dotnet/Synapsis.Api/Models/Requests/BoundingBox.cs` | 17 |
+| `src/dotnet/Synapsis.Api/Models/Requests/MeasureCondition.cs` | 14 |
+| `src/dotnet/Synapsis.Api/Repositories/SearchFilters.cs` | 165 |
+| `src/dotnet/Synapsis.Api/Repositories/GraphFilters.cs` | 94 |
+| `tests/dotnet/Synapsis.Tests/Integration/GraphQueryIntegrationTests.cs` | 460 |
+| `tests/dotnet/Synapsis.Tests/Unit/GraphFilterTests.cs` | 85 |
+| `tests/dotnet/Synapsis.Tests/Unit/GraphQueryRequestTests.cs` | 71 |
+| `tests/dotnet/Synapsis.Tests/Unit/GraphAnswerContractTests.cs` | 104 |
+| `src/dotnet/Synapsis.MockApi/` (36 files: project, sample `Sample/records.json`, services, models) | 3,987 |
+| `tests/dotnet/Synapsis.Tests/Integration/MapCellsTests.cs` (local, git-ignored) | 95 |
+| Old methods in `SearchRepository.cs` (cells with omitted counts), `GraphRepository.cs` (Ytshak's three connection queries), `RecordRepository.cs` (`AsOfManyAsync`, the Mongo check of graph candidates) | 104 + 136 + 47 |
+| `deploy/core/compose.yml` (`mock-api`, profile `mock`), `README.md` (the mock section), `Synapsis.sln` (the mock entry) | 11 + 12 + 14 |
+
+In all about 6,760 lines. The C# H3 code of the API went with `MapLayers.cs`; `Synapsis.Data/Services/LatticeKeys.cs`
+stays (the indexer computes the `h3_r*` fields with it). `RecordAnswer` stays (`GET /records/{id}`).
+`contracts/synapsis-api.yaml` no longer mentions the mock (it is frozen). Nothing references port 8081 except the UI's
+`config.ts` and one UI test, changed in Stage 4.
+
+Side effect found and fixed: Ytshak's branch commits files under `tests/dotnet/` (a git-ignored folder), and the
+merge replaced the local `Synapsis.Tests.csproj` with his. The local tests lost `Mvc.Testing`, `Data`,
+`Elasticsearch` and `Setup`. They are restored, the file is committed, and `dotnet test` gives 115 of 116. The one
+failure is the setup test, which connects to Neo4j without the password (it failed before too).
 
 ## 11. How the system looks now
 
