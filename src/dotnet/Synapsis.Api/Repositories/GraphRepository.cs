@@ -20,21 +20,8 @@ public sealed class GraphRepository
     }
 
     /// <summary>
-    /// The one Cypher statement of GET /graph: the node with this id (its label from the id's prefix, so the id index
-    /// is used), its true number of links (degree, read from the store, not counted one by one), and at most limit of
-    /// its links, any type, any direction, each with the node at the other end.
-    /// </summary>
-    public const string NeighboursStatement =
-        "MATCH (c:{label} {id: $id}) " +
-        "WITH c, COUNT { (c)--() } AS total " +
-        "OPTIONAL MATCH (c)-[r]-(n) " +
-        "WITH c, total, r, n LIMIT $limit " +
-        "RETURN c {.*, labels: labels(c)} AS center, total, " +
-        "collect({type: type(r), from: startNode(r).id, to: endNode(r).id, properties: properties(r), node: n {.*, labels: labels(n)}}) AS links";
-
-    /// <summary>
-    /// GET /graph: {center, total, links} for the record id; null when no node has it (or the id is not an entity,
-    /// event or conclusion id). Values are passed through as Neo4j gives them; times become ISO text.
+    /// GET /graph: {center, total, links} for the record id, in one Cypher statement; null when no node has it (or the
+    /// id is not an entity, event or conclusion id). Values are passed through as Neo4j gives them; times become ISO text.
     /// </summary>
     public async Task<JsonObject?> NeighboursAsync(string id, int limit)
     {
@@ -45,8 +32,19 @@ public sealed class GraphRepository
         {
             return null;
         }
+        // The node by its label and id (so the id index is used); its true number of links (the degree Neo4j keeps
+        // with the node); at most $limit of its links, any type, any direction, each with the node at the other end.
+        string statement = $$$"""
+            MATCH (c:{{{label}}} {id: $id})
+            WITH c, COUNT { (c)--() } AS total
+            OPTIONAL MATCH (c)-[r]-(n)
+            WITH c, total, r, n LIMIT $limit
+            RETURN c {.*, labels: labels(c)} AS center, total,
+                   collect({type: type(r), from: startNode(r).id, to: endNode(r).id, properties: properties(r),
+                            node: n {.*, labels: labels(n)}}) AS links
+            """;
         await using IAsyncSession session = _neo4jContext.OpenSession();
-        IResultCursor cursor = await session.RunAsync(NeighboursStatement.Replace("{label}", label), new Dictionary<string, object> { ["id"] = id, ["limit"] = limit });
+        IResultCursor cursor = await session.RunAsync(statement, new Dictionary<string, object> { ["id"] = id, ["limit"] = limit });
         List<IRecord> rows = await cursor.ToListAsync();
         if (rows.Count == 0)
         {

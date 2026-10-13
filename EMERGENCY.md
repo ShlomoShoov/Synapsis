@@ -235,6 +235,11 @@ failure is the setup test, which connects to Neo4j without the password (it fail
   data.
 - **Stage 5**: the full-data review (§13) and the rule at the top of this file. Nothing in the code changed.
 - **Stage 6**: the prompt for the UI agent (§14). The file:line references in §12 are updated after Stage 3's deletions.
+- **Final round, 1 (readable queries)**: each route is one method whose body (or Cypher) is written as it is sent, a
+  raw JSON string with the values put in; the controller only reads parameters and calls it; the embedding moved into
+  `SearchRepository.SearchAsync`. No behaviour change: the 23 check requests (§12 and the errors) give byte-identical
+  answers before and after; quotes and backslashes in the input answer 200. One message changed: an embedder refusal
+  still answers 400, now with "The embedder refused the question." instead of the embedder's own text.
 
 ## 11. How the system looks now
 
@@ -308,9 +313,11 @@ Answers are kept in memory (160 questions), so going back to a view draws at onc
 
 Every route below answers on `http://localhost:8080` and passes the store's answer through: Elasticsearch documents
 (`_source`) and buckets, Neo4j nodes and links. The UI does all the shaping. Code: `src/dotnet/Synapsis.Api/Controllers/ReadController.cs`
-(the routes), `Repositories/SearchRepository.cs` (Elasticsearch), `Repositories/GraphRepository.cs` (Neo4j).
+(the routes: each action reads its parameters and calls one method), `Repositories/SearchRepository.cs` (Elasticsearch: one
+method per route, which lists the conditions and then writes the whole body as it is sent), `Repositories/GraphRepository.cs`
+(Neo4j: the Cypher statement written in the method).
 
-**Shared filters** (Elasticsearch routes, all optional; `SearchRepository.Filters`, `SearchRepository.cs:35`):
+**Shared filters** (Elasticsearch routes, all optional; `SearchRepository.SharedFilters`, `SearchRepository.cs:217`):
 
 | Parameter | Type | Filters |
 | --- | --- | --- |
@@ -320,6 +327,9 @@ Every route below answers on `http://localhost:8080` and passes the store's answ
 | `type` | text, repeatable | any of them |
 
 A filter on `from`/`to` drops entities (they have no `time_start`). A wrong date or number answers 400.
+As sent, each one condition: `{ "range": { "time_start": { "gte": "<from>" } } }`, `{ "range": { "time_start": { "lt": "<to>" } } }`,
+`{ "terms": { "source": [...] } }`, `{ "terms": { "type": [...] } }`. Every text a user typed goes into the body as a
+JSON string (quoted and escaped), so quotes or backslashes in it cannot break the query.
 
 ### GET /map/cells
 
@@ -343,13 +353,14 @@ A filter on `from`/`to` drops entities (they have no `time_start`). A wrong date
 10,000 returned (0 = nothing cut). No centre or boundary: the UI draws the hexagon from the key with h3-js
 (`cellToBoundary`, `cellToLatLng`).
 
-**Sends to Elasticsearch** (`SearchRepository.MapCellsAsync`, `SearchRepository.cs:78`; the request
+**Sends to Elasticsearch** (`SearchRepository.MapCellsAsync`, `SearchRepository.cs:39`; route `ReadController.cs:30`; the request
 `resolution=3&bbox=170,45,-170,55&from=1965-01-01&to=1965-04-01`):
 ```bash
 curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
   "size": 0,
   "query": { "bool": { "filter": [
-    { "range": { "time_start": { "gte": "1965-01-01T00:00:00Z", "lt": "1965-04-01T00:00:00Z" } } },
+    { "range": { "time_start": { "gte": "1965-01-01T00:00:00Z" } } },
+    { "range": { "time_start": { "lt": "1965-04-01T00:00:00Z" } } },
     { "term": { "kind": "event" } },
     { "geo_bounding_box": { "location": { "top_left": { "lat": 55, "lon": 170 }, "bottom_right": { "lat": 45, "lon": -170 } } } },
     { "exists": { "field": "h3_r3" } } ] } },
@@ -398,13 +409,14 @@ Elasticsearch (`_source`; `text_vector` is never in it):
 `total > items.length`, the list was cut: the UI should show cells instead. Fields a record does not have are absent
 (`title`, `name`, `body`, `country`, `h3_r4`...).
 
-**Sends to Elasticsearch** (`SearchRepository.ListAsync`, `SearchRepository.cs:102`; route `ReadController.cs:55`;
+**Sends to Elasticsearch** (`SearchRepository.MapPointsAsync`, `SearchRepository.cs:76`; route `ReadController.cs:47`;
 the request `bbox=170,45,-170,55&from=1965-01-01&to=1965-04-01`):
 ```bash
 curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
   "size": 5000,
   "query": { "bool": { "filter": [
-    { "range": { "time_start": { "gte": "1965-01-01T00:00:00Z", "lt": "1965-04-01T00:00:00Z" } } },
+    { "range": { "time_start": { "gte": "1965-01-01T00:00:00Z" } } },
+    { "range": { "time_start": { "lt": "1965-04-01T00:00:00Z" } } },
     { "term": { "kind": "event" } },
     { "geo_bounding_box": { "location": { "top_left": { "lat": 55, "lon": 170 }, "bottom_right": { "lat": 45, "lon": -170 } } } } ] } },
   "sort": [ { "state": "desc" } ],
@@ -455,8 +467,8 @@ as PREMISE; RELATED links two entities and carries the relation's properties). `
 `total > links.length` the list was cut. Unknown id, or an id that is not `ent:`/`evt:`/`con:` (relations are links,
 not nodes): 404. The UI moves further by calling `/graph?id=` on a neighbour.
 
-**Sends to Neo4j** one statement (`GraphRepository.NeighboursStatement`, `GraphRepository.cs:27`; run by
-`NeighboursAsync`, `GraphRepository.cs:39`; route `ReadController.cs:75`). The label comes from the id's prefix
+**Sends to Neo4j** one statement (written in `GraphRepository.NeighboursAsync`, `GraphRepository.cs:26`; route
+`ReadController.cs:64`). The label comes from the id's prefix
 (`ent:` Entity, `evt:` Event, `con:` Conclusion), so Neo4j finds the node through its `id` index instead of scanning
 every node:
 ```bash
@@ -505,7 +517,7 @@ documents in children beyond the 1,000 returned (0 = nothing cut). A key with no
 (Changed from the plan, which returned a bare list: the object carries `sum_other_doc_count`, so nothing is cut
 silently.)
 
-**Sends to Elasticsearch** (`SearchRepository.LogicalAsync`, `SearchRepository.cs:165`; route `ReadController.cs:95`;
+**Sends to Elasticsearch** (`SearchRepository.LogicalAsync`, `SearchRepository.cs:100`; route `ReadController.cs:84`;
 the request `node=cyber.vendor_product`):
 ```bash
 curl -s localhost:9200/synapsis-records/_search -H 'content-type: application/json' -d '{
@@ -560,9 +572,9 @@ the slowest route; filters (`source`, `from`/`to`) make it faster.
 Order: with `q`, the best match first (Elasticsearch's score); semantic, the nearest first; without `q`, the newest
 `time_start` first (records without one, such as entities, last).
 
-**Three modes, three bodies** (route `ReadController.cs:106`):
+**Three modes, three bodies**, all in `SearchRepository.SearchAsync` (`SearchRepository.cs:134`; route `ReadController.cs:94`):
 
-1. Words (`SearchRepository.SearchWordsAsync`, `SearchRepository.cs:116`). Each word must be found as the start
+1. Words (step 2b, `SearchRepository.cs:167`). Each word must be found as the start
    of a word in `name`, `title` or `body` (`phrase_prefix` cuts the text into words the way the index does, so
    "log4j" finds "Log4j2"), or as the start of the `id`:
    ```bash
@@ -576,7 +588,7 @@ Order: with `q`, the best match first (Elasticsearch's score); semantic, the nea
      "aggs": { "records": { "cardinality": { "field": "id" } } } }'
    ```
    (`must` holds one `should` block per word, so every word must match; `filter` holds the filters.)
-2. Meaning (`SearchMeaningAsync`, `SearchRepository.cs:139`). The API asks the embedder for the question's vector
+2. Meaning (step 2c, `SearchRepository.cs:191`). The API asks the embedder for the question's vector
    (`curl -s localhost:8090/embed -H 'content-type: application/json' -d '{"texts":["remote code execution"],"model":"search"}'`),
    then:
    ```json
@@ -588,7 +600,7 @@ Order: with `q`, the best match first (Elasticsearch's score); semantic, the nea
    *knn* compares the question's vector with the stored ones: it looks at the 500 best candidates and keeps the `k`
    nearest. The filters go inside `knn.filter`, so they apply before the nearest are chosen. A question with no known
    word answers `{"total": 0, "items": []}`.
-3. No `q` (`ListAsync`, `SearchRepository.cs:102`, as `/map/points`), sorted
+3. No `q` (step 2a, `SearchRepository.cs:152`; like `/map/points`), sorted
    `[{"time_start": {"order": "desc", "missing": "_last"}}, {"state": "desc"}]`.
 
 `logical` adds `{"term": {"logical_prefixes": "<key>"}}`, `entity` adds `{"term": {"entities": "<id>"}}` to the filters.

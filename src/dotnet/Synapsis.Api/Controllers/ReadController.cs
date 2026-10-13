@@ -1,32 +1,29 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Synapsis.Api.Repositories;
-using Synapsis.Data.Dal;
 
 namespace Synapsis.Api.Controllers;
 
 /// <summary>
 /// The read API: five routes, each answering one thing, passing the stores' own answers through (Elasticsearch
-/// documents and buckets, Neo4j nodes and links). The UI does all the shaping. Shared optional filters on the
-/// Elasticsearch routes: from, to (dates, on time_start, to excluded), source and type (repeatable).
+/// documents and buckets, Neo4j nodes and links). Each action reads its parameters (400 when one is wrong) and calls
+/// one repository method, where the query is written. Shared optional filters on the Elasticsearch routes: from, to
+/// (dates, on time_start, to excluded), source and type (repeatable).
 /// </summary>
 [ApiController]
 public sealed class ReadController : ControllerBase
 {
     private readonly SearchRepository _searchRepository;
     private readonly GraphRepository _graphRepository;
-    private readonly EmbedderClient _embedderClient;
 
-    /// <summary>Creates the controller over Elasticsearch, Neo4j and the embedder.</summary>
-    public ReadController(SearchRepository searchRepository, GraphRepository graphRepository, EmbedderClient embedderClient)
+    /// <summary>Creates the controller over Elasticsearch and Neo4j.</summary>
+    public ReadController(SearchRepository searchRepository, GraphRepository graphRepository)
     {
         _searchRepository = searchRepository;
         _graphRepository = graphRepository;
-        _embedderClient = embedderClient;
     }
 
     /// <summary>GET /map/cells: records per H3 cell at a resolution (2 to 5), in the bbox when given.</summary>
@@ -38,17 +35,12 @@ public sealed class ReadController : ControllerBase
         {
             return Problem(statusCode: 400, detail: "resolution is required, 2 to 5.");
         }
-        List<JsonObject> filters = SearchRepository.Filters(from, to, source, type, kind);
-        if (bbox != null)
+        double[]? box = bbox == null ? null : ParseBox(bbox);
+        if (bbox != null && box == null)
         {
-            double[]? box = ParseBox(bbox);
-            if (box == null)
-            {
-                return Problem(statusCode: 400, detail: "bbox must be minLon,minLat,maxLon,maxLat.");
-            }
-            filters.Add(SearchRepository.InsideBox(box));
+            return Problem(statusCode: 400, detail: "bbox must be minLon,minLat,maxLon,maxLat.");
         }
-        return Ok(await _searchRepository.MapCellsAsync(filters, resolution.Value));
+        return Ok(await _searchRepository.MapCellsAsync(resolution.Value, box, kind, from, to, source, type));
     }
 
     /// <summary>GET /map/points: the matching documents with a point inside the bbox (required), one per record, at most limit (5,000).</summary>
@@ -65,10 +57,7 @@ public sealed class ReadController : ControllerBase
         {
             return Problem(statusCode: 400, detail: "limit must be 1 to 5000.");
         }
-        List<JsonObject> filters = SearchRepository.Filters(from, to, source, type, kind);
-        filters.Add(SearchRepository.InsideBox(box));
-        JsonArray latestStateFirst = new JsonArray(new JsonObject { ["state"] = "desc" });
-        return Ok(await _searchRepository.ListAsync(filters, latestStateFirst, limit));
+        return Ok(await _searchRepository.MapPointsAsync(box, kind, limit, from, to, source, type));
     }
 
     /// <summary>GET /graph: the node with this id and at most limit (200, max 1,000) of its direct links; 404 when no node has the id.</summary>
@@ -95,8 +84,7 @@ public sealed class ReadController : ControllerBase
     [HttpGet("logical")]
     public async Task<IActionResult> Logical(string? node, DateTime? from, DateTime? to, [FromQuery] string[]? source, [FromQuery] string[]? type)
     {
-        List<JsonObject> filters = SearchRepository.Filters(from, to, source, type, null);
-        return Ok(await _searchRepository.LogicalAsync(filters, node));
+        return Ok(await _searchRepository.LogicalAsync(node, from, to, source, type));
     }
 
     /// <summary>
@@ -111,38 +99,16 @@ public sealed class ReadController : ControllerBase
         {
             return Problem(statusCode: 400, detail: "limit must be 1 to 500.");
         }
-        List<JsonObject> filters = SearchRepository.Filters(from, to, source, type, kind);
-        if (!string.IsNullOrEmpty(logical))
+        if (semantic && string.IsNullOrWhiteSpace(q))
         {
-            filters.Add(new JsonObject { ["term"] = new JsonObject { ["logical_prefixes"] = logical } });
+            return Problem(statusCode: 400, detail: "semantic=true needs q.");
         }
-        if (!string.IsNullOrEmpty(entity))
+        JsonObject? answer = await _searchRepository.SearchAsync(q, semantic, kind, logical, entity, limit, from, to, source, type);
+        if (answer == null)
         {
-            filters.Add(new JsonObject { ["term"] = new JsonObject { ["entities"] = entity } });
+            return Problem(statusCode: 400, detail: "The embedder refused the question.");
         }
-        if (string.IsNullOrWhiteSpace(q))
-        {
-            if (semantic)
-            {
-                return Problem(statusCode: 400, detail: "semantic=true needs q.");
-            }
-            JsonArray newestFirst = new JsonArray(new JsonObject { ["time_start"] = new JsonObject { ["order"] = "desc", ["missing"] = "_last" } }, new JsonObject { ["state"] = "desc" });
-            return Ok(await _searchRepository.ListAsync(filters, newestFirst, limit));
-        }
-        if (!semantic)
-        {
-            return Ok(await _searchRepository.SearchWordsAsync(filters, q, limit));
-        }
-        (float[]? vector, string? refusal) = await _embedderClient.EmbedAsync(q, HttpContext.RequestAborted);
-        if (refusal != null)
-        {
-            return Problem(statusCode: 400, detail: refusal);
-        }
-        if (vector == null)
-        {
-            return Ok(new JsonObject { ["total"] = 0, ["items"] = new JsonArray() });
-        }
-        return Ok(await _searchRepository.SearchMeaningAsync(filters, vector, limit));
+        return Ok(answer);
     }
 
     /// <summary>"minLon,minLat,maxLon,maxLat" as four numbers in range; null when it is not.</summary>
