@@ -1,22 +1,25 @@
 /**
- * The basemap: a MapLibre style drawn from the files in assets/geo/ (Natural Earth, made by scripts/make-basemap.sh)
- * and the public elevation tiles, so the globe needs no tile server and looks the same everywhere.
+ * The basemap: the Earth at night, a MapLibre style drawn from the files in assets/geo/ (Natural Earth, made by
+ * scripts/make-basemap.sh) and the public elevation tiles, so the globe needs no tile server and looks the same
+ * everywhere.
  *
- * From the bottom: the land (the background), the relief shading, the sea (which hides the shading offshore), lakes and
- * rivers, a faint graticule, the borders, then the labels in the home page's serif. The events are added above all of
- * it (see layers.ts). The heavy files load only when the map is close enough to need them (lazySources).
+ * From the bottom: the land (the background), its relief shading, the sea (which hides the shading offshore), a coast
+ * that glows faintly, lakes and rivers, a faint graticule, the borders, then the labels. The events (LightsLayer) are
+ * drawn above all of it. A blue atmosphere rims the globe; the stars are behind the map (Starfield). The heavy files
+ * load only when the map is close enough to need them (lazySources). There is no 3D terrain: it costs every frame and
+ * shows little on a night Earth.
  */
-import type { Feature, FeatureCollection, LineString } from 'geojson';
 import type {
   ExpressionSpecification,
   FontFacesSpecification,
   LayerSpecification,
   StyleSpecification,
 } from 'maplibre-gl';
+import type { Feature, FeatureCollection, LineString } from 'geojson';
+import sansUrl from '@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2?url';
+import sansExtUrl from '@fontsource-variable/instrument-sans/files/instrument-sans-latin-ext-wght-normal.woff2?url';
 import serifItalicUrl from '@fontsource-variable/newsreader/files/newsreader-latin-wght-italic.woff2?url';
-import serifUrl from '@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2?url';
 import serifExtItalicUrl from '@fontsource-variable/newsreader/files/newsreader-latin-ext-wght-italic.woff2?url';
-import serifExtUrl from '@fontsource-variable/newsreader/files/newsreader-latin-ext-wght-normal.woff2?url';
 import { terrainTilesUrl } from '../config';
 import { ground } from './palette';
 
@@ -40,35 +43,25 @@ export const lazySources: LazySource[] = [
   { id: 'divisions', url: geo('states'), fromZoom: 2.5 },
 ];
 
-/** The serif of the home page, drawn from its own font files (no glyph server). */
+/** The interface sans for places, the brand's serif (italic) for the seas, drawn from their own font files. */
 export const fonts = {
-  regular: 'Newsreader Regular',
-  medium: 'Newsreader Medium',
-  italic: 'Newsreader Italic',
+  sans: 'Instrument Sans Regular',
+  sansMedium: 'Instrument Sans Medium',
+  serifItalic: 'Newsreader Italic',
 };
 
+const latin = ['U+0000-00FF', 'U+0131', 'U+0152-0153', 'U+2000-206F'];
+
 const fontFaces: FontFacesSpecification = {
-  [fonts.regular]: [
-    { url: serifUrl, 'unicode-range': ['U+0000-00FF', 'U+0131', 'U+0152-0153', 'U+2000-206F'] },
-    { url: serifExtUrl },
-  ],
-  [fonts.medium]: [
-    { url: serifUrl, 'unicode-range': ['U+0000-00FF', 'U+0131', 'U+0152-0153', 'U+2000-206F'] },
-    { url: serifExtUrl },
-  ],
-  [fonts.italic]: [
-    {
-      url: serifItalicUrl,
-      'unicode-range': ['U+0000-00FF', 'U+0131', 'U+0152-0153', 'U+2000-206F'],
-    },
+  [fonts.sans]: [{ url: sansUrl, 'unicode-range': latin }, { url: sansExtUrl }],
+  [fonts.sansMedium]: [{ url: sansUrl, 'unicode-range': latin }, { url: sansExtUrl }],
+  [fonts.serifItalic]: [
+    { url: serifItalicUrl, 'unicode-range': latin },
     { url: serifExtItalicUrl },
   ],
 };
 
-/** The layer the events go under, so the labels stay readable above the hexagons' footprints. */
-export const firstLabelLayer = 'label-sea';
-
-/** The basemap's style. `relief` adds the relief shading and the 3D terrain (both read the elevation tiles). */
+/** The basemap's style. `relief` adds the shading of the land from the elevation tiles. */
 export function basemapStyle({ relief }: { relief: boolean }): StyleSpecification {
   return {
     version: 8,
@@ -77,15 +70,12 @@ export function basemapStyle({ relief }: { relief: boolean }): StyleSpecificatio
     sky: {
       'sky-color': ground.space,
       'horizon-color': ground.horizon,
-      'sky-horizon-blend': 0.6,
-      // The halo of air around the whole Earth, fading out as the camera comes down to a region.
-      'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 0.55, 4, 0.4, 7, 0],
+      'sky-horizon-blend': 0.8,
+      // MapLibre's air is lit like daylight from one side; the even glow around the Earth is drawn by GlobeMap.
+      'atmosphere-blend': 0,
     },
-    // Lit from just above the viewer, so the air makes a thin even rim and the columns' walls shade alike everywhere.
-    light: { anchor: 'viewport', position: [1.5, 200, 30], color: '#ffffff', intensity: 0.35 },
-    ...(relief ? { terrain: { source: 'terrain', exaggeration: 1.4 } } : {}),
+    light: { anchor: 'viewport', position: [1.5, 200, 30], color: '#ffffff', intensity: 0.3 },
     sources: {
-      // The same tiles twice: MapLibre draws the shading and the terrain best from separate sources.
       ...(relief
         ? {
             elevation: {
@@ -93,15 +83,8 @@ export function basemapStyle({ relief }: { relief: boolean }): StyleSpecificatio
               tiles: [terrainTilesUrl],
               encoding: 'terrarium',
               tileSize: 256,
-              maxzoom: 12,
+              maxzoom: 11,
               attribution: 'Elevation: Mapzen Terrain Tiles (AWS Open Data)',
-            },
-            terrain: {
-              type: 'raster-dem',
-              tiles: [terrainTilesUrl],
-              encoding: 'terrarium',
-              tileSize: 256,
-              maxzoom: 12,
             },
           }
         : {}),
@@ -113,12 +96,7 @@ export function basemapStyle({ relief }: { relief: boolean }): StyleSpecificatio
       borders: { type: 'geojson', data: geo('borders'), maxzoom: 10 },
       divisions: { type: 'geojson', data: empty, maxzoom: 9 },
       graticule: { type: 'geojson', data: graticule(15), maxzoom: 4 },
-      labels: {
-        type: 'geojson',
-        data: geo('labels'),
-        maxzoom: 9,
-        attribution: 'Natural Earth',
-      },
+      labels: { type: 'geojson', data: geo('labels'), maxzoom: 9, attribution: 'Natural Earth' },
     },
     layers: [
       { id: 'land', type: 'background', paint: { 'background-color': ground.land } },
@@ -132,8 +110,8 @@ export function basemapStyle({ relief }: { relief: boolean }): StyleSpecificatio
         maxzoom: 6,
         paint: {
           'line-color': ground.graticule,
-          'line-width': 0.5,
-          'line-opacity': ['interpolate', ['linear'], ['zoom'], 0, 0.45, 4, 0.25, 6, 0],
+          'line-width': 0.6,
+          'line-opacity': ['interpolate', ['linear'], ['zoom'], 0, 0.9, 4, 0.5, 6, 0],
         },
       },
       ...borderLayers(),
@@ -142,35 +120,23 @@ export function basemapStyle({ relief }: { relief: boolean }): StyleSpecificatio
   };
 }
 
-/** Shading of the land from the elevation tiles: soft, warm shadows lit from the north-west. */
+/** Shading of the land from the elevation tiles: mountains catch a cold light from the north-west. */
 function reliefLayer(): LayerSpecification {
   return {
     id: 'relief',
     type: 'hillshade',
     source: 'elevation',
     paint: {
-      'hillshade-shadow-color': ground.relief,
-      'hillshade-highlight-color': '#ffffff',
-      'hillshade-accent-color': ground.relief,
-      'hillshade-exaggeration': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        0,
-        0.9,
-        4,
-        0.7,
-        8,
-        0.45,
-        12,
-        0.35,
-      ],
+      'hillshade-shadow-color': ground.reliefShadow,
+      'hillshade-highlight-color': ground.reliefHighlight,
+      'hillshade-accent-color': ground.reliefShadow,
+      'hillshade-exaggeration': ['interpolate', ['linear'], ['zoom'], 0, 0.75, 5, 0.6, 10, 0.45],
       'hillshade-illumination-direction': 315,
     },
   };
 }
 
-/** The sea at three scales, and its coast. */
+/** The sea at three scales, and its coast: a thin bright line in a wider soft glow. */
 function seaLayers(): LayerSpecification[] {
   const scales = [
     { source: 'sea-coarse', minzoom: 0, maxzoom: 2.5 },
@@ -180,12 +146,25 @@ function seaLayers(): LayerSpecification[] {
   // Until the fine coast has loaded, the middle one keeps drawing: it stays on below the fine one.
   return scales.flatMap(({ source, minzoom, maxzoom }) => [
     {
-      id: `${source}`,
+      id: source,
       type: 'fill' as const,
       source,
       minzoom,
       maxzoom: source === 'sea-mid' ? 24 : maxzoom,
-      paint: { 'fill-color': ground.sea, 'fill-antialias': true },
+      paint: { 'fill-color': ground.sea },
+    },
+    {
+      id: `${source}-glow`,
+      type: 'line' as const,
+      source,
+      minzoom,
+      maxzoom,
+      paint: {
+        'line-color': ground.coastGlow,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 2, 6, 5],
+        'line-blur': ['interpolate', ['linear'], ['zoom'], 0, 2, 6, 5],
+        'line-opacity': 0.22,
+      },
     },
     {
       id: `${source}-coast`,
@@ -195,7 +174,7 @@ function seaLayers(): LayerSpecification[] {
       maxzoom,
       paint: {
         'line-color': ground.coast,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.4, 6, 0.8, 10, 1.1],
+        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.5, 6, 0.9, 10, 1.2],
       },
     },
   ]);
@@ -229,6 +208,17 @@ function waterLayers(): LayerSpecification[] {
 
 /** The borders of countries (dashed where disputed) and, closer, of their divisions. */
 function borderLayers(): LayerSpecification[] {
+  const width: ExpressionSpecification = [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    0,
+    0.5,
+    4,
+    0.8,
+    8,
+    1.3,
+  ];
   return [
     {
       id: 'divisions',
@@ -249,11 +239,7 @@ function borderLayers(): LayerSpecification[] {
       source: 'borders',
       filter: ['==', ['get', 'd'], 0],
       layout: { 'line-join': 'round' },
-      paint: {
-        'line-color': ground.border,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.45, 4, 0.8, 8, 1.4],
-        'line-opacity': 0.8,
-      },
+      paint: { 'line-color': ground.border, 'line-width': width, 'line-opacity': 0.75 },
     },
     {
       id: 'borders-disputed',
@@ -262,9 +248,9 @@ function borderLayers(): LayerSpecification[] {
       filter: ['==', ['get', 'd'], 1],
       paint: {
         'line-color': ground.border,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.45, 4, 0.8, 8, 1.4],
+        'line-width': width,
         'line-dasharray': [2, 2],
-        'line-opacity': 0.8,
+        'line-opacity': 0.75,
       },
     },
   ];
@@ -276,8 +262,8 @@ const fromItsZoom: ExpressionSpecification = ['<=', ['get', 'z'], ['zoom']];
 function labelLayers(): LayerSpecification[] {
   const halo = {
     'text-halo-color': ground.labelHalo,
-    'text-halo-width': 1.4,
-    'text-halo-blur': 0.4,
+    'text-halo-width': 1.2,
+    'text-halo-blur': 0.6,
   };
   return [
     {
@@ -287,7 +273,7 @@ function labelLayers(): LayerSpecification[] {
       filter: ['all', ['in', ['get', 'k'], ['literal', ['ocean', 'sea']]], fromItsZoom],
       layout: {
         'text-field': ['get', 'n'],
-        'text-font': [fonts.italic],
+        'text-font': [fonts.serifItalic],
         'text-size': [
           'interpolate',
           ['linear'],
@@ -295,45 +281,43 @@ function labelLayers(): LayerSpecification[] {
           0,
           ['match', ['get', 'k'], 'ocean', 12, 10],
           5,
-          ['match', ['get', 'k'], 'ocean', 18, 13],
+          ['match', ['get', 'k'], 'ocean', 17, 13],
         ],
-        'text-letter-spacing': ['match', ['get', 'k'], 'ocean', 0.3, 0.12],
+        'text-letter-spacing': ['match', ['get', 'k'], 'ocean', 0.35, 0.12],
         'text-transform': ['match', ['get', 'k'], 'ocean', 'uppercase', 'none'],
         'text-max-width': 8,
         'symbol-sort-key': ['get', 'r'],
       },
-      paint: { 'text-color': ground.seaLabel, ...halo, 'text-halo-color': ground.sea },
+      paint: { 'text-color': ground.seaLabel, ...halo },
     },
     {
       id: 'label-city-dot',
       type: 'circle',
       source: 'labels',
-      minzoom: 2,
+      minzoom: 3,
       filter: ['all', ['==', ['get', 'k'], 'city'], fromItsZoom],
       paint: {
-        'circle-radius': ['match', ['get', 'p'], 2, 2.6, 1.8],
+        'circle-radius': ['match', ['get', 'p'], 2, 2.2, 1.6],
         'circle-color': ground.label,
-        'circle-stroke-color': ground.labelHalo,
-        'circle-stroke-width': 1,
-        'circle-opacity': 0.85,
+        'circle-opacity': 0.7,
       },
     },
     {
       id: 'label-city',
       type: 'symbol',
       source: 'labels',
-      minzoom: 2,
+      minzoom: 3,
       filter: ['all', ['==', ['get', 'k'], 'city'], fromItsZoom],
       layout: {
         'text-field': ['get', 'n'],
-        'text-font': [fonts.regular],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 2, 11, 8, 14],
+        'text-font': [fonts.sans],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 3, 10.5, 8, 13],
         'text-anchor': 'left',
-        'text-offset': [0.55, 0],
+        'text-offset': [0.6, 0],
         'text-max-width': 9,
         'symbol-sort-key': ['get', 'r'],
       },
-      paint: { 'text-color': ground.label, ...halo },
+      paint: { 'text-color': ground.label, 'text-opacity': 0.85, ...halo },
     },
     {
       id: 'label-country',
@@ -342,14 +326,14 @@ function labelLayers(): LayerSpecification[] {
       filter: ['all', ['==', ['get', 'k'], 'country'], fromItsZoom],
       layout: {
         'text-field': ['get', 'n'],
-        'text-font': [fonts.medium],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 1, 10, 4, 13, 7, 16],
+        'text-font': [fonts.sansMedium],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 1, 9.5, 4, 12, 7, 15],
         'text-transform': 'uppercase',
-        'text-letter-spacing': 0.14,
+        'text-letter-spacing': 0.18,
         'text-max-width': 7,
         'symbol-sort-key': ['get', 'r'],
       },
-      paint: { 'text-color': ground.label, 'text-opacity': 0.8, ...halo },
+      paint: { 'text-color': ground.label, 'text-opacity': 0.6, ...halo },
     },
   ];
 }
@@ -364,16 +348,12 @@ export function graticule(step: number): FeatureCollection<LineString> {
   });
   for (let lon = -180; lon < 180; lon += step) {
     const meridian: [number, number][] = [];
-    for (let lat = -80; lat <= 80; lat += 2.5) {
-      meridian.push([lon, lat]);
-    }
+    for (let lat = -80; lat <= 80; lat += 2.5) meridian.push([lon, lat]);
     features.push(line(meridian));
   }
   for (let lat = -75; lat <= 75; lat += step) {
     const parallel: [number, number][] = [];
-    for (let lon = -180; lon <= 180; lon += 2.5) {
-      parallel.push([lon, lat]);
-    }
+    for (let lon = -180; lon <= 180; lon += 2.5) parallel.push([lon, lat]);
     features.push(line(parallel));
   }
   return { type: 'FeatureCollection', features };

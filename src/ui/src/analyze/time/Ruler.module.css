@@ -1,0 +1,185 @@
+/* The ruler: ticks rise from the bottom, their labels under the band; the window glows in the accent. */
+
+.track {
+  position: relative;
+  height: 48px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  border-radius: 10px;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0.025), rgb(255 255 255 / 0.01));
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+}
+
+.track:active {
+  cursor: grabbing;
+}
+
+/* Present for the keyboard and screen readers, not drawn. */
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A focused hidden input lights what it moves. */
+.track:has([data-control='window']:focus-visible) .window,
+.track:has([data-control='from']:focus-visible) .edge[data-side='from']::after,
+.track:has([data-control='to']:focus-visible) .edge[data-side='to']::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.future {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 4px,
+    rgb(255 255 255 / 0.035) 4px 5px
+  );
+  pointer-events: none;
+}
+
+.minor,
+.major,
+.now,
+.playhead {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  pointer-events: none;
+}
+
+.minor {
+  bottom: 17px;
+  height: 4px;
+  background: rgb(200 220 255 / 0.16);
+}
+
+.major {
+  bottom: 17px;
+  height: 8px;
+  background: rgb(200 220 255 / 0.32);
+}
+
+.major[data-strong] {
+  height: 31px;
+  background: rgb(200 220 255 / 0.14);
+}
+
+.tickLabel {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  translate: -50% 0;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.major[data-strong] .tickLabel {
+  color: var(--text-2);
+}
+
+.now {
+  top: 0;
+  bottom: 0;
+  background: rgb(220 235 255 / 0.55);
+}
+
+.now span {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.window {
+  position: absolute;
+  top: 5px;
+  bottom: 21px;
+  border-radius: 6px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent) 38%, transparent),
+    color-mix(in srgb, var(--accent) 14%, transparent)
+  );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 85%, white),
+    0 0 18px color-mix(in srgb, var(--accent) 40%, transparent);
+  cursor: grab;
+}
+
+.edge {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 14px;
+  cursor: ew-resize;
+}
+
+.edge[data-side='from'] {
+  left: -7px;
+}
+
+.edge[data-side='to'] {
+  right: -7px;
+}
+
+.window[data-narrow] .edge[data-side='from'] {
+  left: -15px;
+}
+
+.window[data-narrow] .edge[data-side='to'] {
+  right: -15px;
+}
+
+/* The grip: a small bright pill on the edge. */
+.edge::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 14px;
+  translate: -50% -50%;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 30%, white);
+  box-shadow: 0 0 8px var(--accent);
+  pointer-events: none;
+  transition: opacity 150ms;
+}
+
+.window[data-narrow] .edge::after {
+  opacity: 0;
+}
+
+.window[data-narrow] .edge:hover::after {
+  opacity: 1;
+}
+
+.playhead {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow:
+    0 0 6px #fff,
+    0 0 16px var(--live);
+}

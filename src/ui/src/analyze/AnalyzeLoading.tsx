@@ -1,5 +1,5 @@
 /**
- * What /analyze shows while its code loads (the map engine is in its own chunk): the page's paper and a quiet word.
+ * What /analyze shows while its code loads (the map engine is in its own chunk): the night sky and a quiet word.
  */
 export function AnalyzeLoading() {
   return (
@@ -9,8 +9,8 @@ export function AnalyzeLoading() {
         inset: 0,
         display: 'grid',
         placeItems: 'center',
-        background: 'var(--paper)',
-        color: 'var(--ink-muted)',
+        background: '#03050a',
+        color: '#7f90a8',
         fontStyle: 'italic',
       }}
     >
