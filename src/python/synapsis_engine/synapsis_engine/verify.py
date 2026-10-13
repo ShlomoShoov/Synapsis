@@ -170,6 +170,26 @@ def golden_lenses(cards):
     return rows
 
 
+ELECTIONS = [(2020, "mae", 2.56, 0.05), (2020, "winners", 48, 0), (2020, "of", 50, 0), (2020, "mae_polls", 5.60, 0.05),
+             (2024, "mae", 2.24, 0.05), (2024, "winners", 37, 0), (2024, "of", 37, 0), (2024, "mae_polls", 3.31, 0.05),
+             (2024, "winners_polls", 34, 0), (2024, "brier", 0.0041, None), (2024, "brier_market", 0.0391, None)]
+
+
+def golden_elections(cards):
+    """reference/EXPECTED.md section 5 (the Brier values need the reference's probability model: shown, not judged)."""
+    card = next((c for k, c in cards.items() if k.endswith("|bias")), {})
+    got, rows = card.get("elections", {}), []
+    for y, k, want, tol in ELECTIONS:
+        v = got.get(y, {}).get(k)
+        if v is None:
+            rows.append(("elections", f"{y} {k}", want, "pending", card.get("skip") or f"no {y} score yet"))
+        elif tol is None:
+            rows.append(("elections", f"{y} {k}", want, round(v, 4), "shown (probability model not in the reference)"))
+        else:
+            rows.append(("elections", f"{y} {k}", want, round(v, 3), "ok" if abs(v - want) <= tol else "FAIL"))
+    return rows
+
+
 def usgs_extra(ws, card):
     s = backfill.series_for(ws, card)
     N = m3.neighbours(s.subjects)
@@ -208,6 +228,9 @@ def coverage(shapes, cards, notes, out):
             lines.append(f"- `{ck}`: own past, {c['values']:,} values" + (f": not covered: {c['skip']}" if c.get("skip") else
                          f", {c['with_z']:,} with a z (>= {8} previous changes, MAD > 0), calibration {c['t_cal']} "
                          f"buckets (frozen {c['freeze']}), |z| threshold {max(4, c['threshold']):.2f}"))
+        elif c["kind"] == "bias":
+            lines.append(f"- `{ck}`: source-bias routine (elections)" + (f": not covered: {c['skip']}" if c.get("skip") else
+                         ": " + "; ".join(f"{y}: MAE {v['mae']:.2f}, winners {v['winners']} of {v['of']}" for y, v in sorted(c["elections"].items()))))
         elif c["kind"] == "lenses":
             sc = "; ".join(f"{k}: " + (v if isinstance(v, str) else f"{v['failed_in_top50']} of {v['failed']} failures in the top 50, AUC {v['auc']}")
                            for k, v in sorted(c.get("lens_scores", {}).items()))
@@ -272,7 +295,7 @@ def main():
     L += ["## 5. Pipeline: events per source, MongoDB (first states) = DuckDB", "", "| Source | MongoDB | DuckDB |", "|---|---|---|"]
     L += [f"| {s} | {mongo.get(s, 0):,} | {duck.get(s, 0):,} |" for s in sorted(set(mongo) | set(duck))] + [""]
 
-    g = golden_occurrences(ws, cards) + golden_lenses(cards)
+    g = golden_occurrences(ws, cards) + golden_lenses(cards) + golden_elections(cards)
     ok[6] = all(r[4] != "FAIL" for r in g)
     L += ["## 6. Golden values (reference/EXPECTED.md)", "", "| Source | Value | Expected | Engine | Result |", "|---|---|---|---|---|"]
     L += [f"| {s} | {n} | {w} | {v} | {e} |" for s, n, w, v, e in g] + [""]

@@ -11,7 +11,7 @@ import math
 import numpy as np
 import pandas as pd
 
-from . import anomalies, config, findings, m3
+from . import anomalies, bias, config, findings, m3
 
 FORECAST_TOP = 20
 FORECAST_LAST = 52
@@ -508,4 +508,17 @@ def run(ws, decl, shapes, only=None, cards=None, as_of=None):
                     notes[source].append(f"lenses: {card['skip']}")
                 else:
                     out += lens_conclusions(ws, decl, card, as_of)
+    spec = decl["bias_pair"]
+    poll_sources = [r[0] for r in ws.con.execute("SELECT DISTINCT source FROM events WHERE type = ? ORDER BY 1",
+                                                 [spec["poll"]]).fetchall()]
+    for source in poll_sources[:1]:
+        ck = f"{source}|bias"
+        if (only and source != only) or (cards is not None and ck not in cards):
+            continue
+        got, info = bias.conclusions(ws, decl, as_of)
+        out += got
+        cards_out[ck] = cards[ck] if cards is not None else {"source": source, "kind": "bias", **(
+            info if "skip" in info else {"elections": {int(y): v for y, v in info.items()}})}
+        if "skip" in info:
+            notes.setdefault(source, []).append(f"source-bias routine: {info['skip']}")
     return out, cards_out, notes

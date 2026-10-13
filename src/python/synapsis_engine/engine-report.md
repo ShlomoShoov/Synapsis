@@ -1,6 +1,6 @@
 # Engine report
 
-Generated 2026-10-13 19:33 UTC by `python -m synapsis_engine verify`. Records: 4,733 (4,713 conclusions).
+Generated 2026-10-13 19:37 UTC by `python -m synapsis_engine verify`. Records: 4,733 (4,713 conclusions).
 
 Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 
@@ -150,6 +150,17 @@ Summary: 1 pass, 2 pass, 3 pass, 4 pass, 5 pass, 6 pass
 | src:fdic:financials | lens B 2022: in top 50 / AUC | 0 / 0.71 | pending | pending: failures recorded only to 2023-03-12 00:00:00 (< 2024-02-15) |
 | src:fdic:financials | lens A 2023: in top 50 / AUC | 1 / 0.366 | pending | no year-end report yet |
 | src:fdic:financials | lens B 2023: in top 50 / AUC | 0 / 0.608 | pending | no year-end report yet |
+| elections | 2020 mae | 2.56 | pending | no POL.ELECTION.RESULT records |
+| elections | 2020 winners | 48 | pending | no POL.ELECTION.RESULT records |
+| elections | 2020 of | 50 | pending | no POL.ELECTION.RESULT records |
+| elections | 2020 mae_polls | 5.6 | pending | no POL.ELECTION.RESULT records |
+| elections | 2024 mae | 2.24 | pending | no POL.ELECTION.RESULT records |
+| elections | 2024 winners | 37 | pending | no POL.ELECTION.RESULT records |
+| elections | 2024 of | 37 | pending | no POL.ELECTION.RESULT records |
+| elections | 2024 mae_polls | 3.31 | pending | no POL.ELECTION.RESULT records |
+| elections | 2024 winners_polls | 34 | pending | no POL.ELECTION.RESULT records |
+| elections | 2024 brier | 0.0041 | pending | no POL.ELECTION.RESULT records |
+| elections | 2024 brier_market | 0.0391 | pending | no POL.ELECTION.RESULT records |
 
 ## 7. Coverage
 
@@ -203,6 +214,7 @@ Operators per series (model cards):
 - `src:tukaani:xz-git|measurement|CODE.COMMIT`: own past, 198 values, 188 with a z (>= 8 previous changes, MAD > 0), calibration 24 buckets (frozen 2008-05-19 00:00:00), |z| threshold 10.24
 - `src:ucdp:ged|cell`: not covered: no bucket after the calibration span (the data ends 1989-01-09) (50 events, 23 subjects)
 - `src:usgs:comcat|cell`: 200 events (2 arrived after their bucket closed and are left out of the inputs), 86 subjects, days 1965-01-01..2016-12-31, calibration 9131 buckets (frozen 1990-01-01 00:54:07), M3 (a, decay, gamma) = (0.03, 0.7, 0.4), spark threshold 21.157; test: M3 AUC None, top1% 0.000 vs routine AUC None, top1% 0.000
+- `src:wikipedia:polls|bias`: source-bias routine (elections): not covered: no POL.ELECTION.RESULT records
 - `src:wikipedia:polls|participant`: not covered: only 2 calibration buckets (< 8) (109 events, 54 subjects)
 - `src:fdic:financials`: FIN.BANK.QUARTER_REPORT (own past): only 1 calibration buckets (< 8)
 - `src:first:epss`: CYB.VULN.EPSS_SCORE (own past): only 0 calibration buckets (< 8)
@@ -211,6 +223,7 @@ Operators per series (model cards):
 - `src:start:gtd`: SEC.ATTACK.ARMED_ASSAULT, SEC.ATTACK.ASSASSINATION, SEC.ATTACK.BOMBING, SEC.ATTACK.FACILITY, SEC.ATTACK.HIJACKING, SEC.ATTACK.KIDNAPPING, SEC.ATTACK.UNKNOWN: no bucket after the calibration span (the data ends 1970-06-29)
 - `src:ucdp:ged`: SEC.CONFLICT.NON_STATE, SEC.CONFLICT.ONE_SIDED, SEC.CONFLICT.STATE_BASED: no bucket after the calibration span (the data ends 1989-01-09)
 - `src:wikipedia:polls`: POL.POLL.STATE: only 2 calibration buckets (< 8)
+- `src:wikipedia:polls`: source-bias routine: no POL.ELECTION.RESULT records
 
 ## Conclusions per source and type
 
