@@ -1,5 +1,6 @@
 /**
- * The astronaut of the intro, drawn in SVG: a suit lit by the sun from the upper right and by the Earth from below,
+ * The astronaut of the intro as a drawing: it shows at once, while the 3D one (AstronautScene.ts) loads, and stays
+ * where WebGL is missing. In SVG: a suit lit by the sun from the upper right and by the Earth from below,
  * a gold visor that reflects the Earth's limb, the life-support pack behind, the chest unit, the joint rings and the
  * folds of the fabric. Decoration only (aria-hidden).
  */

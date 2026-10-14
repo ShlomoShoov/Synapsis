@@ -3,9 +3,13 @@
  * right. A click (or Esc, or "skip") and the astronaut lets go: a small push back, then the fall, tumbling, shrinking
  * as it drops away towards the Earth, glowing as it meets the air, while the view follows it down and the Earth rises
  * to fill it; the atmosphere's light, then the page. Once per visit; never with reduced motion.
+ *
+ * The astronaut is a 3D one (AstronautScene.ts), loaded once the intro shows; the SVG drawing stands in until its
+ * first frame, and stays where WebGL is missing or the fall began before the 3D one was ready.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Astronaut } from './Astronaut';
+import type { AstronautScene } from './AstronautScene';
 import { fallMs, markIntroSeen, shouldShowIntro } from './intro';
 import styles from './Intro.module.css';
 
@@ -27,6 +31,39 @@ export function Intro() {
     markIntroSeen(sessionStore());
     setStage((now) => (now === 'float' ? 'fall' : now));
   };
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const scene = useRef<AstronautScene | null>(null);
+  const floating = useRef(stage === 'float');
+  const [threeD, setThreeD] = useState(false);
+  const shown = stage !== 'gone';
+
+  // The 3D astronaut: loaded while the drawing floats, shown from its first frame, let go with the page.
+  useEffect(() => {
+    if (!shown) return undefined;
+    let cancelled = false;
+    let created: AstronautScene | null = null;
+    import('./AstronautScene')
+      .then(({ createAstronautScene }) => {
+        if (cancelled || !canvas.current || !floating.current) return;
+        created = createAstronautScene(canvas.current, () => {
+          if (!cancelled && floating.current) setThreeD(true);
+        });
+        scene.current = created;
+      })
+      .catch(() => {
+        // No WebGL (or the code could not load): the drawing stays.
+      });
+    return () => {
+      cancelled = true;
+      created?.dispose();
+      scene.current = null;
+    };
+  }, [shown]);
+
+  useEffect(() => {
+    floating.current = stage === 'float';
+    if (stage === 'fall' && threeD) scene.current?.fall();
+  }, [stage, threeD]);
 
   useEffect(() => {
     if (stage === 'float') {
@@ -49,7 +86,7 @@ export function Intro() {
 
   if (stage === 'gone') return null;
   return (
-    <div className={styles.intro} data-stage={stage}>
+    <div className={styles.intro} data-stage={stage} data-three={threeD || undefined}>
       <div className={styles.sky} aria-hidden="true">
         <div className={styles.starsFar} />
         <div className={styles.starsNear} />
@@ -60,6 +97,7 @@ export function Intro() {
         <div className={styles.clouds} />
         <div className={styles.night} />
       </div>
+      <canvas ref={canvas} className={styles.scene} aria-hidden="true" />
       <div className={styles.air} aria-hidden="true" />
       <button
         type="button"
