@@ -27,7 +27,8 @@ export interface LightSet {
   seeds: Float32Array;
   /** 1 for one event; more for a hexagon of many. */
   sizes: Float32Array;
-  /** Per light: the record id (a point) or the cell id (a hexagon). */
+  /** Per light: the record id (a point), the cell id (a hexagon), or `rough:` and the cell id (events placed only
+   *  to that cell, map/rough.ts). */
   ids: string[];
   places: LngLat[];
   /** Per light: the item, for a point. */
@@ -77,12 +78,15 @@ export function lightsOfPoints(points: Item[]): LightSet {
 }
 
 /** One light per hexagon: warm white, larger with more events (by the square root, as an area). */
+/** The start of a rough light's id. */
+export const roughPrefix = 'rough:';
+
 export function lightsOfCells(cells: Cell[]): LightSet {
   const set = emptySet(cells.length);
   const most = cells.reduce((max, cell) => Math.max(max, cell.count), 1);
   cells.forEach((cell, index) => {
     put(set, index, {
-      id: cell.id,
+      id: cell.rough ? `${roughPrefix}${cell.id}` : cell.id,
       place: cell.center,
       color: densityColor,
       day: Number.NaN,

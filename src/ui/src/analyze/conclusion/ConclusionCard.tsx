@@ -131,15 +131,28 @@ export function ConclusionCard({
   );
 }
 
+/** The engine's measure names, in words (others are spelled out as they come). */
+const measureNames: Record<string, string> = {
+  expected: 'Expected',
+  routine: 'Routine (usual)',
+  self: 'Own recent activity',
+  neighbours: 'Neighbours',
+  lower80: '80% band, low',
+  upper80: '80% band, high',
+  rank: 'Rank',
+  of: 'Out of',
+  confidence: 'Confidence / 100',
+};
+
 function NumberGrid({ numbers }: { numbers: Numbers }) {
   const entries = Object.entries(numbers);
   if (entries.length === 0) return null;
   return (
     <ul className={styles.numbers}>
       {entries.map(([name, value]) => (
-        <li key={name}>
-          <span>{name === 'of' ? 'Of' : words(name)}</span>
-          <b>{formatNumber(value)}</b>
+        <li key={name} title={`${name}: ${formatNumber(value)}`}>
+          <span>{measureNames[name] ?? words(name)}</span>
+          <b>{short(value)}</b>
         </li>
       ))}
     </ul>

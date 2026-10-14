@@ -1,0 +1,258 @@
+.section {
+  position: relative;
+  padding: 72px var(--gutter) 80px;
+  background: linear-gradient(180deg, #0b0a08 0, #0b0a08 60%, var(--surface-0) 100%);
+}
+
+/* The stem: the flow above goes on down from the API into the stages. */
+.stem {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 56px;
+  background: linear-gradient(180deg, transparent, var(--rule-4));
+}
+
+.intro {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font: 400 26px var(--font-display);
+  color: var(--text-1);
+}
+
+.intro p {
+  margin: 8px 0 0;
+  font: 400 13.5px/1.5 var(--font-sans);
+  color: var(--text-3);
+}
+
+.stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 13px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage {
+  position: relative;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-m);
+  background: var(--surface-1);
+}
+
+/* The link between two stages: a record goes left to right; it moves while the stage on its right works. */
+.stage + .stage::before {
+  content: '';
+  position: absolute;
+  top: 26px;
+  left: -13px;
+  width: 13px;
+  height: 1px;
+  background: var(--rule-4);
+}
+
+.stage[data-moving] + .stage::before,
+.stage[data-moving]::before {
+  background: repeating-linear-gradient(90deg, #8fd18b 0 3px, transparent 3px 6px);
+  background-size: 12px 1px;
+  animation: flow 900ms linear infinite;
+}
+
+@keyframes flow {
+  to {
+    background-position: 12px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage[data-moving] + .stage::before,
+  .stage[data-moving]::before {
+    animation: none;
+  }
+}
+
+.stageHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 14px;
+}
+
+/* Too narrow for the five in a row: they wrap, and the links between them would point at nothing. */
+@media (max-width: 1100px) {
+  .stages {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  .stage + .stage::before {
+    display: none;
+  }
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+
+.stage[data-live] .dot {
+  background: #8fd18b;
+  box-shadow: 0 0 8px rgb(143 209 139 / 0.6);
+}
+
+.role {
+  margin: 8px 0 0;
+  min-height: 2.8em;
+  font: 400 12.5px/1.4 var(--font-sans);
+  color: var(--text-3);
+}
+
+.copies {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-3, var(--rule-2));
+  font: 500 11px var(--font-mono);
+  color: var(--text-2);
+}
+
+.rate {
+  margin: 12px 0 12px;
+  font: 500 28px/1 var(--font-mono);
+  color: var(--text-1);
+}
+
+.rate span {
+  margin-left: 8px;
+  font: 400 12px var(--font-sans);
+  color: var(--text-3);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.facts dt {
+  color: var(--text-3);
+}
+
+.facts dd {
+  margin: 0;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.facts small {
+  color: var(--text-3);
+}
+
+[data-bad] {
+  color: #e8a87c !important;
+}
+
+.seen {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.heading {
+  margin: 56px 0 16px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.heading span {
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th {
+  padding: 8px 12px 8px 0;
+  font-weight: 400;
+  color: var(--text-3);
+  text-align: left;
+  border-bottom: 1px solid var(--rule-2);
+}
+
+.table td {
+  padding: 8px 12px 8px 0;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--rule-1);
+}
+
+.table th:nth-child(n + 3),
+.table td:nth-child(n + 3) {
+  text-align: right;
+}
+
+.muted {
+  color: var(--text-3);
+}
+
+.runs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.runs li {
+  display: grid;
+  grid-template-columns: 90px 180px 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--rule-1);
+}
+
+.runs strong {
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.quiet {
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+.error {
+  color: #e8a87c;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .runs li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

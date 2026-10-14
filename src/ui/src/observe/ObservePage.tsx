@@ -1,9 +1,10 @@
 /**
- * Observe (route /observe): what the system is receiving, for the people who run it. One page, two sections,
+ * Observe (route /observe): what the system is receiving, for the people who run it. One page, three sections,
  * and a sidebar to move between them:
  *
  *   01 Live flow   every batch on its way from its source to the core, in 3D, live or replayed from the past;
  *   02 Metrics     the ingestion log's numbers over a chosen period, in dashboards the viewer can arrange;
+ *   03 Pipeline    below the API, stage by stage: relay, indexer, projector, engine (contracts/pipeline-log.md);
  *
  * The page turns the room dark while it is open (theme/night.css) and gives it back on leaving.
  */
@@ -20,6 +21,7 @@ import styles from './ObservePage.module.css';
 import { sections } from './shell/sections';
 import { ShortcutsDialog } from './shell/ShortcutsDialog';
 import { Sidebar } from './shell/Sidebar';
+import { PipelineSection } from './pipeline/PipelineSection';
 import { scrollToId, useScrollSpy } from './shell/useScrollSpy';
 import { paletteStyle } from './theme/palette';
 
@@ -58,6 +60,7 @@ export function ObservePage() {
           />
           <main ref={setMain} className={styles.main}>
             <FlowSection />
+            <PipelineSection />
             <MetricsSection />
           </main>
           <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

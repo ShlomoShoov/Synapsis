@@ -926,3 +926,33 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   double-click resets; the width is kept in the browser) and maximise to the whole screen with the button on that
   edge (Esc or the button restores). Fixtures: the conclusions are written by hand (the stack was being reloaded;
   `fixtures/analyze/README.md` says so). Not yet checked against the live API.
+- **QA on real data, rough cells, Observe Pipeline (14 Oct night, branch `ui/observe-qa`)**. *Rough cells*: a glowing
+  cell zoomed into an empty area. Checked on the live data: the indexer gives an event `h3_rN` only when its place is
+  finer than the cell's edge, so events with an H3 cell fall from 405,672 at r3 to 233,156 at r4 (UCDP placed by
+  province, USGS with a wide uncertainty); near Kandahar 234 UCDP events have an r3 cell and no r4 cell, and the points
+  in view (11,018) are too many, so the map drew r4 cells without them. `analyze/map/rough.ts`: the map also asks
+  `/map/cells` at every coarser resolution in view (up to 3 more requests, cached) and draws what a coarse cell holds
+  beyond its finer cells as a rough light at its centre ("N events placed only roughly here · their source places them
+  to within about 60 km"); the count on the map is now the coarsest one. No API change. *Observe 03 Pipeline*
+  (`observe/pipeline/`): reads `synapsis-ingest-log` and `synapsis-pipeline-log` from Elasticsearch every 30 s: one
+  card per stage (API → relay → indexer → projector → engine): rate now, last 24 h, Kafka lag and the time to catch up
+  at this rate, refused/failed; every source's batches, received, stored, refused, last batch; the engine's last 12
+  runs. Checked: the two queries against the live logs (curl), the parsing by unit tests; not yet seen in a browser
+  (the built UI on 1897 is dev's). Walk on 1897: search "log4j" (3 records), record panel, graph (4 connections) work.
+- **Live QA, stories, pipeline in the flow, the astronaut (14 Oct morning, branch `ui/live-qa`)**. *Stories*
+  (`analyze/story/`): a "Stories" menu beside Search opens the proof cases as Analyze addresses: Tōhoku 10–11 Mar 2011
+  (USGS + engine, view on Japan: 129 earthquakes and 7 forecast cells, the Tōhoku cell rank 1 of 1,205, said 11 Mar
+  00:45 UTC), Conflict week of 10 Apr 2023 (UCDP + engine: 20 forecast cells), SVB (graph of `ent:fdic:cert-24735`,
+  94 connections), Elections 2024 (the Pennsylvania calibrated estimate in the graph: estimates have no map place). The
+  address now also names the filter (`source=a,b`, `kind=`); a new address opens the page again from it (keyed on
+  the query). *Pipeline in the flow* (Shlomo: it must flow on from Live flow, not be a section): `observe/pipeline/`
+  now follows the flow's canvas on the same ground, a stem down from the API, the five stages in a row with links that
+  move while records pass, each saying its job in words; section 03 and its per-source table (Metrics has one) are
+  gone. *Fix*: six indexers write heartbeats as one `service`, each with its own share of the lag: the card showed one
+  share (3.1M, "about 2 h") and a rate from two copies' documents; it now sums the last 30 s of lags (18.5M, as
+  `night-status.sh`) and the last 60 s of work, and shows how many copies reported. *Observe sidebar*: no
+  Live/Simulated switch (`?data=simulated` still works), no "Getting started, soon", Analyze is a link, no "Not
+  declared by any package". *Analyze*: the top bar no longer covers the page name at 1280 px; a conclusion's measures
+  in words with short numbers; under the source chips "indexed ~X of Y" and "still indexing" while X < Y (live:
+  engine ~36.3K of 41.3K). *Astronaut* (`analyze/intro/`): SVG and CSS, once per visit (sessionStorage), Esc/Skip,
+  none with reduced motion. Checked in a browser at 1280×720 on the live API; build, lint, 152 tests.

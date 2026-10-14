@@ -92,3 +92,20 @@ export function timeWindowOf(value: string): TimeWindow | null {
   const day = (ms: number) => Math.floor(ms / dayMs) * dayMs;
   return { from: day(from), to: day(until) + dayMs };
 }
+
+const kinds: RecordKind[] = ['entity', 'event', 'conclusion'];
+
+/** The filter named in the address: ?source=a,b (or repeated) and ?kind=event|conclusion|entity. */
+export function filterFromAddress(params: URLSearchParams): ViewFilter {
+  const sources = params
+    .getAll('source')
+    .flatMap((value) => value.split(','))
+    .map((value) => value.trim())
+    .filter((value, index, all) => value && all.indexOf(value) === index);
+  const kind = params.get('kind');
+  return {
+    ...noFilter,
+    sources,
+    kind: kinds.includes(kind as RecordKind) ? (kind as RecordKind) : null,
+  };
+}

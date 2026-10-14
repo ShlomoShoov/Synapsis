@@ -21,6 +21,11 @@ CALIBRATION_SHARE = 0.6          # calibration: the first 60% of the source's bu
 MIN_CALIBRATION_BUCKETS = 8      # fewer: no fit, the coverage report says so
 
 
+def only_sources():
+    """ENGINE_SOURCES=a,b: read only these sources' events (the full data of every source does not fit in memory)."""
+    return [x.strip() for x in os.environ.get("ENGINE_SOURCES", "").split(",") if x.strip()]
+
+
 def mongo_url():
     return os.environ.get("ENGINE_MONGO_URL", "mongodb://localhost:27017/?directConnection=true")
 

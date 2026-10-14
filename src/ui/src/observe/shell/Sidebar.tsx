@@ -8,7 +8,7 @@
  */
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { useObserveData, type DataMode } from '../data/observeContext';
+import { useObserveData } from '../data/observeContext';
 import type { Ping } from '../data/model';
 import { formatDuration } from '../lib/format';
 import { useSetUtc, useTimeFormats } from '../lib/timeZone';
@@ -21,8 +21,7 @@ import { scrollToId, type ScrollPosition } from './useScrollSpy';
 /** The other areas of Synapsis. */
 const areas: { name: string; icon: IconName; to?: string }[] = [
   { name: 'Home', icon: 'home', to: '/home' },
-  { name: 'Getting started', icon: 'book' },
-  { name: 'Analyze', icon: 'analyze' },
+  { name: 'Analyze', icon: 'analyze', to: '/analyze' },
 ];
 
 /** The sidebar. */
@@ -180,7 +179,7 @@ function Instruments({
   collapsed: boolean;
   onShowShortcuts: () => void;
 }) {
-  const { mode, setMode, health, log, api } = useObserveData();
+  const { mode, health, log, api } = useObserveData();
   const formats = useTimeFormats();
   const setUtc = useSetUtc();
   const overall: Ping | null =
@@ -211,19 +210,6 @@ function Instruments({
 
   return (
     <div className={styles.instruments}>
-      <div className={styles.row}>
-        <span className={styles.rowLabel}>Data</span>
-        <Segmented<DataMode>
-          small
-          label="Where the data comes from"
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: 'live', label: 'Live' },
-            { value: 'simulated', label: 'Simulated' },
-          ]}
-        />
-      </div>
       <ul className={styles.services}>
         <ServiceRow name="Elasticsearch" ping={health.log} where={log.location} />
         <ServiceRow name="API" ping={health.api} where={api.location} />

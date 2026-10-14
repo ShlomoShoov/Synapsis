@@ -15,7 +15,7 @@
 import '@fontsource-variable/instrument-sans/wght.css';
 import '@fontsource/fragment-mono/400.css';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { DimensionSwitch, type Dimension } from './DimensionSwitch';
 import { EventsKey } from './map/EventsKey';
 import { GlobeMap, type Camera, type GlobeController, type MapLook } from './map/GlobeMap';
@@ -28,7 +28,7 @@ import { requestOf } from './map/viewport';
 import { fetchCatalog } from './api/client';
 import type { Item } from './api/model';
 import { FilterCard } from './filter/FilterCard';
-import { noFilter, timeWindowOf, withValue, type FilterField } from './filter/viewFilter';
+import { filterFromAddress, timeWindowOf, withValue, type FilterField } from './filter/viewFilter';
 import { useLatest } from './lib/useLatest';
 import { LogicalView } from './logical/LogicalView';
 import { SearchSheet } from './search/SearchSheet';
@@ -36,6 +36,8 @@ import { headingOfItem, headingOfRecord } from './object/describe';
 import { ObjectPanel } from './object/ObjectPanel';
 import { current, useObject, type Focus } from './object/useObject';
 import { QueryPanel } from './query/QueryPanel';
+import { StoryMenu } from './story/StoryMenu';
+import { Intro } from './intro/Intro';
 import { TimeCard } from './time/TimeCard';
 import { useLive } from './time/useLive';
 import { fromDayInput, lastMonth, type TimeWindow } from './time/window';
@@ -47,7 +49,18 @@ const GraphView = lazy(async () => ({ default: (await import('./graph/GraphView'
 /** The width the object panel takes on the right (its width and the gaps around it), kept clear on the globe. */
 const panelInset = 388 + 18 + 18;
 
+/** Analyze reads its address when it opens: a new address (a story, a shared link) opens the page again from it. */
 export function AnalyzePage() {
+  const { search } = useLocation();
+  return (
+    <>
+      <AnalyzeView key={search} />
+      <Intro />
+    </>
+  );
+}
+
+function AnalyzeView() {
   const [searchParams] = useSearchParams();
   // The moment the page opened: "today" for the timeline (a page left open over midnight keeps its day).
   const [now] = useState(() => Date.now());
@@ -65,7 +78,7 @@ export function AnalyzePage() {
   const request = look ? requestOf(look.zoom, look.bounds) : null;
   // The read API has no as_of (EMERGENCY.md §12): the control stays, the map reads what is known now.
   // The view's filter: the map sends source, type and kind with the time card's window.
-  const [viewFilter, setViewFilter] = useState(noFilter);
+  const [viewFilter, setViewFilter] = useState(() => filterFromAddress(searchParams));
   const filters = {
     from: timeWindow.from,
     to: timeWindow.to,
@@ -230,19 +243,22 @@ export function AnalyzePage() {
         onChange={setDimension}
         hasObject={focus !== null}
         extra={
-          <button
-            type="button"
-            className={styles.search}
-            onClick={() => setSearching(true)}
-            aria-label="Search (/)"
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <circle cx="8.5" cy="8.5" r="5" />
-              <path d="m12.5 12.5 4 4" />
-            </svg>
-            Search
-            <kbd>/</kbd>
-          </button>
+          <>
+            <StoryMenu />
+            <button
+              type="button"
+              className={styles.search}
+              onClick={() => setSearching(true)}
+              aria-label="Search (/)"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="8.5" cy="8.5" r="5" />
+                <path d="m12.5 12.5 4 4" />
+              </svg>
+              Search
+              <kbd>/</kbd>
+            </button>
+          </>
         }
       />
       {searching && (

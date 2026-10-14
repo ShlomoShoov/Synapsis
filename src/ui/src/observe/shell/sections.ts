@@ -35,7 +35,8 @@ export const sections: readonly SectionInfo[] = [
     number: '01',
     title: 'Live flow',
     icon: 'flow',
-    summary: 'Every batch on its way from its source to the core.',
+    summary:
+      'Every batch on its way from its source to the core, and on through each stage below it.',
     key: '1',
   },
   {

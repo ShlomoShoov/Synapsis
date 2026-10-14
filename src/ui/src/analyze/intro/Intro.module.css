@@ -1,0 +1,171 @@
+/* The intro: deep space over the page, the astronaut drifting, the Earth rising when it falls. */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(1px 1px at 12% 22%, rgb(255 255 255 / 0.8), transparent),
+    radial-gradient(1px 1px at 78% 14%, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 64% 72%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1px 1px at 30% 80%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1px 1px at 88% 58%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1px 1px at 45% 10%, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(ellipse at 50% 40%, #0b1424 0%, #04070d 70%);
+  transition: opacity 600ms ease 900ms;
+}
+
+.land {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.land:focus-visible {
+  outline: none;
+}
+
+.intro[data-stage='fall'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.float {
+  display: block;
+  animation: drift 7s ease-in-out infinite;
+}
+
+.astronaut {
+  width: clamp(110px, 16vw, 170px);
+  height: auto;
+  filter: drop-shadow(0 0 24px rgb(143 182 255 / 0.25));
+  transition:
+    transform 1100ms cubic-bezier(0.55, 0, 0.9, 0.4),
+    opacity 1100ms ease;
+}
+
+.intro[data-stage='fall'] .astronaut {
+  transform: translateY(70vh) rotate(160deg) scale(0.25);
+  opacity: 0;
+}
+
+.suit {
+  fill: #e8ecf3;
+}
+
+.pack {
+  fill: #a9b3c4;
+}
+
+.limb {
+  fill: none;
+  stroke: #e8ecf3;
+  stroke-width: 13;
+  stroke-linecap: round;
+}
+
+.visor {
+  fill: #1c2a44;
+  stroke: #8fb6ff;
+  stroke-width: 1.5;
+}
+
+.glint {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.7);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.panel {
+  fill: #8fb6ff;
+  opacity: 0.8;
+}
+
+.words {
+  position: absolute;
+  top: calc(50% + clamp(90px, 13vw, 130px));
+  left: 0;
+  right: 0;
+  text-align: center;
+  transition: opacity 400ms ease;
+}
+
+.intro[data-stage='fall'] .words {
+  opacity: 0;
+}
+
+.line {
+  display: block;
+  font: 400 clamp(22px, 3vw, 32px) var(--font-display);
+  color: var(--text-1, #f2f2f2);
+}
+
+.hint {
+  display: block;
+  margin: 10px 0 0;
+  font: 500 11px var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3, #8a93a3);
+}
+
+/* The Earth: a lit limb below the edge, rising as the astronaut falls. */
+.earth {
+  position: absolute;
+  left: 50%;
+  bottom: -141vmax;
+  width: 140vmax;
+  height: 140vmax;
+  border-radius: 50%;
+  translate: -50% 0;
+  background: radial-gradient(circle at 50% 30%, #1d3b66 0%, #0b1a30 55%, #060c16 75%);
+  box-shadow:
+    0 0 60px 10px rgb(110 160 255 / 0.35),
+    inset 0 20px 60px rgb(160 200 255 / 0.25);
+  transition: transform 1300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.intro[data-stage='fall'] .earth {
+  transform: translateY(-36vmax);
+}
+
+.skip {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  padding: 8px 14px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 999px;
+  background: transparent;
+  font: 500 12px var(--font-sans);
+  color: var(--text-2, #c8ced8);
+  cursor: pointer;
+}
+
+.skip:hover,
+.skip:focus-visible {
+  color: var(--text-1, #fff);
+  border-color: rgb(255 255 255 / 0.4);
+  outline: none;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-8deg);
+  }
+
+  50% {
+    transform: translate(10px, -16px) rotate(6deg);
+  }
+}

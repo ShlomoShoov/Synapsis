@@ -9,6 +9,7 @@ import { conclusionTypes } from '../conclusion/conclusion';
 import { Glyph } from '../conclusion/Glyph';
 import { PanelFrame } from '../lib/PanelFrame';
 import { sourceName, words } from '../object/describe';
+import { IndexedNote } from './IndexedNote';
 import { chipsOf, noFilter, withValue, withoutValue, type ViewFilter } from './viewFilter';
 import styles from './FilterCard.module.css';
 
@@ -143,6 +144,8 @@ export function FilterCard({
             ))}
           </ul>
         )}
+
+        <IndexedNote sources={filter.sources} catalog={catalog} />
 
         <p className={styles.hint}>
           {searchOnly

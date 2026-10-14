@@ -32,11 +32,12 @@ import {
 import { useReducedMotion } from '../lib/useReducedMotion';
 import { formatMoment } from '../time/window';
 import { basemapStyle, lazySources } from './basemap';
-import type { LightSet } from './lights';
+import { type LightSet, roughPrefix } from './lights';
 import { LightsLayer, type LiveTime } from './LightsLayer';
 import { Glyph } from '../conclusion/Glyph';
 import { cellIcon, iconOf, type MarkSet } from './marks';
 import { categoryOf, densityColor } from './palette';
+import { edgeKmOf } from './rough';
 import { nearestLight, unit } from './pick';
 import { starShifts, starTile, tileSizes } from './starfield';
 import styles from './GlobeMap.module.css';
@@ -568,6 +569,20 @@ function hoverOf(set: LightSet, index: number, x: number, y: number): Hover {
   const item = set.items[index];
   if (!item) {
     const count = set.counts[index] ?? 0;
+    const id = set.ids[index] ?? '';
+    if (id.startsWith(roughPrefix)) {
+      const km = edgeKmOf(id.slice(roughPrefix.length));
+      return {
+        x,
+        y,
+        title: `${count.toLocaleString('en')} ${count === 1 ? 'event' : 'events'} placed only roughly here`,
+        color: densityColor,
+        lines: [
+          km ? `Their source places them to within about ${km} km` : 'Their source gives no finer place',
+          'They stay here as you zoom in',
+        ],
+      };
+    }
     return {
       x,
       y,
