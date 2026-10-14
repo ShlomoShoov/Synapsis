@@ -1,14 +1,41 @@
 .section {
   position: relative;
-  padding: 112px var(--gutter) 96px;
-  border-top: 1px solid var(--rule-1);
-  background: linear-gradient(180deg, #0b0a08 0, var(--surface-0) 240px);
+  padding: 72px var(--gutter) 80px;
+  background: linear-gradient(180deg, #0b0a08 0, #0b0a08 60%, var(--surface-0) 100%);
+}
+
+/* The stem: the flow above goes on down from the API into the stages. */
+.stem {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 56px;
+  background: linear-gradient(180deg, transparent, var(--rule-4));
+}
+
+.intro {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font: 400 26px var(--font-display);
+  color: var(--text-1);
+}
+
+.intro p {
+  margin: 8px 0 0;
+  font: 400 13.5px/1.5 var(--font-sans);
+  color: var(--text-3);
 }
 
 .stages {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 13px;
   margin: 32px 0 0;
   padding: 0;
   list-style: none;
@@ -22,21 +49,54 @@
   background: var(--surface-1);
 }
 
-/* The arrow between two stages: a record goes left to right. */
+/* The link between two stages: a record goes left to right; it moves while the stage on its right works. */
 .stage + .stage::before {
   content: '';
   position: absolute;
   top: 26px;
-  left: -10px;
-  width: 8px;
-  border-top: 1px solid var(--rule-4);
+  left: -13px;
+  width: 13px;
+  height: 1px;
+  background: var(--rule-4);
+}
+
+.stage[data-moving] + .stage::before,
+.stage[data-moving]::before {
+  background: repeating-linear-gradient(90deg, #8fd18b 0 3px, transparent 3px 6px);
+  background-size: 12px 1px;
+  animation: flow 900ms linear infinite;
+}
+
+@keyframes flow {
+  to {
+    background-position: 12px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage[data-moving] + .stage::before,
+  .stage[data-moving]::before {
+    animation: none;
+  }
 }
 
 .stageHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
   font-size: 14px;
+}
+
+/* Too narrow for the five in a row: they wrap, and the links between them would point at nothing. */
+@media (max-width: 1100px) {
+  .stages {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  .stage + .stage::before {
+    display: none;
+  }
 }
 
 .dot {

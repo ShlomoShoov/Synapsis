@@ -98,9 +98,7 @@ export function SourcesPanel({
                     <DomainDot domain={row.info.domain} />
                     {row.info.short}
                   </span>
-                  <span className={styles.sourceTitle}>
-                    {row.info.title ?? 'Not declared by any package'}
-                  </span>
+                  <span className={styles.sourceTitle}>{row.info.title ?? ''}</span>
                 </button>
               ),
             },

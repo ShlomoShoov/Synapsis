@@ -60,8 +60,8 @@ export function ObservePage() {
           />
           <main ref={setMain} className={styles.main}>
             <FlowSection />
-            <MetricsSection />
             <PipelineSection />
+            <MetricsSection />
           </main>
           <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
         </div>

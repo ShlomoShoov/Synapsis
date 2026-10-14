@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { healthCheckMs } from '../config';
-import { readStored, writeStored } from '../lib/storage';
+import { writeStored } from '../lib/storage';
 import { ApiClient } from './api/ApiClient';
 import { emptyCatalog } from './catalog';
 import { ElasticIngestLog } from './elastic/ElasticIngestLog';
@@ -35,7 +35,8 @@ function initialMode(): DataMode {
   if (asked === 'simulated' || asked === 'live') {
     return asked;
   }
-  return readStored<DataMode>('data-mode', 'live') === 'simulated' ? 'simulated' : 'live';
+  // The page no longer offers the switch: only the address asks for the simulation.
+  return 'live';
 }
 
 /** The services of a mode. */

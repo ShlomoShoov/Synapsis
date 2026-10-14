@@ -6,8 +6,6 @@
  */
 import { useEffect, useState } from 'react';
 import { formatAge, formatCompact, formatCount, formatRate, formatSpan } from '../lib/format';
-import { SectionHeader } from '../shell/SectionHeader';
-import { sectionInfo } from '../shell/sections';
 import {
   catchUpMs,
   type Pipeline,
@@ -19,7 +17,6 @@ import {
 import styles from './PipelineSection.module.css';
 
 export function PipelineSection() {
-  const section = sectionInfo('pipeline');
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -48,63 +45,33 @@ export function PipelineSection() {
   }, []);
 
   return (
-    <section
-      id="pipeline"
-      data-nav-section="pipeline"
-      className={styles.section}
-      aria-labelledby="pipeline-title"
-    >
-      <SectionHeader section={section} />
-      {error && <p className={styles.error}>Could not read the logs: {error}</p>}
+    <section id="below-api" className={styles.section} aria-labelledby="below-api-title">
+      <div className={styles.stem} aria-hidden="true" />
+      <header className={styles.intro}>
+        <h3 id="below-api-title" className={styles.title}>
+          Below the API
+        </h3>
+        <p>
+          Where each record goes once the API has stored it: every stage live, what waits for it and
+          when it catches up.
+        </p>
+      </header>
+      {error && (
+        <p className={styles.error}>
+          The services' logs cannot be read now ({error}). The flow above is not affected.
+        </p>
+      )}
       {!pipeline ? (
-        !error && <p className={styles.quiet}>Reading the logs…</p>
+        !error && <p className={styles.quiet}>Reading the services' logs…</p>
       ) : (
         <>
-          <ol className={styles.stages} id="pipeline-stages" data-nav-anchor="Stages">
+          <ol className={styles.stages}>
             {pipeline.stages.map((stage) => (
               <StageCard key={stage.id} stage={stage} now={now} />
             ))}
           </ol>
 
-          <h3 className={styles.heading} id="pipeline-sources" data-nav-anchor="Per source">
-            Per source <span>everything each source sent through the API</span>
-          </h3>
-          {pipeline.sources.length === 0 ? (
-            <p className={styles.quiet}>No batch yet.</p>
-          ) : (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Source</th>
-                    <th>Sent by</th>
-                    <th>Batches</th>
-                    <th>Received</th>
-                    <th>Stored</th>
-                    <th>Refused</th>
-                    <th>Last batch</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pipeline.sources.map((row) => (
-                    <tr key={row.source}>
-                      <td>{row.source.replace(/^src:/, '')}</td>
-                      <td className={styles.muted}>{row.producers.join(', ')}</td>
-                      <td>{formatCount(row.batches)}</td>
-                      <td>{formatCount(row.received)}</td>
-                      <td>{formatCount(row.stored)}</td>
-                      <td data-bad={row.refused > 0 || undefined}>{formatCount(row.refused)}</td>
-                      <td className={styles.muted}>
-                        {row.lastAt ? formatAge(row.lastAt, now) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <h3 className={styles.heading} id="pipeline-engine" data-nav-anchor="Engine runs">
+          <h3 className={styles.heading}>
             The engine's last runs <span>conclusions it sent back through the API</span>
           </h3>
           {pipeline.runs.length === 0 ? (
@@ -139,7 +106,11 @@ function StageCard({ stage, now }: { stage: Stage; now: number }) {
   const live = stage.lastAt !== null && now - stage.lastAt < silentMs;
   const catchUp = catchUpMs(stage);
   return (
-    <li className={styles.stage} data-live={live || undefined}>
+    <li
+      className={styles.stage}
+      data-live={live || undefined}
+      data-moving={(live && stage.rate !== null && stage.rate > 0) || undefined}
+    >
       <div className={styles.stageHead}>
         <span className={styles.dot} aria-hidden="true" />
         <strong>{stage.title}</strong>
