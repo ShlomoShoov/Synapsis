@@ -285,16 +285,12 @@
 .screenshot {
   margin: 30px 0;
 }
-.screenshot > div {
-  display: grid;
-  place-items: center;
-  min-height: 250px;
-  border: 1px dashed #aaa793;
-  background: linear-gradient(140deg, #eae3d3, #f5f1e9);
-  color: var(--ink-muted);
-  font:
-    13px/1.4 ui-monospace,
-    monospace;
+.screenshot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
 }
 .screenshot figcaption {
   padding-top: 9px;

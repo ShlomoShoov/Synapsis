@@ -36,11 +36,11 @@ export function CodeBlock({ label, code }: { label: string; code: string }) {
   );
 }
 
-export function ScreenshotPlaceholder({ caption }: { caption: string }) {
+export function Screenshot({ src, alt, caption }: { src: string; alt: string; caption: string }) {
   return (
     <figure className={styles.screenshot}>
-      <div>UI screenshot pending</div>
-      <figcaption>{caption} · capture from the current running UI pending</figcaption>
+      <img src={src} alt={alt} width="1440" height="900" loading="lazy" />
+      <figcaption>{caption}</figcaption>
     </figure>
   );
 }

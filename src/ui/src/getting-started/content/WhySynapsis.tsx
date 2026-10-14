@@ -7,8 +7,8 @@ export function WhySynapsis() {
       <h3>One record, many dimensions</h3>
       <p className={styles.lead}>
         Real-world intelligence is fractured across isolated formats — cyber feeds, event logs, and
-        field reports. Synapsis bridges them into a single canonical model, making any observation
-        instantly searchable across space, time, semantics, and relationships.
+        field reports. Synapsis bridges them into a single canonical model, making observations
+        explorable across the dimensions they carry: space, time, semantics, and relationships.
       </p>
       <h3>Why it exists</h3>
       <p>
@@ -99,10 +99,11 @@ export function Primitives() {
         <code>confidence</code>. These requirements come from{' '}
         <code>RecordValidator.FindMissingField</code> and the record model classes.
       </p>
-      <Callout title="Inference readiness">
-        A conclusion can represent an inference with its supporting records and method. Automatic
-        forecasting, model execution, and prediction publishing are planned or unavailable in the
-        current application.
+      <Callout title="Engine conclusions">
+        The on-demand engine computes patterns and forecasts from stored events and can publish them
+        as Conclusion records through <code>POST /ingest</code>. Analyze displays those conclusions
+        alongside source records. The engine is run on demand; ingesting an event does not
+        automatically start a forecast run.
       </Callout>
     </>
   );
