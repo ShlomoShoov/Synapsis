@@ -135,10 +135,20 @@ const counts = {
   rejected: sum('rejected'),
 };
 
-/** The API's log: the last 24 hours, the last 5 minutes, and every source ever. */
-export function ingestBody(now: number) {
+/** Only what was written up to `now`: a moment of a replay, not the present. */
+const upTo = (field: string, now: number) => ({
+  query: { range: { [field]: { lte: new Date(now).toISOString() } } },
+});
+
+/**
+ * The API's log: the last 24 hours, the last 5 minutes, and every source ever. With `past`, everything is read as it
+ * stood at `now` (a replayed moment); without it, the present, so a clock a little behind Elasticsearch's loses
+ * nothing.
+ */
+export function ingestBody(now: number, past = false) {
   return {
     size: 0,
+    ...(past ? upTo('timestamp', now) : {}),
     aggs: {
       day: {
         filter: { range: { timestamp: { gte: new Date(now - dayMs).toISOString() } } },
@@ -164,9 +174,10 @@ export function ingestBody(now: number) {
 }
 
 /** The services' log: each service's two last documents and its last 24 hours, and the engine's last runs. */
-export function servicesBody(now: number) {
+export function servicesBody(now: number, past = false) {
   return {
     size: 0,
+    ...(past ? upTo('at', now) : {}),
     aggs: {
       services: {
         terms: { field: 'service', size: 10 },
@@ -323,8 +334,19 @@ export function catchUpMs(stage: Stage): number | null {
   return (stage.lag / stage.rate) * 1000;
 }
 
-/** Reads both logs. A log not created yet reads as empty. */
-export async function readPipeline(now: number, signal?: AbortSignal): Promise<Pipeline> {
+/** Whether a stage has written to its log within a heartbeat or so of `now`. */
+export function isLive(stage: Stage, now: number): boolean {
+  return (
+    stage.lastAt !== null && stage.lastAt <= now + heartbeatMs && now - stage.lastAt < silentMs
+  );
+}
+
+/** Reads both logs, as they stood at `now` when `past`. A log not created yet reads as empty. */
+export async function readPipeline(
+  now: number,
+  signal?: AbortSignal,
+  past = false,
+): Promise<Pipeline> {
   const search = <T>(index: string, body: object) =>
     requestJson<T>(
       `${elasticUrl}/${index}/_search?ignore_unavailable=true`,
@@ -336,8 +358,8 @@ export async function readPipeline(now: number, signal?: AbortSignal): Promise<P
       { service: 'Elasticsearch', signal },
     );
   const [ingest, services] = await Promise.all([
-    search<IngestAnswer>(ingestLogIndex, ingestBody(now)),
-    search<ServicesAnswer>(pipelineLogIndex, servicesBody(now)),
+    search<IngestAnswer>(ingestLogIndex, ingestBody(now, past)),
+    search<ServicesAnswer>(pipelineLogIndex, servicesBody(now, past)),
   ]);
   return pipelineOf(ingest, services);
 }

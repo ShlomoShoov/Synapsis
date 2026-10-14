@@ -1,4 +1,12 @@
-/* The intro: deep space over the page, the astronaut drifting, the Earth rising when it falls. */
+/*
+ * The intro: deep space over the page, the sun off to the right, the Earth's limb below, the astronaut drifting.
+ * On a click the astronaut falls: the steps below are timed within fallMs (intro.ts, 2.6 s).
+ *
+ *   0 – 0.3 s    it lets go: a small push back, the words fade;
+ *   0.3 – 2.2 s  it falls, faster and faster, tumbling and shrinking as it drops away, glowing as it meets the air;
+ *                the view follows it down: the stars climb, the Earth rises and grows;
+ *   1.8 – 2.6 s  the atmosphere's light fills the view, then the page shows.
+ */
 
 .intro {
   position: fixed;
@@ -7,16 +15,209 @@
   display: grid;
   place-items: center;
   overflow: hidden;
-  background:
-    radial-gradient(1px 1px at 12% 22%, rgb(255 255 255 / 0.8), transparent),
-    radial-gradient(1px 1px at 78% 14%, rgb(255 255 255 / 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 64% 72%, rgb(255 255 255 / 0.6), transparent),
-    radial-gradient(1px 1px at 30% 80%, rgb(255 255 255 / 0.5), transparent),
-    radial-gradient(1px 1px at 88% 58%, rgb(255 255 255 / 0.6), transparent),
-    radial-gradient(1px 1px at 45% 10%, rgb(255 255 255 / 0.5), transparent),
-    radial-gradient(ellipse at 50% 40%, #0b1424 0%, #04070d 70%);
-  transition: opacity 600ms ease 900ms;
+  background: radial-gradient(ellipse 120% 90% at 50% 35%, #0a1222 0%, #05080f 55%, #020306 100%);
 }
+
+.intro[data-stage='fall'] {
+  pointer-events: none;
+  animation: out 2600ms linear forwards;
+}
+
+/* ---------- The sky ---------- */
+
+.sky,
+.starsFar,
+.starsNear {
+  position: absolute;
+  inset: -30vh -5vw;
+}
+
+/* Far stars: one star per tile, tiles of different sizes so the pattern never shows; a faint band of the galaxy. */
+.starsFar {
+  background-image:
+    radial-gradient(1px 1px at 23px 41px, rgb(255 255 255 / 0.85), transparent),
+    radial-gradient(1px 1px at 151px 87px, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1px 1px at 97px 173px, rgb(210 225 255 / 0.7), transparent),
+    radial-gradient(1px 1px at 211px 29px, rgb(255 255 255 / 0.5), transparent),
+    radial-gradient(1px 1px at 61px 251px, rgb(255 240 220 / 0.65), transparent),
+    radial-gradient(1px 1px at 301px 199px, rgb(255 255 255 / 0.55), transparent),
+    radial-gradient(1px 1px at 137px 331px, rgb(220 230 255 / 0.6), transparent),
+    linear-gradient(
+      118deg,
+      transparent 28%,
+      rgb(150 160 210 / 0.05) 42%,
+      rgb(205 190 225 / 0.08) 50%,
+      rgb(150 160 210 / 0.05) 58%,
+      transparent 70%
+    );
+  background-size:
+    211px 211px,
+    293px 293px,
+    227px 227px,
+    347px 347px,
+    389px 389px,
+    431px 431px,
+    467px 467px,
+    100% 100%;
+  transition: transform 2200ms cubic-bezier(0.55, 0, 0.75, 0.3) 250ms;
+}
+
+/* Near stars: fewer, brighter, a little colour, twinkling. */
+.starsNear {
+  background-image:
+    radial-gradient(1.6px 1.6px at 83px 117px, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 401px 263px, rgb(190 215 255 / 0.95), transparent),
+    radial-gradient(1.8px 1.8px at 257px 479px, rgb(255 236 210 / 0.9), transparent),
+    radial-gradient(1.4px 1.4px at 541px 61px, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 613px 401px, rgb(255 255 255 / 0.8), transparent);
+  background-size:
+    557px 557px,
+    613px 613px,
+    709px 709px,
+    787px 787px,
+    853px 853px;
+  animation: twinkle 5.5s ease-in-out infinite;
+  transition: transform 2200ms cubic-bezier(0.55, 0, 0.75, 0.3) 250ms;
+}
+
+.intro[data-stage='fall'] .starsFar {
+  transform: translateY(-12vh);
+}
+
+.intro[data-stage='fall'] .starsNear {
+  transform: translateY(-30vh);
+}
+
+/* The sun, off the top right: where the light on the suit comes from. */
+.sun {
+  position: absolute;
+  top: -22vmax;
+  right: -18vmax;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      rgb(255 250 235 / 0.9) 0 1.2%,
+      rgb(255 236 200 / 0.35) 4%,
+      transparent 14%
+    ),
+    radial-gradient(circle, rgb(255 214 160 / 0.14) 0, rgb(255 190 120 / 0.05) 30%, transparent 60%);
+  transition:
+    transform 2200ms cubic-bezier(0.55, 0, 0.75, 0.3) 250ms,
+    opacity 1600ms ease 600ms;
+}
+
+.intro[data-stage='fall'] .sun {
+  transform: translateY(-16vh);
+  opacity: 0.4;
+}
+
+/* ---------- The Earth ---------- */
+
+.earth {
+  position: absolute;
+  left: 50%;
+  bottom: -136vmax;
+  width: 150vmax;
+  height: 150vmax;
+  border-radius: 50%;
+  translate: -50% 0;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 64% 4%,
+    #346fae 0%,
+    #17447f 15%,
+    #0b2a57 34%,
+    #061530 56%,
+    #020812 78%
+  );
+  box-shadow:
+    0 0 0 0.3vmax rgb(165 210 255 / 0.55),
+    0 0 4vmax 1vmax rgb(80 150 255 / 0.4),
+    0 0 16vmax 4vmax rgb(40 100 220 / 0.16);
+  will-change: transform;
+  transition: transform 2300ms cubic-bezier(0.5, 0, 0.6, 1) 200ms;
+}
+
+.intro[data-stage='fall'] .earth {
+  transform: translateY(-34vmax) scale(1.35);
+}
+
+.continents,
+.clouds,
+.night {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+/* Land and cloud: fractal noise, cut at a level, tiled without a seam. */
+.continents {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='1000'%3E%3Cfilter id='l' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004' numOctaves='6' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.37 0 0 0 0 0.25 0 0 0 5 -2.8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23l)'/%3E%3C/svg%3E");
+  background-size: 1000px 1000px;
+  opacity: 0.5;
+}
+
+.clouds {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1000' height='1000'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.005 0.014' numOctaves='5' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 2.6 -1.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
+  background-size: 1000px 1000px;
+  opacity: 0.78;
+  animation: clouds 160s linear infinite;
+}
+
+/* Day under the sun at the top right, night away from it; the air lit along the limb. */
+.night {
+  background:
+    linear-gradient(97deg, rgb(1 3 8 / 0.92) 18%, rgb(2 6 16 / 0.6) 36%, transparent 60%),
+    radial-gradient(
+      circle at 64% 2%,
+      transparent 0 32%,
+      rgb(2 6 16 / 0.55) 50%,
+      rgb(1 3 8 / 0.94) 68%
+    );
+  box-shadow:
+    inset 0 1.4vmax 3vmax rgb(150 200 255 / 0.4),
+    inset 0 0.25vmax 0.4vmax rgb(210 235 255 / 0.55);
+}
+
+/* The air, lit from below, filling the view at the end of the fall. */
+.air {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    0deg,
+    rgb(120 180 255 / 0.55),
+    rgb(80 140 240 / 0.15) 45%,
+    transparent 75%
+  );
+  opacity: 0;
+  transition: opacity 1200ms ease-in 1100ms;
+}
+
+.intro[data-stage='fall'] .air {
+  opacity: 1;
+}
+
+.flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 80%,
+    rgb(235 245 255 / 0.95),
+    rgb(170 210 255 / 0.7) 45%,
+    rgb(110 160 240 / 0.4)
+  );
+  opacity: 0;
+}
+
+.intro[data-stage='fall'] .flash {
+  animation: flash 2600ms linear forwards;
+}
+
+/* ---------- The astronaut ---------- */
 
 .land {
   position: absolute;
@@ -34,80 +235,130 @@
   outline: none;
 }
 
-.intro[data-stage='fall'] {
+/* Drifting: three motions of different periods together, so the drift never repeats the same way. */
+.float {
+  display: block;
+  animation: drift 11s ease-in-out infinite;
+}
+
+.sway {
+  display: block;
+  animation: sway 14s ease-in-out infinite;
+}
+
+.fall {
+  position: relative;
+  display: block;
+}
+
+.tumble {
+  display: block;
+  animation: roll 19s ease-in-out infinite alternate;
+}
+
+.astronaut {
+  display: block;
+  width: clamp(150px, 19vw, 230px);
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0 30px rgb(150 190 255 / 0.18)) drop-shadow(0 16px 30px rgb(0 0 0 / 0.5));
+}
+
+.intro[data-stage='fall'] .float,
+.intro[data-stage='fall'] .sway {
+  animation-play-state: paused;
+}
+
+.intro[data-stage='fall'] .fall {
+  animation: fall 2200ms forwards;
+}
+
+.intro[data-stage='fall'] .tumble {
+  animation: tumble 2200ms cubic-bezier(0.4, 0, 0.8, 0.5) forwards;
+}
+
+/* The heat of the air on the way down: a glow above the falling body, longer as it goes faster. */
+.heat {
+  position: absolute;
+  left: 50%;
+  bottom: 40%;
+  width: 70%;
+  height: 160%;
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 50% 60% at 50% 100%,
+    rgb(255 236 200 / 0.95),
+    rgb(255 150 70 / 0.65) 30%,
+    rgb(255 90 40 / 0.25) 55%,
+    transparent 75%
+  );
+  filter: blur(10px);
   opacity: 0;
   pointer-events: none;
 }
 
-.float {
-  display: block;
-  animation: drift 7s ease-in-out infinite;
-}
-
-.astronaut {
-  width: clamp(110px, 16vw, 170px);
-  height: auto;
-  filter: drop-shadow(0 0 24px rgb(143 182 255 / 0.25));
-  transition:
-    transform 1100ms cubic-bezier(0.55, 0, 0.9, 0.4),
-    opacity 1100ms ease;
-}
-
-.intro[data-stage='fall'] .astronaut {
-  transform: translateY(70vh) rotate(160deg) scale(0.25);
-  opacity: 0;
-}
-
-.suit {
-  fill: #e8ecf3;
-}
-
-.pack {
-  fill: #a9b3c4;
+.intro[data-stage='fall'] .heat {
+  animation: heat 2200ms ease-in forwards;
 }
 
 .limb {
   fill: none;
-  stroke: #e8ecf3;
-  stroke-width: 13;
   stroke-linecap: round;
 }
 
-.visor {
-  fill: #1c2a44;
-  stroke: #8fb6ff;
-  stroke-width: 1.5;
-}
-
-.glint {
+.limbLight {
   fill: none;
-  stroke: rgb(255 255 255 / 0.7);
-  stroke-width: 2;
   stroke-linecap: round;
 }
 
-.panel {
-  fill: #8fb6ff;
-  opacity: 0.8;
+.ring {
+  fill: #c3c9d3;
+  stroke: #7b8698;
+  stroke-width: 1.1;
 }
+
+.ringDark {
+  fill: #8b95a6;
+  stroke: #5b6578;
+  stroke-width: 1;
+}
+
+.fold {
+  fill: none;
+  stroke: rgb(70 82 102 / 0.38);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+
+.lamp {
+  animation: lamp 3.2s ease-in-out infinite;
+}
+
+/* ---------- The words ---------- */
 
 .words {
   position: absolute;
-  top: calc(50% + clamp(90px, 13vw, 130px));
+  top: calc(50% + clamp(120px, 15vw, 170px));
   left: 0;
   right: 0;
   text-align: center;
-  transition: opacity 400ms ease;
+  transition:
+    opacity 300ms ease,
+    transform 500ms ease;
 }
 
 .intro[data-stage='fall'] .words {
   opacity: 0;
+  transform: translateY(10px);
 }
 
 .line {
   display: block;
   font: 400 clamp(22px, 3vw, 32px) var(--font-display);
   color: var(--text-1, #f2f2f2);
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.6);
 }
 
 .hint {
@@ -119,24 +370,8 @@
   color: var(--text-3, #8a93a3);
 }
 
-/* The Earth: a lit limb below the edge, rising as the astronaut falls. */
-.earth {
-  position: absolute;
-  left: 50%;
-  bottom: -141vmax;
-  width: 140vmax;
-  height: 140vmax;
-  border-radius: 50%;
-  translate: -50% 0;
-  background: radial-gradient(circle at 50% 30%, #1d3b66 0%, #0b1a30 55%, #060c16 75%);
-  box-shadow:
-    0 0 60px 10px rgb(110 160 255 / 0.35),
-    inset 0 20px 60px rgb(160 200 255 / 0.25);
-  transition: transform 1300ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.intro[data-stage='fall'] .earth {
-  transform: translateY(-36vmax);
+.land:focus-visible .hint {
+  color: var(--text-1, #fff);
 }
 
 .skip {
@@ -146,7 +381,8 @@
   padding: 8px 14px;
   border: 1px solid rgb(255 255 255 / 0.18);
   border-radius: 999px;
-  background: transparent;
+  background: rgb(4 7 13 / 0.4);
+  backdrop-filter: blur(6px);
   font: 500 12px var(--font-sans);
   color: var(--text-2, #c8ced8);
   cursor: pointer;
@@ -159,13 +395,133 @@
   outline: none;
 }
 
+.intro[data-stage='fall'] .skip {
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+/* ---------- Motions ---------- */
+
 @keyframes drift {
   0%,
   100% {
-    transform: translate(0, 0) rotate(-8deg);
+    transform: translate(0, 0);
+  }
+
+  30% {
+    transform: translate(12px, -14px);
+  }
+
+  55% {
+    transform: translate(4px, -22px);
+  }
+
+  80% {
+    transform: translate(-10px, -8px);
+  }
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: perspective(900px) rotateY(-9deg) rotate(-7deg);
   }
 
   50% {
-    transform: translate(10px, -16px) rotate(6deg);
+    transform: perspective(900px) rotateY(10deg) rotate(5deg);
+  }
+}
+
+@keyframes roll {
+  from {
+    transform: rotate(-4deg);
+  }
+
+  to {
+    transform: rotate(6deg);
+  }
+}
+
+/* A small push back as it lets go, then gravity: slow at first, faster and faster, away towards the Earth. */
+@keyframes fall {
+  0% {
+    transform: translate(0, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+
+  14% {
+    transform: translate(-6px, -22px) scale(1.02);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45);
+  }
+
+  100% {
+    transform: translate(5vw, 46vh) scale(0.06);
+  }
+}
+
+@keyframes tumble {
+  0% {
+    transform: rotate(0);
+  }
+
+  100% {
+    transform: rotate(250deg);
+  }
+}
+
+@keyframes heat {
+  0%,
+  45% {
+    opacity: 0;
+    transform: scale(1, 0.6);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(2.6, 5.5);
+  }
+}
+
+@keyframes flash {
+  0%,
+  70% {
+    opacity: 0;
+  }
+
+  88% {
+    opacity: 0.85;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes out {
+  0%,
+  86% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes twinkle {
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes clouds {
+  to {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes lamp {
+  50% {
+    opacity: 0.7;
   }
 }

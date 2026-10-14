@@ -2,6 +2,9 @@
 
 const seenKey = 'synapsis.analyze.intro-seen';
 
+/** How long the fall lasts, from the click to the page (Intro.module.css times its steps within it). */
+export const fallMs = 2600;
+
 export function shouldShowIntro(
   storage: Pick<Storage, 'getItem'> | null,
   reducedMotion: boolean,
