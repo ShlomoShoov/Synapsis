@@ -21,6 +21,7 @@ import { scrollToId, type ScrollPosition } from './useScrollSpy';
 /** The other areas of Synapsis. */
 const areas: { name: string; icon: IconName; to?: string }[] = [
   { name: 'Home', icon: 'home', to: '/home' },
+  { name: 'Getting started', icon: 'book', to: '/getting-started' },
   { name: 'Analyze', icon: 'analyze', to: '/analyze' },
 ];
 

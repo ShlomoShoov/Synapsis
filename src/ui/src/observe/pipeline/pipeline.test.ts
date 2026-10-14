@@ -137,8 +137,13 @@ describe('pipelineOf', () => {
     expect(empty.stages.every((each) => each.handled === 0)).toBe(true);
   });
 
-  it('sums several indexers: their rate over two heartbeats and their shares of the queue', () => {
+  it('sums several indexers: their rate over two heartbeats and their shares of the queue, once each', () => {
     const indexer = services.aggregations!.services.buckets[0]!;
+    // Five copies beat together, one 17 s later; the last beat of the five is not in the index yet.
+    const copies = [0, 1, 2, 3, 4].flatMap((copy) => [
+      heartbeat('2026-10-14T00:00:30Z', 1300 + copy, 3_000_000),
+      heartbeat('2026-10-14T00:00:00Z', 1300 + copy, 3_000_000),
+    ]);
     const shared: ServicesAnswer = {
       aggregations: {
         ...services.aggregations!,
@@ -146,8 +151,16 @@ describe('pipelineOf', () => {
           buckets: [
             {
               ...indexer,
-              rated: { doc_count: 12, processed: v(16_200) },
-              beat: { doc_count: 6, lag: v(18_000_000) },
+              latest: {
+                hits: {
+                  hits: [
+                    heartbeat('2026-10-14T00:00:47Z', 1200, 3_000_000),
+                    ...copies,
+                    heartbeat('2026-10-14T00:00:17Z', 1190, 3_000_000),
+                    heartbeat('2026-10-13T23:59:30Z', 9999, 9_999_999),
+                  ],
+                },
+              },
             },
           ],
         },
@@ -155,8 +168,8 @@ describe('pipelineOf', () => {
     };
     const stage = pipelineOf(ingest, shared).stages.find((s) => s.id === 'indexer')!;
     expect(stage.instances).toBe(6);
-    expect(stage.rate).toBe(270);
+    expect(stage.rate).toBe((2 * (1300 * 5 + 10) + 1200 + 1190) / 60);
     expect(stage.lag).toBe(18_000_000);
-    expect(catchUpMs(stage)).toBe((18_000_000 / 270) * 1000);
+    expect(stage.lastAt).toBe(Date.parse('2026-10-14T00:00:47Z'));
   });
 });

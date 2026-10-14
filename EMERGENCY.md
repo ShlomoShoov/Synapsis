@@ -956,3 +956,28 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   in words with short numbers; under the source chips "indexed ~X of Y" and "still indexing" while X < Y (live:
   engine ~36.3K of 41.3K). *Astronaut* (`analyze/intro/`): SVG and CSS, once per visit (sessionStorage), Esc/Skip,
   none with reduced motion. Checked in a browser at 1280×720 on the live API; build, lint, 152 tests.
+- **UI release for the presentation (14 Oct 09:00–09:30, branch `ui/release`, local UI agent)**. *Merged into dev*:
+  `ui/live-qa` (fast-forward, 46bdf69); `feature/getting-started-docs` (Ytshak; reachable from Home, the header and
+  Observe's sidebar); `ui/visual-enhancements` (the cloud agent: the pipeline drawn under Live flow, replayed with the
+  flow's clock; the 3D astronaut with the SVG as fallback). *Fixes*: (1) the indexer copies are counted from the
+  service's last heartbeat, not from the browser's clock, so a heartbeat Elasticsearch does not show yet never drops a
+  copy; the same in a replay (the query is bounded at the playhead). Each copy reports its own partition's lag, so the
+  sum is the group's lag once: Observe 14.1M = `kafka-consumer-groups --describe synapsis-elasticsearch` 14.11M (6
+  partitions); replayed 5 min back: 6 copies, 14.21M. The card says "6 copies". (2) Kafka's header showed 28M, the two
+  readers' lags added; both read the same records, so it now shows the slower reader's (14.1M, "not read by both yet").
+  (3) The engine is drawn as it works: beside the API and MongoDB, a pipe MongoDB → engine and a dashed one engine →
+  API (it was fed from Neo4j). (4) Two stories: Log4Shell, Dec 2021 (`ent:cve:CVE-2021-44228` in the graph: CISA KEV,
+  NVD, EPSS, HN, Reddit, 57 nodes) and Report card: UCDP 2010–2024 (`con:engine:forecast_score:ucdp-ged:cell:test`:
+  AUC 0.918 against the routine's 0.879, top-1% 0.59 against 0.431, 783 weeks). *Checked on 1897 (live data)*: Observe
+  pipeline against Kafka for both readers; every story: Tōhoku (129 earthquakes, 12 conclusions; the forecast's panel:
+  statement, parts, said 11 Mar 00:45 about 11 Mar, 50 premises), Conflict (383 events, 20 conclusions), SVB graph (95
+  nodes), Elections (52 nodes), Log4Shell, the report card (260,920 events behind it); Getting Started from Home; the
+  3D astronaut, and Esc ends it (fade about 2 s). Node 24 checks: build, lint, 160 tests; package-lock unchanged.
+  Rollback: `docker tag synapsis-ui:good-0927 synapsis/ui:dev && docker compose -f deploy/core/compose.yml up -d
+  --no-build --no-deps ui` (from the main checkout). *Known, not fixed*: the engine's cisa-kev and ransomware-live
+  forecasts and scores have `known_at` 2026-10-19 (in the future; engine data, so the KEV story is Log4Shell, not
+  the KEV score); a story's first load can take 10–16 s while Elasticsearch indexes (open each once before
+  presenting); Live flow shows 0 records/min because no feeder has sent since 02:42 (replay the night to show the
+  flow); the engine card's "last word" is the last run's message (wikipedia:polls, "golden 0 pass"), not the engine's
+  total; the graph opens close on a node with many links (SVB: a large glow, zoom out with −); the intro shows once
+  per visit (a new tab shows it again); the 3D astronaut was not seen on the presenting machine's GPU.
