@@ -37,6 +37,7 @@ import { ObjectPanel } from './object/ObjectPanel';
 import { current, useObject, type Focus } from './object/useObject';
 import { QueryPanel } from './query/QueryPanel';
 import { StoryMenu } from './story/StoryMenu';
+import { Intro } from './intro/Intro';
 import { TimeCard } from './time/TimeCard';
 import { useLive } from './time/useLive';
 import { fromDayInput, lastMonth, type TimeWindow } from './time/window';
@@ -51,7 +52,12 @@ const panelInset = 388 + 18 + 18;
 /** Analyze reads its address when it opens: a new address (a story, a shared link) opens the page again from it. */
 export function AnalyzePage() {
   const { search } = useLocation();
-  return <AnalyzeView key={search} />;
+  return (
+    <>
+      <AnalyzeView key={search} />
+      <Intro />
+    </>
+  );
 }
 
 function AnalyzeView() {
