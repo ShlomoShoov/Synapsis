@@ -66,6 +66,8 @@ export interface Cell {
   count: number;
   center: LngLat;
   boundary: LngLat[];
+  /** Events placed only to this coarse cell: what it holds beyond its finer cells in view (map/rough.ts). */
+  rough?: boolean;
 }
 
 /** Matching events the map cannot draw, and why. */

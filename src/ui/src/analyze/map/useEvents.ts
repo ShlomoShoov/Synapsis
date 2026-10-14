@@ -4,13 +4,15 @@
  * The map first asks how many records are in view, per H3 cell at the zoom's resolution (GET /map/cells). When they
  * are 5,000 or fewer, it asks for the events themselves (GET /map/points), so every light has its type's colour and
  * no point is ever cut. Otherwise it draws the cells' density as warm lights, which grow with the count; zooming in
- * brings back the events one by one.
+ * brings back the events one by one. The coarser resolutions in view are counted too, so events placed only roughly
+ * (no cell at this zoom's resolution) stay on the map (rough.ts).
  */
 import { fetchCells, fetchPoints } from '../api/client';
 import type { MapLayer, RecordKind } from '../api/model';
 import { type Filters, type MapView, cellsQuery, resolutionOf, wholeEarth } from '../api/query';
 import { useLatest } from '../lib/useLatest';
 import { type LightSet, lightsOfCells, lightsOfPoints } from './lights';
+import { withRough } from './rough';
 
 /** The most events drawn one by one (the API's largest page of points). */
 export const mostPoints = 5000;
@@ -26,8 +28,12 @@ export function useEvents(filters: Filters, view: MapView | null, kind?: RecordK
   const resolution = view ? resolutionOf(view.zoom) : 2;
   const key = view ? cellsQuery(filters, resolution, view.bbox, kind) : null;
   return useLatest<Events>(key, async (signal) => {
-    // 1. The records in view, per cell.
-    const cells = await fetchCells(filters, resolution, view!.bbox, signal, kind);
+    // 1. The records in view, per cell, and per coarser cell (for the events with no place fine enough for this zoom).
+    const coarser = view!.bbox ? [...Array(resolution - 2).keys()].map((step) => step + 2) : [];
+    const [fine, ...parents] = await Promise.all(
+      [resolution, ...coarser].map((each) => fetchCells(filters, each, view!.bbox, signal, kind)),
+    );
+    const cells = withRough(fine!, parents);
 
     // 2. Few enough: the points themselves. A point too imprecise for a cell is not in the cells' sum, so a list of
     //    points that was cut after all (total above the items) gives way to the cells.
