@@ -1,4 +1,4 @@
-import { Callout, ScreenshotPlaceholder } from '../DocsBlocks';
+import { Callout, Screenshot } from '../DocsBlocks';
 
 export function UiMap() {
   return (
@@ -7,7 +7,11 @@ export function UiMap() {
         Open <a href="/analyze">Analyze</a>. The Map, Graph, and Logical switch sits alongside the
         search entry, time card, and filters. The selected object follows you between dimensions.
       </p>
-      <ScreenshotPlaceholder caption="Analyze overview, October 2026" />
+      <Screenshot
+        src="/media/getting-started/analyze-map.jpg"
+        alt="Analyze map with time range, filters, event density, and map controls"
+        caption="Analyze map · saved API fixtures, 14 October 2026"
+      />
       <p>
         On Map, pan or zoom to a place. The view requests H3 density cells first; when the matching
         record count is 5,000 or fewer it requests individual points. Dense areas remain summarized
@@ -30,7 +34,11 @@ export function UiGraph() {
         Select a connected node to pivot. The object details panel keeps the source record available
         so a connection can be checked against evidence.
       </p>
-      <ScreenshotPlaceholder caption="Graph with an open object, October 2026" />
+      <Screenshot
+        src="/media/getting-started/analyze-graph.jpg"
+        alt="Graph showing a selected record, its direct links, key, and details panel"
+        caption="Graph with a selected record · saved API fixtures, 14 October 2026"
+      />
     </>
   );
 }
@@ -43,7 +51,11 @@ export function UiLogical() {
         filed there. The tree is a way to browse classification, not a replacement for the original
         source record.
       </p>
-      <ScreenshotPlaceholder caption="Logical tree, October 2026" />
+      <Screenshot
+        src="/media/getting-started/analyze-logical.jpg"
+        alt="Logical dimension showing expandable paths and record counts"
+        caption="Logical tree · saved API fixtures, 14 October 2026"
+      />
     </>
   );
 }
@@ -86,7 +98,11 @@ export function UiDetails() {
         Use the available Map, Graph, or Tree actions when the record has a corresponding location,
         connection, or logical path. The raw JSON is the source-grounded view.
       </p>
-      <ScreenshotPlaceholder caption="Object details and source tabs, October 2026" />
+      <Screenshot
+        src="/media/getting-started/analyze-details.jpg"
+        alt="Object details with source state, evidence, and original record sections"
+        caption="Object details · saved API fixtures, 14 October 2026"
+      />
     </>
   );
 }

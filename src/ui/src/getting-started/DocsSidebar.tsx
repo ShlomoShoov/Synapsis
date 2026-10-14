@@ -13,7 +13,8 @@ export function DocsSidebar({ active, open, onToggle, onSelect }: Props) {
   const toggle = useRef<HTMLButtonElement>(null);
   const firstLink = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
-    if (open && window.matchMedia('(max-width: 900px)').matches) firstLink.current?.focus();
+    if (open && window.matchMedia('(max-width: 900px)').matches)
+      firstLink.current?.focus({ preventScroll: true });
   }, [open]);
   useEffect(() => {
     if (!open) return;
