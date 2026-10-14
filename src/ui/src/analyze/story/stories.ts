@@ -58,6 +58,25 @@ export const stories: Story[] = [
     object: 'con:engine:calibrated_estimate:wikipedia-polls:US-PA:2024-11-05',
     dimension: 'graph',
   },
+  {
+    id: 'kev',
+    title: 'Log4Shell, Dec 2021',
+    line: 'One CVE, listed by CISA KEV on 10 December: the same vulnerability in NVD, EPSS, Hacker News and Reddit.',
+    from: '2021-12-01',
+    to: '2022-01-01',
+    object: 'ent:cve:CVE-2021-44228',
+    dimension: 'graph',
+  },
+  {
+    id: 'score',
+    title: 'Report card: UCDP 2010–2024',
+    line: "How the engine's weekly conflict forecasts did over 783 weeks, against the routine.",
+    from: '2010-01-04',
+    to: '2025-01-01',
+    view: [31, 13, 2.5],
+    sources: ['src:ucdp:ged'],
+    object: 'con:engine:forecast_score:ucdp-ged:cell:test',
+  },
 ];
 
 /** The address of Analyze that opens the story. */

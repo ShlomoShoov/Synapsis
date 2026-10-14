@@ -23,6 +23,13 @@ describe('stories', () => {
     expect(params.get('dimension')).toBe('graph');
   });
 
+  it('the report card opens the score conclusion over the map', () => {
+    const score = stories.find((story) => story.id === 'score')!;
+    const params = new URLSearchParams(addressOf(score).split('?')[1]);
+    expect(params.get('object')).toBe('con:engine:forecast_score:ucdp-ged:cell:test');
+    expect(params.get('dimension')).toBeNull();
+  });
+
   it('reads the kind from the address, and ignores a kind it does not know', () => {
     expect(filterFromAddress(new URLSearchParams('kind=conclusion')).kind).toBe('conclusion');
     expect(filterFromAddress(new URLSearchParams('kind=nonsense')).kind).toBeNull();
