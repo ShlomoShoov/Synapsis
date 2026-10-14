@@ -973,8 +973,11 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   statement, parts, said 11 Mar 00:45 about 11 Mar, 50 premises), Conflict (383 events, 20 conclusions), SVB graph (95
   nodes), Elections (52 nodes), Log4Shell, the report card (260,920 events behind it); Getting Started from Home; the
   3D astronaut, and Esc ends it (fade about 2 s). Node 24 checks: build, lint, 160 tests; package-lock unchanged.
-  Rollback: `docker tag synapsis-ui:good-0927 synapsis/ui:dev && docker compose -f deploy/core/compose.yml up -d
-  --no-build --no-deps ui` (from the main checkout). *Known, not fixed*: the engine's cisa-kev and ransomware-live
+  *09:48*: Ytshak's Getting Started update merged (6f7cc2b: four screenshots of Analyze from the saved fixtures,
+  82–104 KB each, served from `assets/media/getting-started/`; the engine callout); checked on 1897: the 11 topics,
+  the 4 images (200, 1440×900), links from Home, the header and Observe's sidebar; Observe and the SVB story still open.
+  Rollback to before it: `docker tag synapsis-ui:good-0948 synapsis/ui:dev && docker compose -f
+  deploy/core/compose.yml up -d --no-build --no-deps ui` (from the main checkout; `good-0927` is the one before). *Known, not fixed*: the engine's cisa-kev and ransomware-live
   forecasts and scores have `known_at` 2026-10-19 (in the future; engine data, so the KEV story is Log4Shell, not
   the KEV score); a story's first load can take 10–16 s while Elasticsearch indexes (open each once before
   presenting); Live flow shows 0 records/min because no feeder has sent since 02:42 (replay the night to show the
