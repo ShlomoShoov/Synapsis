@@ -23,6 +23,9 @@ const recentMs = 300_000;
 const heartbeatMs = 30_000;
 const serviceRateMs = 60_000;
 
+/** The documents read per service: enough for two heartbeats of every copy. */
+const recentDocs = 40;
+
 /** A service silent for longer than this (four heartbeats) is shown as quiet. */
 export const silentMs = 120_000;
 
@@ -120,8 +123,6 @@ export interface ServicesAnswer {
     services: Buckets<{
       latest: Hits<ServiceDoc>;
       day: { processed: Sum; written: Sum; skipped: Sum; failed: Sum };
-      rated?: { doc_count: number; processed: Sum };
-      beat?: { doc_count: number; lag: Sum };
     }>;
     runs: { latest: Hits<RunDoc> };
   };
@@ -163,7 +164,7 @@ export function ingestBody(now: number) {
   };
 }
 
-/** The services' log: each service's two last documents and its last 24 hours, and the engine's last runs. */
+/** The services' log: each service's last documents and its last 24 hours, and the engine's last runs. */
 export function servicesBody(now: number) {
   return {
     size: 0,
@@ -173,27 +174,10 @@ export function servicesBody(now: number) {
         aggs: {
           latest: {
             top_hits: {
-              size: 2,
+              size: recentDocs,
               sort: [{ at: 'desc' }],
               _source: ['at', 'processed', 'lag', 'event'],
             },
-          },
-          // Several copies of a service (the indexers) each write a heartbeat with their own share of the queue: the
-          // rate is what all of them handled in the last two heartbeats, the waiting is their lags of the last one.
-          rated: {
-            filter: { range: { at: { gte: new Date(now - serviceRateMs).toISOString() } } },
-            aggs: { processed: sum('processed') },
-          },
-          beat: {
-            filter: {
-              bool: {
-                filter: [
-                  { range: { at: { gte: new Date(now - heartbeatMs).toISOString() } } },
-                  { term: { event: 'heartbeat' } },
-                ],
-              },
-            },
-            aggs: { lag: sum('lag') },
           },
           day: {
             filter: { range: { at: { gte: new Date(now - dayMs).toISOString() } } },
@@ -246,13 +230,21 @@ export function pipelineOf(ingest: IngestAnswer, services: ServicesAnswer): Pipe
   const byService = new Map((services.aggregations?.services.buckets ?? []).map((b) => [b.key, b]));
   const service = (id: 'relay' | 'indexer' | 'projector', title: string, into: string): Stage => {
     const bucket = byService.get(id);
-    const [latest, previous] = (bucket?.latest.hits.hits ?? []).map((hit) => hit._source);
+    const docs = (bucket?.latest.hits.hits ?? []).map((hit) => hit._source);
+    const [latest, previous] = docs;
     const lastAt = timeOf(latest?.at);
     const previousAt = timeOf(previous?.at);
     const seconds = lastAt !== null && previousAt !== null ? (lastAt - previousAt) / 1000 : 0;
-    const instances = bucket?.beat?.doc_count ?? 0;
-    // Several copies at work: their sums (two documents in a row may come from two copies, and each lag is a share).
+    // Several copies of a service (the indexers) each write a heartbeat every 30 s with their own share of the queue
+    // (one Kafka partition each). The windows end at the last document, not at this clock, so a heartbeat
+    // Elasticsearch does not show yet never drops a copy: one heartbeat per copy in the last 30 s, two in the last 60.
+    const since = (ms: number) =>
+      docs.filter((doc) => lastAt !== null && (timeOf(doc.at) ?? 0) > lastAt - ms);
+    const beat = since(heartbeatMs).filter((doc) => doc.event === 'heartbeat');
+    const instances = beat.length;
     const shared = instances > 1;
+    const total = (list: ServiceDoc[], field: 'processed' | 'lag') =>
+      list.reduce((acc, doc) => acc + (doc[field] ?? 0), 0);
     return {
       id,
       title,
@@ -261,14 +253,14 @@ export function pipelineOf(ingest: IngestAnswer, services: ServicesAnswer): Pipe
         latest?.event === 'stop'
           ? 0
           : shared
-            ? valueOf(bucket?.rated?.processed) / (serviceRateMs / 1000)
+            ? total(since(serviceRateMs), 'processed') / (serviceRateMs / 1000)
             : seconds > 0
               ? (latest?.processed ?? 0) / seconds
               : null,
       handled: valueOf(bucket?.day.processed),
       failed: valueOf(bucket?.day.failed),
       skipped: valueOf(bucket?.day.skipped),
-      lag: shared ? valueOf(bucket?.beat?.lag) : (latest?.lag ?? null),
+      lag: shared ? total(beat, 'lag') : (latest?.lag ?? null),
       instances: shared ? instances : undefined,
       lastAt,
     };

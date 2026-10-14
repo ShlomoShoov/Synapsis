@@ -118,9 +118,9 @@ function StageCard({ stage, now }: { stage: Stage; now: number }) {
         {stage.instances && (
           <span
             className={styles.copies}
-            title="Copies of this service that reported in the last 30 seconds"
+            title="Copies of this service in its last heartbeat. Each reads its own share of the queue: the rate and the waiting are their sum."
           >
-            ×{stage.instances}
+            {stage.instances} copies
           </span>
         )}
       </div>
