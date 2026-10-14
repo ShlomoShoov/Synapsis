@@ -1,0 +1,96 @@
+/* The stories menu: a small glass button beside the page name, and a list of the proof cases below it. */
+
+.root {
+  position: relative;
+  align-self: center;
+  pointer-events: auto;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px 0 15px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: var(--glass-shadow);
+  font: 600 12.5px var(--font-sans);
+  color: var(--text-2);
+  cursor: pointer;
+  transition:
+    color 180ms,
+    box-shadow 180ms;
+}
+
+.button:hover,
+.button[aria-expanded='true'] {
+  color: var(--text-1);
+  box-shadow:
+    var(--glass-shadow),
+    0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 0 18px -4px var(--accent);
+}
+
+.button svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  translate: -50% 0;
+  width: min(340px, calc(100vw - 48px));
+  padding: 12px 8px 8px;
+  border-radius: 16px;
+  background: rgb(6 11 20 / 0.92);
+  backdrop-filter: blur(22px) saturate(1.3);
+  box-shadow: var(--glass-shadow);
+}
+
+.menu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intro {
+  margin: 0 10px 8px;
+  font: 500 11px var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.story {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 150ms;
+}
+
+.story:hover,
+.story:focus-visible {
+  background: rgb(255 255 255 / 0.06);
+  outline: none;
+}
+
+.title {
+  font: 500 13.5px var(--font-sans);
+  color: var(--text-1);
+}
+
+.line {
+  font: 400 12px/1.4 var(--font-sans);
+  color: var(--text-3);
+}

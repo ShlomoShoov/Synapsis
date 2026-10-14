@@ -3,12 +3,12 @@
 .bar {
   position: absolute;
   top: 18px;
-  left: calc((100% - 424px) / 2);
+  /* Centred in the room left of the right column (424px), never over the page name on the left (about 216px). */
+  left: max(216px, calc((100% - 424px) / 2 - var(--bar-half, 280px)));
   z-index: 2;
   display: flex;
   align-items: center;
   gap: 10px;
-  translate: -50% 0;
 }
 
 .switch {
