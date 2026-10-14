@@ -545,3 +545,9 @@
     opacity: 0.7;
   }
 }
+
+/* Until an astronaut is ready to be seen (the 3D one, or the drawing standing in), only the stars. */
+.intro:not([data-ready]) .float,
+.intro:not([data-ready]) .words {
+  visibility: hidden;
+}

@@ -17,6 +17,23 @@ export function shouldShowIntro(
   }
 }
 
+/** The 3D astronaut's code (three.js), fetched once: asked for early (from Home), so it is ready when the intro shows. */
+let scene: Promise<typeof import('./AstronautScene')> | null = null;
+export const loadScene = () => (scene ??= import('./AstronautScene'));
+
+/** Starts fetching the 3D astronaut when the intro will show in this visit. */
+export function preloadIntro() {
+  let storage: Storage | null = null;
+  try {
+    storage = window.sessionStorage;
+  } catch {
+    // No storage: the intro does not show.
+  }
+  if (shouldShowIntro(storage, window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+    loadScene().catch(() => undefined);
+  }
+}
+
 export function markIntroSeen(storage: Pick<Storage, 'setItem'> | null) {
   try {
     storage?.setItem(seenKey, '1');

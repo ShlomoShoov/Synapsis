@@ -4,7 +4,8 @@
  * The header follows the scroll: glass over the dawn, paper over paper, and the small name joins it once the first
  * screen has gone (useHeroScroll).
  */
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { preloadIntro } from '@/analyze/intro/intro';
 import { Header } from '@/site/Header';
 import { Footer } from './Footer';
 import { Hero } from './Hero';
@@ -18,6 +19,8 @@ export function HomePage() {
   const pageRef = useRef<HTMLDivElement>(null);
   const paperRef = useRef<HTMLDivElement>(null);
   const onPaper = useHeroScroll(pageRef, paperRef);
+  // The way into Analyze: its 3D astronaut is fetched while the visitor reads this page.
+  useEffect(() => preloadIntro(), []);
 
   return (
     <div ref={pageRef}>
