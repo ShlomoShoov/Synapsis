@@ -986,7 +986,13 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   build, lint, 158 tests. Seen on 1897 in a fresh tab: Home → Analyze opens on the first click; on this loaded machine
   the globe needs about 20–25 s the first time (the map's worker starts late; "Reading the events…" meanwhile; the
   files themselves load in ms). Rollback: `docker tag synapsis-ui:good-1035 synapsis/ui:dev && docker compose -f
-  deploy/core/compose.yml up -d --no-build --no-deps ui` (the build with the astronaut and Getting Started). *Known, not fixed*: the engine's cisa-kev and ransomware-live
+  deploy/core/compose.yml up -d --no-build --no-deps ui` (the build with the astronaut and Getting Started).
+  *12:02* (after the 11:00 merge deadline and the 11:30 freeze: an error, the clock was not checked): the intro is back
+  (20b8ff3 reverts 1b242ab) with a fix (9f5bd0a): only the stars until the 3D astronaut's first frame, its code fetched
+  early from Home, a click does nothing until then, Esc and Skip go straight to the map; the SVG only without WebGL or
+  after 10 s. Checked in fresh tabs on a dev server: 3D shown, one click → fall → map, Esc while loading → map, no
+  console errors; 160 tests. Rollback to the 10:35 build (no intro): `docker tag synapsis-ui:good-1202 synapsis/ui:dev
+  && docker compose -f deploy/core/compose.yml up -d --no-build --no-deps ui`. *Known, not fixed*: the engine's cisa-kev and ransomware-live
   forecasts and scores have `known_at` 2026-10-19 (in the future; engine data, so the KEV story is Log4Shell, not
   the KEV score); a story's first load can take 10–16 s while Elasticsearch indexes (open each once before
   presenting); Live flow shows 0 records/min because no feeder has sent since 02:42 (replay the night to show the
