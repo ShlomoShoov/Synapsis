@@ -29,16 +29,15 @@ import type { FlowEngine } from './engine/FlowEngine';
 import { FlowCanvas } from './FlowCanvas';
 import styles from './FlowSection.module.css';
 import { ArrivalsFeed, Legend, Readouts, SourceCard } from './hud';
-import { Playback, speedLabel } from './playback';
+import { type Playback, speedLabel } from './playback';
 import { ReplayFeeder } from './replay';
 import { Timeline } from './Timeline';
 
-/** The live flow section. */
-export function FlowSection() {
+/** The live flow section, on the page's clock (the pipeline below follows the same one). */
+export function FlowSection({ playback }: { playback: Playback }) {
   const { log, catalog, mode, health, setMode } = useObserveData();
   const formats = useTimeFormats();
   const reducedMotion = useReducedMotion();
-  const playback = useMemo(() => new Playback(), []);
   const director = useMemo(() => new FlowDirector(), []);
   const feeder = useMemo(() => new ReplayFeeder(log), [log]);
   const play = useSyncExternalStore(playback.subscribe, playback.getSnapshot);

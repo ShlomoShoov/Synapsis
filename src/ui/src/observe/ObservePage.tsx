@@ -2,9 +2,9 @@
  * Observe (route /observe): what the system is receiving, for the people who run it. One page, three sections,
  * and a sidebar to move between them:
  *
- *   01 Live flow   every batch on its way from its source to the core, in 3D, live or replayed from the past;
+ *   01 Live flow   every batch on its way from its source to the core, in 3D, live or replayed from the past,
+ *                  and on below the API through the pipeline (contracts/pipeline-log.md), on the same clock;
  *   02 Metrics     the ingestion log's numbers over a chosen period, in dashboards the viewer can arrange;
- *   03 Pipeline    below the API, stage by stage: relay, indexer, projector, engine (contracts/pipeline-log.md);
  *
  * The page turns the room dark while it is open (theme/night.css) and gives it back on leaving.
  */
@@ -13,6 +13,7 @@ import './theme/night.css';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ObserveDataProvider } from './data/ObserveDataProvider';
 import { FlowSection } from './flow/FlowSection';
+import { Playback } from './flow/playback';
 import { ignoreShortcut } from './lib/keyboard';
 import { readStored, writeStored } from './lib/storage';
 import { TimeZoneProvider } from './lib/TimeZoneProvider';
@@ -33,6 +34,8 @@ export function ObservePage() {
   const [collapsed, setCollapsed] = useState(() => readStored('sidebar-collapsed', false));
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const palette = useMemo(() => paletteStyle(), []);
+  /** The clock the live flow and the pipeline below it share: live, or a moment of the past. */
+  const playback = useMemo(() => new Playback(), []);
 
   const toggleSidebar = useCallback(() => {
     setCollapsed((value) => {
@@ -59,8 +62,8 @@ export function ObservePage() {
             onShowShortcuts={() => setShortcutsOpen(true)}
           />
           <main ref={setMain} className={styles.main}>
-            <FlowSection />
-            <PipelineSection />
+            <FlowSection playback={playback} />
+            <PipelineSection playback={playback} />
             <MetricsSection />
           </main>
           <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
