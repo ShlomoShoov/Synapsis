@@ -11,7 +11,11 @@ const counts = (received: number, stored: number, rejected: number) => ({
 
 const ingest: IngestAnswer = {
   aggregations: {
-    day: { ...counts(9000, 8000, 3), last: v(Date.parse('2026-10-14T00:00:00Z')), recent: { received: v(3000) } },
+    day: {
+      ...counts(9000, 8000, 3),
+      last: v(Date.parse('2026-10-14T00:00:00Z')),
+      recent: { received: v(3000) },
+    },
     sources: {
       buckets: [
         {
@@ -79,7 +83,13 @@ describe('pipelineOf', () => {
   const stage = (id: string) => pipeline.stages.find((each) => each.id === id)!;
 
   it('lists the stages in the order a record goes through them', () => {
-    expect(pipeline.stages.map((each) => each.id)).toEqual(['api', 'relay', 'indexer', 'projector', 'engine']);
+    expect(pipeline.stages.map((each) => each.id)).toEqual([
+      'api',
+      'relay',
+      'indexer',
+      'projector',
+      'engine',
+    ]);
   });
 
   it("gives the API's last 24 hours and its rate over the last 5 minutes", () => {
@@ -87,7 +97,12 @@ describe('pipelineOf', () => {
   });
 
   it("measures a service's rate from its two last documents and keeps its lag", () => {
-    expect(stage('indexer')).toMatchObject({ rate: 55, lag: 15_000_000, handled: 1_000_000, skipped: 1000 });
+    expect(stage('indexer')).toMatchObject({
+      rate: 55,
+      lag: 15_000_000,
+      handled: 1_000_000,
+      skipped: 1000,
+    });
     expect(catchUpMs(stage('indexer'))).toBeCloseTo((15_000_000 / 55) * 1000);
   });
 
@@ -97,7 +112,10 @@ describe('pipelineOf', () => {
   });
 
   it("gives the engine's conclusions and its last run", () => {
-    expect(stage('engine')).toMatchObject({ handled: 41_258, message: 'backfill: 1,185 conclusions sent' });
+    expect(stage('engine')).toMatchObject({
+      handled: 41_258,
+      message: 'backfill: 1,185 conclusions sent',
+    });
     expect(pipeline.runs[0]).toMatchObject({ source: 'src:wikipedia:polls', written: 1185 });
   });
 
@@ -117,5 +135,28 @@ describe('pipelineOf', () => {
     expect(empty.sources).toEqual([]);
     expect(empty.runs).toEqual([]);
     expect(empty.stages.every((each) => each.handled === 0)).toBe(true);
+  });
+
+  it('sums several indexers: their rate over two heartbeats and their shares of the queue', () => {
+    const indexer = services.aggregations!.services.buckets[0]!;
+    const shared: ServicesAnswer = {
+      aggregations: {
+        ...services.aggregations!,
+        services: {
+          buckets: [
+            {
+              ...indexer,
+              rated: { doc_count: 12, processed: v(16_200) },
+              beat: { doc_count: 6, lag: v(18_000_000) },
+            },
+          ],
+        },
+      },
+    };
+    const stage = pipelineOf(ingest, shared).stages.find((s) => s.id === 'indexer')!;
+    expect(stage.instances).toBe(6);
+    expect(stage.rate).toBe(270);
+    expect(stage.lag).toBe(18_000_000);
+    expect(catchUpMs(stage)).toBe((18_000_000 / 270) * 1000);
   });
 });

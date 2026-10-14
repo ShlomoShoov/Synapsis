@@ -19,6 +19,10 @@ const dayMs = 86_400_000;
 /** The period the API's rate is measured over. */
 const recentMs = 300_000;
 
+/** One heartbeat (30 s) and the time a service's rate is measured over (two heartbeats). */
+const heartbeatMs = 30_000;
+const serviceRateMs = 60_000;
+
 /** A service silent for longer than this (four heartbeats) is shown as quiet. */
 export const silentMs = 120_000;
 
@@ -36,8 +40,10 @@ export interface Stage {
   failed: number;
   /** Handled with nothing to write in the last 24 hours. */
   skipped: number;
-  /** Kafka messages still waiting for it (the indexer and the projector). */
+  /** Kafka messages still waiting for it (the indexer and the projector), all its copies together. */
   lag: number | null;
+  /** How many copies of the service wrote in the last heartbeat (several indexers share the queue). */
+  instances?: number;
   /** When it last wrote to its log; null when never. */
   lastAt: number | null;
   /** Its last word, when it has one (the engine's result). */
@@ -114,6 +120,8 @@ export interface ServicesAnswer {
     services: Buckets<{
       latest: Hits<ServiceDoc>;
       day: { processed: Sum; written: Sum; skipped: Sum; failed: Sum };
+      rated?: { doc_count: number; processed: Sum };
+      beat?: { doc_count: number; lag: Sum };
     }>;
     runs: { latest: Hits<RunDoc> };
   };
@@ -164,7 +172,28 @@ export function servicesBody(now: number) {
         terms: { field: 'service', size: 10 },
         aggs: {
           latest: {
-            top_hits: { size: 2, sort: [{ at: 'desc' }], _source: ['at', 'processed', 'lag', 'event'] },
+            top_hits: {
+              size: 2,
+              sort: [{ at: 'desc' }],
+              _source: ['at', 'processed', 'lag', 'event'],
+            },
+          },
+          // Several copies of a service (the indexers) each write a heartbeat with their own share of the queue: the
+          // rate is what all of them handled in the last two heartbeats, the waiting is their lags of the last one.
+          rated: {
+            filter: { range: { at: { gte: new Date(now - serviceRateMs).toISOString() } } },
+            aggs: { processed: sum('processed') },
+          },
+          beat: {
+            filter: {
+              bool: {
+                filter: [
+                  { range: { at: { gte: new Date(now - heartbeatMs).toISOString() } } },
+                  { term: { event: 'heartbeat' } },
+                ],
+              },
+            },
+            aggs: { lag: sum('lag') },
           },
           day: {
             filter: { range: { at: { gte: new Date(now - dayMs).toISOString() } } },
@@ -181,7 +210,11 @@ export function servicesBody(now: number) {
         filter: { term: { event: 'run' } },
         aggs: {
           latest: {
-            top_hits: { size: 12, sort: [{ at: 'desc' }], _source: ['at', 'source', 'written', 'message'] },
+            top_hits: {
+              size: 12,
+              sort: [{ at: 'desc' }],
+              _source: ['at', 'source', 'written', 'message'],
+            },
           },
         },
       },
@@ -217,15 +250,26 @@ export function pipelineOf(ingest: IngestAnswer, services: ServicesAnswer): Pipe
     const lastAt = timeOf(latest?.at);
     const previousAt = timeOf(previous?.at);
     const seconds = lastAt !== null && previousAt !== null ? (lastAt - previousAt) / 1000 : 0;
+    const instances = bucket?.beat?.doc_count ?? 0;
+    // Several copies at work: their sums (two documents in a row may come from two copies, and each lag is a share).
+    const shared = instances > 1;
     return {
       id,
       title,
       into,
-      rate: latest?.event === 'stop' ? 0 : seconds > 0 ? (latest?.processed ?? 0) / seconds : null,
+      rate:
+        latest?.event === 'stop'
+          ? 0
+          : shared
+            ? valueOf(bucket?.rated?.processed) / (serviceRateMs / 1000)
+            : seconds > 0
+              ? (latest?.processed ?? 0) / seconds
+              : null,
       handled: valueOf(bucket?.day.processed),
       failed: valueOf(bucket?.day.failed),
       skipped: valueOf(bucket?.day.skipped),
-      lag: latest?.lag ?? null,
+      lag: shared ? valueOf(bucket?.beat?.lag) : (latest?.lag ?? null),
+      instances: shared ? instances : undefined,
       lastAt,
     };
   };
@@ -284,7 +328,11 @@ export async function readPipeline(now: number, signal?: AbortSignal): Promise<P
   const search = <T>(index: string, body: object) =>
     requestJson<T>(
       `${elasticUrl}/${index}/_search?ignore_unavailable=true`,
-      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      },
       { service: 'Elasticsearch', signal },
     );
   const [ingest, services] = await Promise.all([

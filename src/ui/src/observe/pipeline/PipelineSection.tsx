@@ -8,7 +8,14 @@ import { useEffect, useState } from 'react';
 import { formatAge, formatCompact, formatCount, formatRate, formatSpan } from '../lib/format';
 import { SectionHeader } from '../shell/SectionHeader';
 import { sectionInfo } from '../shell/sections';
-import { catchUpMs, type Pipeline, pipelinePollMs, readPipeline, silentMs, type Stage } from './pipeline';
+import {
+  catchUpMs,
+  type Pipeline,
+  pipelinePollMs,
+  readPipeline,
+  silentMs,
+  type Stage,
+} from './pipeline';
 import styles from './PipelineSection.module.css';
 
 export function PipelineSection() {
@@ -87,7 +94,9 @@ export function PipelineSection() {
                       <td>{formatCount(row.received)}</td>
                       <td>{formatCount(row.stored)}</td>
                       <td data-bad={row.refused > 0 || undefined}>{formatCount(row.refused)}</td>
-                      <td className={styles.muted}>{row.lastAt ? formatAge(row.lastAt, now) : '—'}</td>
+                      <td className={styles.muted}>
+                        {row.lastAt ? formatAge(row.lastAt, now) : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -117,6 +126,15 @@ export function PipelineSection() {
   );
 }
 
+/** What each stage does, in plain words. */
+const roles: Record<Stage['id'], string> = {
+  api: 'Checks each batch the feeders send and stores every record.',
+  relay: 'Passes each stored record on to the queue.',
+  indexer: 'Makes each record searchable: the map, search and lists.',
+  projector: 'Draws each record into the graph of connections.',
+  engine: 'Reads the records and sends back its conclusions.',
+};
+
 function StageCard({ stage, now }: { stage: Stage; now: number }) {
   const live = stage.lastAt !== null && now - stage.lastAt < silentMs;
   const catchUp = catchUpMs(stage);
@@ -126,10 +144,19 @@ function StageCard({ stage, now }: { stage: Stage; now: number }) {
         <span className={styles.dot} aria-hidden="true" />
         <strong>{stage.title}</strong>
         <span className={styles.muted}>→ {stage.into}</span>
+        {stage.instances && (
+          <span
+            className={styles.copies}
+            title="Copies of this service that reported in the last 30 seconds"
+          >
+            ×{stage.instances}
+          </span>
+        )}
       </div>
+      <p className={styles.role}>{roles[stage.id]}</p>
       <div className={styles.rate}>
         {stage.rate === null ? '—' : formatRate(stage.rate)}
-        <span>{stage.id === 'engine' ? 'runs on demand' : 'now'}</span>
+        <span>{stage.id === 'engine' ? ' runs on demand' : ' now'}</span>
       </div>
       <dl className={styles.facts}>
         <dt>Last 24 h</dt>
@@ -141,7 +168,11 @@ function StageCard({ stage, now }: { stage: Stage; now: number }) {
             <dt>Waiting</dt>
             <dd data-bad={catchUp !== null && catchUp > 3_600_000 ? true : undefined}>
               {formatCompact(stage.lag)}
-              {catchUp !== null && <small> · about {formatSpan(catchUp)} to catch up</small>}
+              {catchUp !== null ? (
+                <small> · about {formatSpan(catchUp)} to catch up</small>
+              ) : (
+                stage.lag === 0 && <small> · caught up</small>
+              )}
             </dd>
           </>
         )}
