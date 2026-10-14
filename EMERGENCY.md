@@ -939,3 +939,20 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   at this rate, refused/failed; every source's batches, received, stored, refused, last batch; the engine's last 12
   runs. Checked: the two queries against the live logs (curl), the parsing by unit tests; not yet seen in a browser
   (the built UI on 1897 is dev's). Walk on 1897: search "log4j" (3 records), record panel, graph (4 connections) work.
+- **Live QA, stories, pipeline in the flow, the astronaut (14 Oct morning, branch `ui/live-qa`)**. *Stories*
+  (`analyze/story/`): a "Stories" menu beside Search opens the proof cases as Analyze addresses: Tōhoku 10–11 Mar 2011
+  (USGS + engine, view on Japan: 129 earthquakes and 7 forecast cells, the Tōhoku cell rank 1 of 1,205, said 11 Mar
+  00:45 UTC), Conflict week of 10 Apr 2023 (UCDP + engine: 20 forecast cells), SVB (graph of `ent:fdic:cert-24735`,
+  94 connections), Elections 2024 (the Pennsylvania calibrated estimate in the graph: estimates have no map place). The
+  address now also names the filter (`source=a,b`, `kind=`); a new address opens the page again from it (keyed on
+  the query). *Pipeline in the flow* (Shlomo: it must flow on from Live flow, not be a section): `observe/pipeline/`
+  now follows the flow's canvas on the same ground, a stem down from the API, the five stages in a row with links that
+  move while records pass, each saying its job in words; section 03 and its per-source table (Metrics has one) are
+  gone. *Fix*: six indexers write heartbeats as one `service`, each with its own share of the lag: the card showed one
+  share (3.1M, "about 2 h") and a rate from two copies' documents; it now sums the last 30 s of lags (18.5M, as
+  `night-status.sh`) and the last 60 s of work, and shows how many copies reported. *Observe sidebar*: no
+  Live/Simulated switch (`?data=simulated` still works), no "Getting started, soon", Analyze is a link, no "Not
+  declared by any package". *Analyze*: the top bar no longer covers the page name at 1280 px; a conclusion's measures
+  in words with short numbers; under the source chips "indexed ~X of Y" and "still indexing" while X < Y (live:
+  engine ~36.3K of 41.3K). *Astronaut* (`analyze/intro/`): SVG and CSS, once per visit (sessionStorage), Esc/Skip,
+  none with reduced motion. Checked in a browser at 1280×720 on the live API; build, lint, 152 tests.
