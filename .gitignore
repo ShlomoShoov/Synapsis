@@ -33,3 +33,5 @@ src/ui/assets/media/**/*.mp4
 
 # C# tests: kept local, they verify the server (tests/dotnet/Synapsis.Tests.sln)
 tests/dotnet/
+
+output.pdf
