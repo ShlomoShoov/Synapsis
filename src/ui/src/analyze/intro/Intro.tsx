@@ -4,13 +4,14 @@
  * as it drops away towards the Earth, glowing as it meets the air, while the view follows it down and the Earth rises
  * to fill it; the atmosphere's light, then the page. Once per visit; never with reduced motion.
  *
- * The astronaut is a 3D one (AstronautScene.ts), loaded once the intro shows; the SVG drawing stands in until its
- * first frame, and stays where WebGL is missing or the fall began before the 3D one was ready.
+ * The astronaut is a 3D one (AstronautScene.ts), fetched early (from Home). Until its first frame only the stars show,
+ * and a click does nothing (Esc and "skip" go straight to the page). The SVG drawing stands in only where WebGL is
+ * missing, or when the 3D one is not ready within 10 seconds.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Astronaut } from './Astronaut';
 import type { AstronautScene } from './AstronautScene';
-import { fallMs, markIntroSeen, shouldShowIntro } from './intro';
+import { fallMs, loadScene, markIntroSeen, shouldShowIntro } from './intro';
 import styles from './Intro.module.css';
 
 const sessionStore = () => {
@@ -31,10 +32,16 @@ export function Intro() {
     markIntroSeen(sessionStore());
     setStage((now) => (now === 'float' ? 'fall' : now));
   };
+  const skip = () => {
+    markIntroSeen(sessionStore());
+    setStage('gone');
+  };
   const canvas = useRef<HTMLCanvasElement>(null);
   const scene = useRef<AstronautScene | null>(null);
   const floating = useRef(stage === 'float');
-  const [threeD, setThreeD] = useState(false);
+  // Which astronaut is ready to be seen: none yet (only the stars), the 3D one, or the drawing standing in.
+  const [ready, setReady] = useState<'3d' | 'svg' | null>(null);
+  const threeD = ready === '3d';
   const shown = stage !== 'gone';
 
   // The 3D astronaut: loaded while the drawing floats, shown from its first frame, let go with the page.
@@ -42,19 +49,22 @@ export function Intro() {
     if (!shown) return undefined;
     let cancelled = false;
     let created: AstronautScene | null = null;
-    import('./AstronautScene')
+    const late = window.setTimeout(() => setReady((now) => now ?? 'svg'), 10_000);
+    loadScene()
       .then(({ createAstronautScene }) => {
         if (cancelled || !canvas.current || !floating.current) return;
         created = createAstronautScene(canvas.current, () => {
-          if (!cancelled && floating.current) setThreeD(true);
+          if (!cancelled && floating.current) setReady((now) => (now === 'svg' ? now : '3d'));
         });
         scene.current = created;
       })
       .catch(() => {
-        // No WebGL (or the code could not load): the drawing stays.
+        // No WebGL (or the code could not load): the drawing stands in.
+        if (!cancelled) setReady('svg');
       });
     return () => {
       cancelled = true;
+      window.clearTimeout(late);
       created?.dispose();
       scene.current = null;
     };
@@ -71,7 +81,8 @@ export function Intro() {
         if (event.key === 'Escape') {
           event.preventDefault();
           event.stopPropagation();
-          go();
+          if (ready) go();
+          else skip();
         }
       };
       window.addEventListener('keydown', key, true);
@@ -82,11 +93,16 @@ export function Intro() {
       return () => window.clearTimeout(timer);
     }
     return undefined;
-  }, [stage]);
+  }, [stage, ready]);
 
   if (stage === 'gone') return null;
   return (
-    <div className={styles.intro} data-stage={stage} data-three={threeD || undefined}>
+    <div
+      className={styles.intro}
+      data-stage={stage}
+      data-three={threeD || undefined}
+      data-ready={ready ?? undefined}
+    >
       <div className={styles.sky} aria-hidden="true">
         <div className={styles.starsFar} />
         <div className={styles.starsNear} />
@@ -102,7 +118,9 @@ export function Intro() {
       <button
         type="button"
         className={styles.land}
-        onClick={go}
+        onClick={() => {
+          if (ready) go();
+        }}
         aria-label="Go look for knowledge: land on the Earth"
         // oxlint-disable-next-line jsx-a11y/no-autofocus -- the intro covers the page; Enter lands at once
         autoFocus
@@ -128,8 +146,7 @@ export function Intro() {
         className={styles.skip}
         onClick={(event) => {
           event.stopPropagation();
-          markIntroSeen(sessionStore());
-          setStage('gone');
+          skip();
         }}
       >
         Skip

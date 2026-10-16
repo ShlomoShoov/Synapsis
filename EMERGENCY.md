@@ -977,7 +977,22 @@ the fixtures"** (never an empty answer). The production build leaves the fixture
   82–104 KB each, served from `assets/media/getting-started/`; the engine callout); checked on 1897: the 11 topics,
   the 4 images (200, 1440×900), links from Home, the header and Observe's sidebar; Observe and the SVB story still open.
   Rollback to before it: `docker tag synapsis-ui:good-0948 synapsis/ui:dev && docker compose -f
-  deploy/core/compose.yml up -d --no-build --no-deps ui` (from the main checkout; `good-0927` is the one before). *Known, not fixed*: the engine's cisa-kev and ransomware-live
+  deploy/core/compose.yml up -d --no-build --no-deps ui` (from the main checkout; `good-0927` is the one before).
+  *10:35*: (1) Shlomo's first click on Analyze failed: his tab, older than the 09:48 build, asked for
+  `AnalyzePage-CAs9Bk9q.js`, which no longer existed (404 in the ui log, 10:13). Fix (29ca85b): nginx serves index.html
+  with `Cache-Control: no-cache`, and the lazy routes have an error page (`site/LoadErrorPage.tsx`) that reloads once
+  (at most once a minute) and otherwise says the page could not be loaded. (2) The intro is removed in one commit
+  (1b242ab, branch `ui/no-intro`; `git revert 1b242ab` brings it back): Analyze opens straight on the map. Checks:
+  build, lint, 158 tests. Seen on 1897 in a fresh tab: Home → Analyze opens on the first click; on this loaded machine
+  the globe needs about 20–25 s the first time (the map's worker starts late; "Reading the events…" meanwhile; the
+  files themselves load in ms). Rollback: `docker tag synapsis-ui:good-1035 synapsis/ui:dev && docker compose -f
+  deploy/core/compose.yml up -d --no-build --no-deps ui` (the build with the astronaut and Getting Started).
+  *12:02* (after the 11:00 merge deadline and the 11:30 freeze: an error, the clock was not checked): the intro is back
+  (20b8ff3 reverts 1b242ab) with a fix (9f5bd0a): only the stars until the 3D astronaut's first frame, its code fetched
+  early from Home, a click does nothing until then, Esc and Skip go straight to the map; the SVG only without WebGL or
+  after 10 s. Checked in fresh tabs on a dev server: 3D shown, one click → fall → map, Esc while loading → map, no
+  console errors; 160 tests. Rollback to the 10:35 build (no intro): `docker tag synapsis-ui:good-1202 synapsis/ui:dev
+  && docker compose -f deploy/core/compose.yml up -d --no-build --no-deps ui`. *Known, not fixed*: the engine's cisa-kev and ransomware-live
   forecasts and scores have `known_at` 2026-10-19 (in the future; engine data, so the KEV story is Log4Shell, not
   the KEV score); a story's first load can take 10–16 s while Elasticsearch indexes (open each once before
   presenting); Live flow shows 0 records/min because no feeder has sent since 02:42 (replay the night to show the
